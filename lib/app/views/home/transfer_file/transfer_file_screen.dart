@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -11,11 +12,13 @@ import 'package:share_app_latest/components/build_choose_option.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
-import '../../../../controllers/progress_controller.dart';
-import '../../../../controllers/transfer_controller.dart';
-import '../../../../controllers/pairing_controller.dart';
-import '../../../../models/device_info.dart';
-import '../../../../models/file_meta.dart';
+import '../../../controllers/bluetooth_controller.dart';
+import '../../../controllers/progress_controller.dart';
+import '../../../controllers/transfer_controller.dart';
+import '../../../controllers/pairing_controller.dart';
+import '../../../controllers/QR_controller.dart';
+import '../../../models/device_info.dart';
+import '../../../models/file_meta.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
 class TransferFileScreen extends StatefulWidget {
@@ -33,6 +36,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   final pairing = Get.put(PairingController());
   final progress = Get.put(ProgressController());
   Worker? _transferCompleteWorker;
+  Worker? _bleOfferAcceptedWorker;
   bool _didAutoNavigate = false;
 
   void _handleInvalidArgs() {
@@ -117,16 +121,14 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
           duration: const Duration(seconds: 2),
         );
 
-        // Navigate back to home screen after successful transfer
-        // Don't create new ChooseFileScreen as it requires DeviceInfo arguments
-        final d = device;
+        if (Get.isRegistered<QrController>()) {
+          Get.find<QrController>().flowState.value =
+              TransferFlowState.completed;
+        }
+        // Navigate to Onboarding after successful transfer (sender flow complete)
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
-            if (d != null) {
-              AppNavigator.toChooseFile(device: d);
-            } else {
-              AppNavigator.toOnboarding();
-            }
+            AppNavigator.toHome();
           }
         });
       }
@@ -136,10 +138,11 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   @override
   void dispose() {
     _transferCompleteWorker?.dispose();
+    _bleOfferAcceptedWorker?.dispose();
     super.dispose();
   }
 
-  void _showFileTypeSelection() {
+  void showFileTypeSelection() {
     Get.dialog(
       Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -247,29 +250,35 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     try {
       print('🔍 DEBUG: Starting _sendSelectedFile with path: $path');
       print('🔍 DEBUG: device = $device');
-      print('🔍 DEBUG: device?.name = ${device?.name}');
-      print('🔍 DEBUG: device?.ip = ${device?.ip}');
-      print('🔍 DEBUG: device?.transferPort = ${device?.transferPort}');
 
-      // Validate device exists before starting
       if (device == null) {
         throw Exception(
           'Device information is missing. Please restart the pairing process.',
         );
       }
 
-      // Safely extract device properties for validation
-      final deviceIp = device?.ip ?? '';
-      final devicePort = device?.transferPort ?? 0;
       final deviceName = device?.name ?? 'Unknown';
+      final file = File(path);
+      if (!await file.exists()) {
+        throw Exception('Selected file no longer exists.');
+      }
 
-      // Validate device has required connection info
+      final fileName = path.split('/').last;
+
+      // Bluetooth flow: send via BLE, wait for accept
+      if (device!.isBluetooth) {
+        await _sendBluetoothOffer(path, fileName, deviceName);
+        return;
+      }
+
+      // WiFi flow
+      final deviceIp = device!.ip;
+      final devicePort = device!.transferPort;
       if (deviceIp.isEmpty) {
         throw Exception(
           'Device IP address is missing. Please restart the pairing process.',
         );
       }
-
       if (devicePort <= 0) {
         throw Exception(
           'Device transfer port is invalid. Please restart the pairing process.',
@@ -278,23 +287,19 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
 
       print('✅ Device validation passed: $deviceName at $deviceIp:$devicePort');
 
-      // Create file metadata
-      final file = File(path);
-      if (!await file.exists()) {
-        throw Exception('Selected file no longer exists.');
+      if (Get.isRegistered<QrController>()) {
+        Get.find<QrController>().flowState.value =
+            TransferFlowState.fileSelected;
       }
 
-      final fileName = path.split('/').last;
       final meta = FileMeta(
         name: fileName,
         size: await file.length(),
         type: _extType(path),
       );
 
-      // Send offer first
-      final pairing = Get.find<PairingController>();
+      final pairingCtrl = Get.find<PairingController>();
 
-      // Show loading dialog while waiting for offer response
       Get.dialog(
         PopScope(
           canPop: false,
@@ -333,17 +338,18 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       );
 
       print('📤 Sending offer to device: $deviceName');
+      print(
+        '[QR] TransferFileScreen sendOffer ip=${device!.ip} wsPort=${device!.wsPort}',
+      );
 
-      // Validate device still exists before sending offer
-      final deviceToSend = device;
-      if (deviceToSend == null) {
-        throw Exception('Device information lost before sending offer.');
+      if (Get.isRegistered<QrController>()) {
+        Get.find<QrController>().flowState.value = TransferFlowState.offerSent;
       }
 
-      final accepted = await pairing.sendOffer(deviceToSend, meta);
+      final accepted = await pairingCtrl.sendOffer(device!, meta);
 
-      // Close the loading dialog
-      Get.back();
+      print('[QR] TransferFileScreen sendOffer result accepted=$accepted');
+      if (Get.isDialogOpen ?? false) Get.back();
 
       if (accepted) {
         print('✅ Offer accepted! Navigating to progress screen...');
@@ -364,12 +370,19 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
         }
 
         print('🔍 DEBUG: About to navigate to TransferProgressScreen with:');
-        print('  - device: ${finalDevice.name} at ${finalDevice.ip}:${finalDevice.transferPort}');
+        print(
+          '  - device: ${finalDevice.name} at ${finalDevice.ip}:${finalDevice.transferPort}',
+        );
         print('  - filePath: $path');
         print('  - fileName: $fileName');
 
         // Reset progress before starting new transfer
         progress.reset();
+
+        if (Get.isRegistered<QrController>()) {
+          Get.find<QrController>().flowState.value =
+              TransferFlowState.transferring;
+        }
 
         // Navigate to TransferProgressScreen - must be registered in app_pages
         try {
@@ -380,7 +393,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
           );
           print('✅ Navigation to TransferProgressScreen completed');
         } catch (navError, navStack) {
-          print('❌ CRITICAL: Navigation to TransferProgressScreen failed: $navError');
+          print(
+            '❌ CRITICAL: Navigation to TransferProgressScreen failed: $navError',
+          );
           print('❌ Stack: $navStack');
           throw Exception('Failed to open transfer screen: $navError');
         }
@@ -410,6 +425,99 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
         duration: const Duration(seconds: 3),
       );
     }
+  }
+
+  Future<void> _sendBluetoothOffer(
+    String path,
+    String fileName,
+    String deviceName,
+  ) async {
+    final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Waiting for receiver to accept...',
+                  style: GoogleFonts.roboto(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Device: $deviceName',
+                  style: GoogleFonts.roboto(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
+    await bluetooth.sendOffer(path);
+
+    Timer? timeoutTimer;
+    _bleOfferAcceptedWorker?.dispose();
+    _bleOfferAcceptedWorker = once(bluetooth.offerAccepted, (accepted) {
+      timeoutTimer?.cancel();
+      if (Get.isDialogOpen ?? false) Get.back();
+      _bleOfferAcceptedWorker?.dispose();
+      _bleOfferAcceptedWorker = null;
+
+      if (accepted != true) return;
+
+      final ip = bluetooth.receiverIp;
+      final port = bluetooth.receiverPort;
+      if (ip == null || ip.isEmpty || port == null) {
+        Get.snackbar(
+          'Error',
+          'Receiver did not send address. Connect to same Wi-Fi.',
+        );
+        return;
+      }
+
+      final receiverDevice = DeviceInfo(
+        name: 'Receiver',
+        ip: ip,
+        transferPort: port,
+      );
+      progress.reset();
+      AppNavigator.toTransferProgress(
+        device: receiverDevice,
+        filePath: path,
+        fileName: fileName,
+      );
+    });
+
+    timeoutTimer = Timer(const Duration(seconds: 15), () {
+      if (_bleOfferAcceptedWorker != null) {
+        _bleOfferAcceptedWorker?.dispose();
+        _bleOfferAcceptedWorker = null;
+        if (Get.isDialogOpen ?? false) Get.back();
+        Get.snackbar(
+          'Timeout',
+          'Receiver did not respond in time.',
+          duration: const Duration(seconds: 3),
+        );
+      }
+    });
   }
 
   Widget _buildFileTypeContainer({
@@ -457,13 +565,13 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     try {
       final d = device;
       if (d == null) {
-        Get.snackbar('Error', 'Device information is missing. Please restart pairing.');
+        Get.snackbar(
+          'Error',
+          'Device information is missing. Please restart pairing.',
+        );
         return;
       }
-      if (!d.isValidForTransfer) {
-        Get.snackbar('Error', 'Device connection info is invalid. Please restart pairing.');
-        return;
-      }
+
       await transfer.initiateFileTransfer(d);
     } catch (e) {
       print('❌ File transfer failed: $e');

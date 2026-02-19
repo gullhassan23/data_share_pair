@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
-
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
 import '../../../routes/app_navigator.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class SelectDeviceScreen extends StatefulWidget {
   final List<DeviceInfo> devices;
+  final bool isBluetooth;
 
-  const SelectDeviceScreen({super.key, required this.devices});
+  SelectDeviceScreen({
+    super.key,
+    required this.devices,
+    this.isBluetooth = false,
+  });
 
   @override
   State<SelectDeviceScreen> createState() => _SelectDeviceScreenState();
@@ -19,9 +26,50 @@ class SelectDeviceScreen extends StatefulWidget {
 
 class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
   int? selectedIndex;
+  Worker? _connectedDeviceWorker;
+  bool _navigatedToTransfer = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isBluetooth) {
+      final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+      _connectedDeviceWorker = ever(bluetooth.connectedDevice, (device) {
+        if (device == null || _navigatedToTransfer || !mounted) return;
+        final info = bluetooth.connectedDeviceInfo;
+        if (info != null) {
+          _navigatedToTransfer = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            AppNavigator.toTransferFile(device: info);
+          });
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _connectedDeviceWorker?.dispose();
+    if (widget.isBluetooth) {
+      try {
+        final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+        bluetooth.stopScan();
+      } catch (_) {}
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isBluetooth) {
+      return _buildBluetoothContent();
+    }
+    return _buildWiFiContent();
+  }
+
+  Widget _buildBluetoothContent() {
+    final bluetooth = Get.find<BluetoothController>(tag: 'sender');
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -39,11 +87,10 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back + Progress
                 Row(
                   children: [
                     IconButton(
-                      onPressed: () => AppNavigator.toOnboarding(),
+                      onPressed: () => Get.back(),
                       icon: const Icon(Icons.arrow_back),
                     ),
                     Text(
@@ -55,9 +102,8 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                     ),
                   ],
                 ),
-
                 StepProgressBar(
-                  currentStep: 3, // ✅ step increased
+                  currentStep: 3,
                   totalSteps: kTransferFlowTotalSteps,
                   activeColor: Theme.of(context).colorScheme.primary,
                   inactiveColor: Colors.grey.shade300,
@@ -65,9 +111,147 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                   segmentSpacing: 5,
                   padding: const EdgeInsets.only(top: 8, bottom: 16),
                 ),
-
                 const SizedBox(height: 30),
+                Expanded(
+                  child: Obx(() {
+                    if (bluetooth.error.value.isNotEmpty) {
+                      return Center(
+                        child: Text(
+                          bluetooth.error.value,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 16,
+                          ),
+                        ),
+                      );
+                    }
+                    final devices = bluetooth.devices;
+                    if (bluetooth.isScanning.value && devices.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Searching for devices...',
+                              style: GoogleFonts.roboto(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    if (devices.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.bluetooth_disabled,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No Bluetooth devices found',
+                              style: GoogleFonts.roboto(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: () => bluetooth.startScan(),
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Scan again'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            "Select The Device",
+                            style: GoogleFonts.roboto(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Tap Connect on the device you want to send files to",
+                            style: GoogleFonts.roboto(
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ...devices.map(
+                            (device) => _BluetoothDeviceTile(
+                              device: device,
+                              bluetooth: bluetooth,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
+  Widget _buildWiFiContent() {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(18.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => AppNavigator.toSendReceive(),
+                      icon: const Icon(Icons.arrow_back),
+                    ),
+                    Text(
+                      "Back",
+                      style: GoogleFonts.roboto(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                StepProgressBar(
+                  currentStep: 3,
+                  totalSteps: kTransferFlowTotalSteps,
+                  activeColor: Theme.of(context).colorScheme.primary,
+                  inactiveColor: Colors.grey.shade300,
+                  height: 6,
+                  segmentSpacing: 5,
+                  padding: const EdgeInsets.only(top: 8, bottom: 16),
+                ),
+                const SizedBox(height: 30),
                 Center(
                   child: Container(
                     width: double.infinity,
@@ -104,30 +288,24 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                             color: Colors.grey.shade700,
                           ),
                         ),
-
                         const SizedBox(height: 16),
                         Divider(color: Colors.grey.shade300),
                         const SizedBox(height: 10),
-
-                        // Device List UI (Screenshot style)
                         ListView.builder(
                           itemCount: widget.devices.length,
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemBuilder: (context, index) {
                             final device = widget.devices[index];
-
                             return GestureDetector(
                               onTap: () {
                                 setState(() {
                                   selectedIndex = index;
                                 });
-
-                                // Navigate next screen (Choose Mode)
                                 Future.delayed(
                                   const Duration(milliseconds: 200),
                                   () {
-                                    AppNavigator.toChooseFile(device: device);
+                                    AppNavigator.toTransferFile(device: device);
                                   },
                                 );
                               },
@@ -186,7 +364,6 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                     ),
                   ),
                 ),
-
                 const Spacer(),
               ],
             ),
@@ -194,5 +371,59 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
         ),
       ),
     );
+  }
+}
+
+class _BluetoothDeviceTile extends StatelessWidget {
+  const _BluetoothDeviceTile({required this.device, required this.bluetooth});
+
+  final BluetoothDevice device;
+  final BluetoothController bluetooth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final connected = bluetooth.isDeviceConnected(device);
+      final deviceInfo = connected ? bluetooth.connectedDeviceInfo : null;
+      return Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: ListTile(
+          onTap: connected && deviceInfo != null
+              ? () => AppNavigator.toTransferFile(device: deviceInfo)
+              : null,
+          leading: Icon(
+            Icons.bluetooth,
+            color: connected ? Colors.green : null,
+          ),
+          title: Text(
+            getDisplayName(device),
+            style: GoogleFonts.roboto(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          subtitle: Text(
+            device.remoteId.str,
+            style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey),
+          ),
+          trailing:
+              connected
+                  ? TextButton(
+                      onPressed: deviceInfo != null
+                          ? () => AppNavigator.toTransferFile(device: deviceInfo)
+                          : null,
+                      child: const Text(
+                        'Connected',
+                        style: TextStyle(color: Colors.green),
+                      ),
+                    )
+                  : ElevatedButton(
+                      onPressed: () => bluetooth.connect(device),
+                      child: const Text('Connect'),
+                    ),
+        ),
+      );
+    });
   }
 }

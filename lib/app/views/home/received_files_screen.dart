@@ -4,9 +4,10 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
-
-import 'package:share_app_latest/components/bg_curve_Ellipes.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/utils/constants.dart';
+import 'package:share_app_latest/utils/tab_bar_progress.dart';
+
 import '../../controllers/transfer_controller.dart';
 
 class ReceivedFilesScreen extends StatefulWidget {
@@ -23,321 +24,301 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          /// Background curve
-          ClipPath(
-            clipper: CurvedBackground(),
-            child: Container(
-              height: MediaQuery.of(context).size.height * 0.55,
-              width: double.infinity,
-              color: const Color(0xFF5DADE2),
-              child: CustomPaint(painter: BackgroundEllipses()),
-            ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
           ),
-          Positioned(
-            top: 2,
-            left: 8,
-            child: SafeArea(
-              child: IconButton(
-                onPressed: () {
-                  // final d = widget.device;
-                  // if (d != null) {
-                  //   AppNavigator.toChooseFile(device: d);
-                  // } else {
-                  //   Get.back();
-                  // }
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const SizedBox(height: 19),
 
-                  AppNavigator.toOnboarding();
-                },
-                icon: const Icon(
-                  Icons.arrow_back,
-                  color: Colors.white,
-                  size: 26,
-                ),
+              /// Back Row
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      AppNavigator.toHome();
+                    },
+                    icon: Icon(Icons.arrow_back),
+                  ),
+                ],
               ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                const SizedBox(height: 80),
 
-                /// Main Content Card
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+              /// Progress Barss
+              StepProgressBar(
+                currentStep: 7,
+                totalSteps: kTransferFlowTotalSteps,
+                activeColor: Colors.blue,
+                inactiveColor: Colors.white.withOpacity(0.6),
+                height: 6,
+                segmentSpacing: 5,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+              ),
+
+              const SizedBox(height: 40),
+
+              /// Main Content Card
+              Expanded(
+                child: Column(
+                  children: [
+                    /// Header
+                    Row(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            AppNavigator.toHome();
+                          },
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: Colors.black,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Received Files",
+                          style: GoogleFonts.roboto(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        /// Header
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.download_done,
-                              color: Colors.green,
-                              size: 28,
+                    const SizedBox(height: 20),
+
+                    /// Files List
+                    Expanded(
+                      child: Obx(() {
+                        final files = transfer.receivedFiles;
+                        if (files.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.inbox,
+                                  size: 64,
+                                  color: Colors.grey.shade400,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "No received files yet",
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 18,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Files you receive will appear here",
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 14,
+                                    color: Colors.black,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              "Received Files",
-                              style: GoogleFonts.roboto(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
+                          );
+                        }
+
+                        // return ListView.builder(
+                        //   itemCount: files.length,
+                        //   itemBuilder: (context, index) {
+                        //     final file = files[index];
+                        //     final fileName = file['name'] as String;
+                        //     final filePath = file['path'] as String;
+                        //     final fileSize = file['size'] as int;
+                        //     final fileType = file['type'] as String;
+                        //     final timestamp = file['timestamp'] as DateTime;
+
+                        //     return Card(
+                        //       margin: const EdgeInsets.only(bottom: 12),
+                        //       child: ListTile(
+                        //         leading: _getFileIcon(fileType),
+                        //         title: Text(
+                        //           fileName,
+                        //           style: const TextStyle(
+                        //             fontWeight: FontWeight.w500,
+                        //           ),
+                        //         ),
+                        //         subtitle: Column(
+                        //           crossAxisAlignment:
+                        //               CrossAxisAlignment.start,
+                        //           children: [
+                        //             Text(
+                        //               _formatFileSize(fileSize),
+                        //               style: TextStyle(
+                        //                 color: Colors.grey.shade600,
+                        //               ),
+                        //             ),
+                        //             Text(
+                        //               _formatTimestamp(timestamp),
+                        //               style: TextStyle(
+                        //                 color: Colors.grey.shade500,
+                        //                 fontSize: 12,
+                        //               ),
+                        //             ),
+                        //           ],
+                        //         ),
+                        //         trailing: PopupMenuButton<String>(
+                        //           onSelected: (value) {
+                        //             if (value == 'save') {
+                        //               _saveFile(filePath, fileName);
+                        //             } else if (value == 'delete') {
+                        //               _deleteFile(index, filePath);
+                        //             }
+                        //           },
+                        //           itemBuilder:
+                        //               (context) => [
+                        //                 const PopupMenuItem(
+                        //                   value: 'save',
+                        //                   child: Row(
+                        //                     children: [
+                        //                       Icon(Icons.save),
+                        //                       SizedBox(width: 8),
+                        //                       Text('Save to Downloads'),
+                        //                     ],
+                        //                   ),
+                        //                 ),
+                        //                 const PopupMenuItem(
+                        //                   value: 'delete',
+                        //                   child: Row(
+                        //                     children: [
+                        //                       Icon(
+                        //                         Icons.delete,
+                        //                         color: Colors.red,
+                        //                       ),
+                        //                       SizedBox(width: 8),
+                        //                       Text('Delete'),
+                        //                     ],
+                        //                   ),
+                        //                 ),
+                        //               ],
+                        //         ),
+                        //         onTap: () {
+                        //           // Could open file preview in future
+                        //           Get.snackbar(
+                        //             'File Ready',
+                        //             'File is available at: ${p.basename(filePath)}',
+                        //             duration: const Duration(seconds: 2),
+                        //           );
+                        //         },
+                        //       ),
+                        //     );
+                        //   },
+                        // );
+
+                        return GridView.builder(
+                          itemCount: files.length,
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 10,
+                                mainAxisSpacing: 10,
+                                childAspectRatio: 1,
                               ),
-                            ),
-                          ],
-                        ),
+                          itemBuilder: (context, index) {
+                            final file = files[index];
+                            final fileName = file['name'] as String;
+                            final filePath = file['path'] as String;
+                            final fileType = file['type'] as String;
 
-                        const SizedBox(height: 20),
-
-                        /// Files List
-                        Expanded(
-                          child: Obx(() {
-                            final files = transfer.receivedFiles;
-                            if (files.isEmpty) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.inbox,
-                                      size: 64,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      "No received files yet",
-                                      style: GoogleFonts.roboto(
-                                        fontSize: 18,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "Files you receive will appear here",
-                                      style: GoogleFonts.roboto(
-                                        fontSize: 14,
-                                        color: Colors.grey.shade500,
-                                      ),
-                                      textAlign: TextAlign.center,
+                            return GestureDetector(
+                              onTap: () async {
+                                if (fileType == 'image') {
+                                  showDialog(
+                                    context: context,
+                                    builder:
+                                        (_) => Dialog(
+                                          child: InteractiveViewer(
+                                            child: Image.file(File(filePath)),
+                                          ),
+                                        ),
+                                  );
+                                } else {
+                                  try {
+                                    await OpenFilex.open(filePath);
+                                  } catch (e) {
+                                    Get.snackbar("Error", "Cannot open file");
+                                  }
+                                }
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 6,
                                     ),
                                   ],
                                 ),
-                              );
-                            }
-
-                            // return ListView.builder(
-                            //   itemCount: files.length,
-                            //   itemBuilder: (context, index) {
-                            //     final file = files[index];
-                            //     final fileName = file['name'] as String;
-                            //     final filePath = file['path'] as String;
-                            //     final fileSize = file['size'] as int;
-                            //     final fileType = file['type'] as String;
-                            //     final timestamp = file['timestamp'] as DateTime;
-
-                            //     return Card(
-                            //       margin: const EdgeInsets.only(bottom: 12),
-                            //       child: ListTile(
-                            //         leading: _getFileIcon(fileType),
-                            //         title: Text(
-                            //           fileName,
-                            //           style: const TextStyle(
-                            //             fontWeight: FontWeight.w500,
-                            //           ),
-                            //         ),
-                            //         subtitle: Column(
-                            //           crossAxisAlignment:
-                            //               CrossAxisAlignment.start,
-                            //           children: [
-                            //             Text(
-                            //               _formatFileSize(fileSize),
-                            //               style: TextStyle(
-                            //                 color: Colors.grey.shade600,
-                            //               ),
-                            //             ),
-                            //             Text(
-                            //               _formatTimestamp(timestamp),
-                            //               style: TextStyle(
-                            //                 color: Colors.grey.shade500,
-                            //                 fontSize: 12,
-                            //               ),
-                            //             ),
-                            //           ],
-                            //         ),
-                            //         trailing: PopupMenuButton<String>(
-                            //           onSelected: (value) {
-                            //             if (value == 'save') {
-                            //               _saveFile(filePath, fileName);
-                            //             } else if (value == 'delete') {
-                            //               _deleteFile(index, filePath);
-                            //             }
-                            //           },
-                            //           itemBuilder:
-                            //               (context) => [
-                            //                 const PopupMenuItem(
-                            //                   value: 'save',
-                            //                   child: Row(
-                            //                     children: [
-                            //                       Icon(Icons.save),
-                            //                       SizedBox(width: 8),
-                            //                       Text('Save to Downloads'),
-                            //                     ],
-                            //                   ),
-                            //                 ),
-                            //                 const PopupMenuItem(
-                            //                   value: 'delete',
-                            //                   child: Row(
-                            //                     children: [
-                            //                       Icon(
-                            //                         Icons.delete,
-                            //                         color: Colors.red,
-                            //                       ),
-                            //                       SizedBox(width: 8),
-                            //                       Text('Delete'),
-                            //                     ],
-                            //                   ),
-                            //                 ),
-                            //               ],
-                            //         ),
-                            //         onTap: () {
-                            //           // Could open file preview in future
-                            //           Get.snackbar(
-                            //             'File Ready',
-                            //             'File is available at: ${p.basename(filePath)}',
-                            //             duration: const Duration(seconds: 2),
-                            //           );
-                            //         },
-                            //       ),
-                            //     );
-                            //   },
-                            // );
-
-                            return GridView.builder(
-                              itemCount: files.length,
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 10,
-                                    childAspectRatio: 1,
-                                  ),
-                              itemBuilder: (context, index) {
-                                final file = files[index];
-                                final fileName = file['name'] as String;
-                                final filePath = file['path'] as String;
-                                final fileType = file['type'] as String;
-
-                                return GestureDetector(
-                                  onTap: () async {
-                                    if (fileType == 'image') {
-                                      showDialog(
-                                        context: context,
-                                        builder:
-                                            (_) => Dialog(
-                                              child: InteractiveViewer(
-                                                child: Image.file(
-                                                  File(filePath),
-                                                ),
-                                              ),
+                                child:
+                                    fileType == 'image'
+                                        ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          child: Image.file(
+                                            File(filePath),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        )
+                                        : Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              fileType == 'video'
+                                                  ? Icons.video_file
+                                                  : fileType == 'document'
+                                                  ? Icons.description
+                                                  : fileType == 'apk'
+                                                  ? Icons.android
+                                                  : Icons.insert_drive_file,
+                                              size: 36,
+                                              color: Colors.blueGrey,
                                             ),
-                                      );
-                                    } else {
-                                      try {
-                                        await OpenFilex.open(filePath);
-                                      } catch (e) {
-                                        Get.snackbar(
-                                          "Error",
-                                          "Cannot open file",
-                                        );
-                                      }
-                                    }
-                                  },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade100,
-                                      borderRadius: BorderRadius.circular(10),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.05),
-                                          blurRadius: 6,
-                                        ),
-                                      ],
-                                    ),
-                                    child:
-                                        fileType == 'image'
-                                            ? ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(10),
-                                              child: Image.file(
-                                                File(filePath),
-                                                fit: BoxFit.cover,
-                                              ),
-                                            )
-                                            : Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  fileType == 'video'
-                                                      ? Icons.video_file
-                                                      : fileType == 'document'
-                                                      ? Icons.description
-                                                      : fileType == 'apk'
-                                                      ? Icons.android
-                                                      : Icons.insert_drive_file,
-                                                  size: 36,
-                                                  color: Colors.blueGrey,
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 6,
-                                                      ),
-                                                  child: Text(
-                                                    fileName,
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    textAlign: TextAlign.center,
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                    ),
+                                            const SizedBox(height: 6),
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
                                                   ),
+                                              child: Text(
+                                                fileName,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
                                                 ),
-                                              ],
+                                              ),
                                             ),
-                                  ),
-                                );
-                              },
+                                          ],
+                                        ),
+                              ),
                             );
-                          }),
-                        ),
-                      ],
+                          },
+                        );
+                      }),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

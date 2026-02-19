@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:get/get.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:share_app_latest/services/receiver_readiness_service.dart';
 import '../models/device_info.dart';
 import '../models/file_meta.dart';
 
@@ -132,30 +132,13 @@ class PairingController extends GetxController {
       deviceName.value = actualDeviceName;
       isServer.value = true;
 
-      // Get WiFi IP - try multiple methods
-      final info = NetworkInfo();
-      String? wifiIp = await info.getWifiIP();
-
+      // Get WiFi IP using ReceiverReadinessService (retries, prefers wlan over cellular)
+      String? wifiIp = await ReceiverReadinessService.waitForNetworkReady(
+        timeout: const Duration(seconds: 5),
+      );
       if (wifiIp == null || wifiIp.isEmpty) {
-        print("⚠️ WiFi IP not found via NetworkInfo, trying alternative methods...");
-        // Try to get IP from network interfaces
-        try {
-          final interfaces = await NetworkInterface.list();
-          for (final interface in interfaces) {
-            for (final addr in interface.addresses) {
-              if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-                wifiIp = addr.address;
-                print("📡 Found IP via NetworkInterface: $wifiIp");
-                break;
-              }
-            }
-            if (wifiIp != null) break;
-          }
-        } catch (e) {
-          print("❌ Error getting IP from NetworkInterface: $e");
-        }
+        wifiIp = await ReceiverReadinessService.discoverLocalIp();
       }
-
       if (wifiIp == null || wifiIp.isEmpty) {
         print("❌ No suitable IP found. Falling back to any IPv4.");
         wifiIp = InternetAddress.anyIPv4.address;
@@ -269,29 +252,7 @@ class PairingController extends GetxController {
   Future<void> discover({bool mergeResults = false}) async {
     print('🔍 [DISCOVER] Starting device discovery (merge: $mergeResults)...');
 
-    final info = NetworkInfo();
-    String? localIp = await info.getWifiIP();
-
-    if (localIp == null || localIp.isEmpty) {
-      print("⚠️ [DISCOVER] Local IP not found via NetworkInfo, trying alternative methods...");
-      try {
-        final interfaces = await NetworkInterface.list();
-        for (final interface in interfaces) {
-          for (final addr in interface.addresses) {
-            if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-              localIp = addr.address;
-              print("📡 [DISCOVER] Found local IP via NetworkInterface: $localIp");
-              break;
-            }
-          }
-          if (localIp != null) break;
-        }
-      } catch (e) {
-        print("❌ [DISCOVER] Error getting local IP: $e");
-        return;
-      }
-    }
-
+    String? localIp = await ReceiverReadinessService.discoverLocalIp();
     if (localIp == null || localIp.isEmpty) {
       print("❌ [DISCOVER] Cannot determine local IP for network scanning");
       return;
@@ -377,7 +338,8 @@ class PairingController extends GetxController {
   /// **Side:** SENDER side - connects to receiver devices to verify availability
   /// **Note:** This is a quick connection/close, not for sending file offers (use sendOffer() for that)
   Future<void> pairWith(DeviceInfo device) async {
-    final uri = Uri.parse('ws://${device.ip}:${device.wsPort}');
+    final port = device.wsPort ?? 7070;
+    final uri = Uri.parse('ws://${device.ip}:$port');
     try {
       final ws = await WebSocket.connect(
         uri.toString(),
@@ -386,8 +348,7 @@ class PairingController extends GetxController {
       final jsonMap = jsonDecode(first as String) as Map<String, dynamic>;
       final peer = DeviceInfo.fromJson(jsonMap);
       ws.close();
-      final info = NetworkInfo();
-      final localIp = await info.getWifiIP();
+      final localIp = await ReceiverReadinessService.discoverLocalIp();
       // Don't add our own device to the list
       if (peer.ip != localIp) {
         final existing = devices.where((e) => e.ip == peer.ip).isNotEmpty;
@@ -407,8 +368,10 @@ class PairingController extends GetxController {
   ///          3. Waits for accept/reject response → 4. Returns true if accepted
   /// **Note:** If accepted, the actual file transfer happens via TransferController.sendFile()
   Future<bool> sendOffer(DeviceInfo device, FileMeta meta) async {
-    print('📤 Sending offer to ${device.ip}:${device.wsPort}');
-    final uri = Uri.parse('ws://${device.ip}:${device.wsPort}');
+    final port = device.wsPort ?? 7070;
+    print('📤 Sending offer to ${device.ip}:$port');
+    print('[QR] sendOffer called ip=${device.ip} wsPort=$port');
+    final uri = Uri.parse('ws://${device.ip}:$port');
     WebSocket? ws;
     try {
       ws = await WebSocket.connect(
@@ -419,6 +382,7 @@ class PairingController extends GetxController {
       final offerJson = jsonEncode({'type': 'offer', 'meta': meta.toJson()});
       ws.add(offerJson);
       print('📤 Offer sent: $offerJson');
+      print('[QR] offer sent');
       print('⏳ Waiting for receiver response (10 second timeout)...');
 
       // Listen to all messages and filter for offer_response
@@ -449,9 +413,10 @@ class PairingController extends GetxController {
       }
 
       print('📨 Received offer response: $response');
+      final accepted = response['accept'] == true;
+      print('[QR] response received accept=$accepted');
       await ws.close();
 
-      final accepted = response['accept'] == true;
       print(
         accepted
             ? '✅ Offer accepted by receiver'
@@ -520,7 +485,7 @@ class PairingController extends GetxController {
     final sendPort = params['sendPort'] as SendPort;
     const wsPort = 7070;
     const batchSize = 32; // Parallel connections per batch for fast symmetric discovery
-    const timeoutMs = 280;
+    const timeoutMs = 400;
 
     Future<Map<String, dynamic>?> tryIp(int i) async {
       if (i >= 255) return null;

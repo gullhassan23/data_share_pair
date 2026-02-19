@@ -29,87 +29,90 @@ class _PairingScreenState extends State<PairingScreen>
   final nameCtrl = TextEditingController(text: 'Device');
   late AnimationController _radarCtrl;
   Timer? _discoveryTimer;
+  bool _isReceiver = false;
+  Worker? _devicesWorker;
 
   bool _offerDialogShown = false; // Track if offer dialog is currently showing
+
+  void _maybeNavigateToSelectDevice() {
+    if (!mounted) return;
+    if (_isReceiver) return;
+    if (_navigated) return;
+    if (pairing.devices.isEmpty) return;
+    _navigated = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      Get.to(() => SelectDeviceScreen(devices: pairing.devices.toList()));
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    final args = Get.arguments as Map<String, dynamic>?;
+    _isReceiver = args?['isReceiver'] as bool? ?? false;
+    print('✅ PairingScreen init (isReceiver: $_isReceiver)');
+
     _radarCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
-    // Clear any stale devices from previous sessions before starting fresh scan
     pairing.devices.clear();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _askPermissions();
       await pairing.startServer();
-      pairing.discover();
-      // Periodic discovery so both devices see each other quickly (symmetric, no lag)
-      _discoveryTimer = Timer.periodic(
-        const Duration(milliseconds: 2500),
-        (_) {
+      if (!_isReceiver) {
+        pairing.discover();
+        _discoveryTimer = Timer.periodic(const Duration(milliseconds: 2500), (
+          _,
+        ) {
           if (!mounted) return;
           if (!pairing.isScanning.value) {
             pairing.discover(mergeResults: true);
           }
-        },
-      );
+        });
+      } else {
+        print('✅ WiFi receiver: server started, waiting for sender');
+      }
     });
+    _devicesWorker = ever(
+      pairing.devices,
+      (_) => _maybeNavigateToSelectDevice(),
+    );
   }
 
-  void _pairWithDevice(DeviceInfo device) async {
+  void pairWithDevice(DeviceInfo device) async {
     try {
       print(
         '🔄 Starting pairing process with device: ${device.name} at ${device.ip}',
       );
 
-      // Validate device object
       if (device.ip.isEmpty) {
         print('❌ Error: Device IP is empty');
         Get.snackbar('Error', 'Device IP is not available');
         return;
       }
 
-      // Start WebSocket server for pairing (needed for offers)
+      final args = Get.arguments as Map<String, dynamic>?;
+      final isReceiver = args?['isReceiver'] as bool? ?? false;
+
       await pairing.startServer();
       print('✅ WebSocket server started');
 
-      // Navigate to mode selection page
-      print(
-        '🔄 Navigating to choose file mode for device: ${device.name} at ${device.ip}',
-      );
-      print('🔄 Device object: $device');
-      final result = await AppNavigator.toChooseFile(device: device);
-      print('🔄 Navigation result: $result');
-
-      if (result != null) {
-        final isSender = result['isSender'] as bool;
-        final selectedDevice = result['device'] as DeviceInfo;
-
-        print('🔄 User selected ${isSender ? 'sending' : 'receiving'} mode');
-
-        if (isSender) {
-          // For senders: Navigate to TransferFileScreen to select and send files
-          print('🔄 Navigating to TransferScreen for sending');
-          AppNavigator.toTransferFile(device: selectedDevice);
-        } else {
-          // For receivers: Start transfer server and show snackbar
-          // They will receive offers through the dialog on this page
-          print('🔄 Setting up receiver mode - starting transfer server');
-          final transferController = Get.find<TransferController>();
-          await transferController.startServer();
-
-          Get.snackbar(
-            'Ready to Receive',
-            'Device is ready to receive files. Wait for transfer offers.',
-            backgroundColor: Colors.blue.withOpacity(0.8),
-            colorText: Colors.white,
-            duration: const Duration(seconds: 3),
-          );
-        }
+      if (!isReceiver) {
+        print('🔄 WiFi sender: navigating to TransferFileScreen');
+        AppNavigator.toTransferFile(device: device);
       } else {
-        print('⚠️ User cancelled mode selection');
+        print('🔄 WiFi receiver: starting transfer server');
+        final transferController = Get.find<TransferController>();
+        await transferController.startServer();
+        Get.snackbar(
+          'Ready to Receive',
+          'Device is ready to receive files. Wait for transfer offers.',
+          backgroundColor: Colors.blue.withOpacity(0.8),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
       }
     } catch (e) {
       print('❌ Pairing failed: $e');
@@ -135,6 +138,8 @@ class _PairingScreenState extends State<PairingScreen>
 
   @override
   void dispose() {
+    _devicesWorker?.dispose();
+    _devicesWorker = null;
     _discoveryTimer?.cancel();
     _discoveryTimer = null;
     _radarCtrl.dispose();
@@ -300,7 +305,7 @@ class _PairingScreenState extends State<PairingScreen>
                   ],
                 ),
                 StepProgressBar(
-                  currentStep: 2,
+                  currentStep: 3,
                   totalSteps: kTransferFlowTotalSteps,
                   activeColor: Theme.of(context).colorScheme.primary,
                   inactiveColor: Colors.grey.shade300,
@@ -323,6 +328,15 @@ class _PairingScreenState extends State<PairingScreen>
                   style: GoogleFonts.roboto(
                     fontSize: 13,
                     color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Ensure both devices are on the same Wi-Fi. If you're receiving, open this screen first and wait; then send from the other device.",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.roboto(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
                   ),
                 ),
                 // Radar Views
@@ -614,29 +628,19 @@ class _PairingScreenState extends State<PairingScreen>
                 //   ),
                 // ),
                 Expanded(
-                  child: Obx(() {
-                    if (pairing.devices.isNotEmpty && !_navigated) {
-                      _navigated = true;
-
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        Get.to(
-                          () => SelectDeviceScreen(
-                            devices: pairing.devices.toList(),
-                          ),
-                        );
-                      });
-                    }
-
-                    return Center(
+                  child: Obx(
+                    () => Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(Icons.radar, size: 60, color: Colors.grey),
                           const SizedBox(height: 14),
                           Text(
-                            pairing.devices.isEmpty
-                                ? "Searching for devices..."
-                                : "Device found! Redirecting...",
+                            _isReceiver
+                                ? "Waiting for sender..."
+                                : (pairing.devices.isEmpty
+                                    ? "Searching for devices..."
+                                    : "Device found! Redirecting..."),
                             style: GoogleFonts.roboto(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
@@ -645,8 +649,8 @@ class _PairingScreenState extends State<PairingScreen>
                           ),
                         ],
                       ),
-                    );
-                  }),
+                    ),
+                  ),
                 ),
                 // Bluetooth devices
               ],

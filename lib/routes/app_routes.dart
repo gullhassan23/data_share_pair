@@ -5,8 +5,12 @@ abstract class AppRoutes {
   static const signup = '/signup';
   static const home = '/home';
   static const pairing = '/pairing';
-  static const chooseFile = '/choose-file';
+  static const connectionMethod = '/connection-method';
+  static const qrSender = '/send-scan-qr'; // Sender scans QR
+  static const qrReceiver = '/receive-show-qr'; // Receiver shows QR
   static const transferProgress = '/transfer-progress';
   static const transferFile = '/transfer-file';
+  static const chooseMethod = '/choose-method';
   static const receivedFiles = '/received-files';
+  static const choosemethodscan = '/choose-method-scan';
 }

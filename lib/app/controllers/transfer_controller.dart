@@ -7,33 +7,37 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:share_app_latest/app/controllers/pairing_controller.dart';
+import 'package:share_app_latest/services/transfer_foreground_service.dart';
+import 'package:share_app_latest/services/transfer_state_persistence.dart';
+import 'package:share_app_latest/services/transfer_temp_manager.dart';
+import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/utils/constants.dart';
+
 import '../models/file_meta.dart';
 import '../models/device_info.dart';
 import 'progress_controller.dart';
-import 'pairing_controller.dart';
 
 class TransferController extends GetxController {
+  final sessionState = TransferSessionState.waiting.obs;
   final progress = Get.put(ProgressController());
+  final isCancelled = false.obs;
+  SendPort? _cancelSendPort;
   final receivedFiles = <Map<String, dynamic>>[].obs;
   ServerSocket? _server;
   final serverPort = 9090;
   ReceivePort? _receivePort;
   StreamController<double>? _sendStream;
   StreamController<double>? _recvStream;
+  final _tempManager = TransferTempManager();
 
-  /// Starts the TCP server for receiving file transfers
-  ///
-  /// **Purpose:** Creates a TCP server on port 9090 that listens for incoming file transfers.
-  ///             When a sender connects, it receives the file data and saves it to the device.
-  /// **Why:** This is the actual file transfer server that handles the binary file data transmission
-  /// **When called:** Called automatically by PairingController.respondToOffer() when receiver accepts
-  ///                 a file transfer offer, OR can be called manually to prepare for receiving files
-  /// **Side:** RECEIVER side - receives files from senders
-  /// **Port:** 9090 (TCP for file transfer)
-  /// **Note:** This is DIFFERENT from PairingController.startServer() which uses WebSocket port 7070
-  ///          for device discovery/pairing. This TCP server handles the actual file data transfer.
   Future<void> startServer() async {
+    if (_server != null) {
+      print('✅ TCP server already running on port $serverPort');
+      return;
+    }
     try {
+      sessionState.value = TransferSessionState.waiting;
       print('🔄 Starting TCP server on port $serverPort...');
       _server = await ServerSocket.bind(
         InternetAddress.anyIPv4,
@@ -50,9 +54,7 @@ class TransferController extends GetxController {
     } catch (e) {
       print('❌ Failed to start TCP server: $e');
       progress.error.value = 'Failed to start server: $e';
-      return; // Do not continue if bind failed - avoid _server! null crash
     }
-    // Only reach here if bind succeeded - _server is non-null
     _recvStream = StreamController<double>.broadcast();
     _recvStream!.stream.listen((v) {
       progress.receiveProgress.value = v;
@@ -77,12 +79,12 @@ class TransferController extends GetxController {
       try {
         print('⏳ Starting file reception process...');
 
-        // Reset receiver progress for new transfer
+        // Reset receiver progress for new transfer; set Receiving immediately so UI shows correctly
         progress.receiveProgress.value = 0.0;
         progress.receivedMB.value = 0.0;
         progress.receiveTotalMB.value = 0.0;
         progress.receiveSpeedMBps.value = 0.0;
-        progress.status.value = '';
+        progress.status.value = 'Receiving...';
         progress.error.value = '';
 
         // Step 1: Read metadata first, then continue to file data in the same loop
@@ -117,6 +119,17 @@ class TransferController extends GetxController {
                 );
                 print('📄 File info: ${meta.name} (${meta.size} bytes)');
 
+                // Keep transfer alive when app is backgrounded
+                await TransferForegroundService.startTransferNotification(
+                  isSender: false,
+                  fileName: meta.name,
+                );
+                await TransferStatePersistence.saveTransferStarted(
+                  isSender: false,
+                  fileName: meta.name,
+                  totalBytes: meta.size,
+                );
+
                 // Initialize receiver progress tracking
                 receiveStartTime = DateTime.now();
                 lastReceiveProgressUpdate = receiveStartTime;
@@ -124,9 +137,11 @@ class TransferController extends GetxController {
                 progress.receiveTotalMB.value = totalMB;
                 progress.status.value = 'Receiving...';
 
-                // Initialize file saving
+                // Initialize file saving (always use original filename from metadata)
                 final dir = await getApplicationDocumentsDirectory();
-                savePath = p.join(dir.path, meta.name);
+                final fileName =
+                    meta.name.isNotEmpty ? meta.name : 'received_file';
+                savePath = p.join(dir.path, p.basename(fileName));
                 final tmpPath = '$savePath.part';
 
                 file = File(tmpPath);
@@ -160,17 +175,14 @@ class TransferController extends GetxController {
               // Reading file data - use byte counting instead of EOF markers
               chunkCount++;
 
-              if (sink == null || meta == null) {
-                print('❌ Error: sink or meta is null during file data reception');
-                break;
-              }
-              sink.add(chunk);
+              // Write chunk to file
+              sink!.add(chunk);
               received += chunk.length;
 
               // Log progress every 50 chunks or when near completion
-              if (chunkCount % 50 == 0 || received >= meta.size) {
+              if (chunkCount % 50 == 0 || received >= meta!.size) {
                 print(
-                  '💾 Chunk $chunkCount: total $received / ${meta.size} bytes (${(received / meta.size * 100).toStringAsFixed(1)}%)',
+                  '💾 Chunk $chunkCount: total $received / ${meta!.size} bytes (${(received / meta.size * 100).toStringAsFixed(1)}%)',
                 );
               }
 
@@ -178,6 +190,7 @@ class TransferController extends GetxController {
               final progressValue = received / meta.size;
               _recvStream?.add(progressValue);
               progress.receiveProgress.value = progressValue;
+              TransferStatePersistence.updateProgress(progressValue);
 
               // Calculate and update MB received
               final receivedMB = received / (1024 * 1024);
@@ -198,6 +211,15 @@ class TransferController extends GetxController {
                 lastReceiveProgressUpdate = now;
                 lastReceivedMB = receivedMB;
               }
+
+              TransferForegroundService.updateProgress(
+                fileName: meta.name,
+                progress: progressValue,
+                sentMB: receivedMB,
+                totalMB: meta.size / (1024 * 1024),
+                speedMBps: progress.receiveSpeedMBps.value,
+                isSender: false,
+              );
 
               // Check if we've received all expected bytes
               if (received >= meta.size) {
@@ -256,9 +278,9 @@ class TransferController extends GetxController {
             if (actualSize == meta.size) {
               print('✅ File size matches expected size');
 
-              // Add to received files list
+              // Add to received files list (use path basename if meta.name empty)
               receivedFiles.add({
-                'name': meta.name,
+                'name': meta.name.isNotEmpty ? meta.name : p.basename(savePath),
                 'path': savePath,
                 'size': actualSize,
                 'type': meta.type,
@@ -268,6 +290,10 @@ class TransferController extends GetxController {
 
               // Auto-save images and videos to gallery
               await _autoSaveToGalleryIfMedia(savePath, meta.name);
+
+              sessionState.value = TransferSessionState.completed;
+              await TransferForegroundService.stopTransferNotification();
+              await TransferStatePersistence.clearTransferState();
             } else {
               print(
                 '⚠️ File size mismatch! Expected: ${meta.size}, Actual: $actualSize',
@@ -279,6 +305,9 @@ class TransferController extends GetxController {
         }
       } catch (e) {
         print('❌ Error receiving file: $e');
+        sessionState.value = TransferSessionState.error;
+        await TransferForegroundService.stopTransferNotification();
+        await TransferStatePersistence.clearTransferState();
         if (sink != null) {
           await sink.close();
         }
@@ -291,14 +320,6 @@ class TransferController extends GetxController {
     });
   }
 
-  /// Automatically saves images and videos to gallery after successful reception
-  ///
-  /// **Purpose:** Automatically saves media files (images/videos) to the device gallery
-  ///             immediately after they are successfully received, without requiring user action
-  /// **Why:** Provides seamless experience - media files appear in gallery automatically
-  /// **When called:** Called automatically after file reception is complete and verified
-  /// **Side:** RECEIVER side - auto-saves media files
-  /// **Behavior:** Only saves images/videos, silently skips other file types
   Future<void> _autoSaveToGalleryIfMedia(
     String sourcePath,
     String fileName,
@@ -336,15 +357,6 @@ class TransferController extends GetxController {
     }
   }
 
-  /// Saves a received file to the device's Downloads folder or Gallery
-  ///
-  /// **Purpose:** Moves a file from the app's internal storage to a user-accessible location
-  ///             (Downloads folder for general files, Gallery for images/videos)
-  /// **Why:** Files are initially saved to app documents directory, but users need them in
-  ///          accessible locations like Downloads or Gallery
-  /// **When called:** Called when user taps "Save" or "Download" on a received file
-  /// **Side:** RECEIVER side - saves files after receiving them
-  /// **Behavior:** Images/videos → Gallery, Other files → Downloads folder
   Future<void> saveToDownloads(String sourcePath, String fileName) async {
     try {
       final sourceFile = File(sourcePath);
@@ -413,27 +425,13 @@ class TransferController extends GetxController {
     }
   }
 
-  /// Stops the TCP file transfer server
-  ///
-  /// **Purpose:** Closes the TCP server (port 9090) that was receiving file transfers
-  /// **Why:** Frees up network resources and stops listening for incoming file transfers
-  /// **When called:** Called when user wants to stop receiving files or when app closes
-  /// **Side:** RECEIVER side - stops the file transfer server
-  /// **Note:** This stops the FILE TRANSFER server, not the pairing server (see PairingController.stopServer())
   Future<void> stopServer() async {
     await _server?.close();
     _server = null;
+    sessionState.value = TransferSessionState.waiting;
     await _recvStream?.close();
   }
 
-  /// Loads the list of previously received files from app storage
-  ///
-  /// **Purpose:** Scans the app's documents directory and builds a list of all files that
-  ///             were previously received, including their metadata (name, size, type, timestamp)
-  /// **Why:** Allows the app to display a history of received files even after app restart
-  /// **When called:** Called automatically when startServer() is called, and can be called
-  ///                 manually to refresh the received files list
-  /// **Side:** RECEIVER side - manages received files list
   Future<void> _loadReceivedFiles() async {
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -449,9 +447,9 @@ class TransferController extends GetxController {
           // Determine file type
           String fileType = 'file';
           final ext = p.extension(fileName).toLowerCase();
-          if (['.jpg', '.jpeg', '.png', '.gif'].contains(ext)) {
+          if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(ext)) {
             fileType = 'image';
-          } else if (['.mp4', '.avi', '.mov'].contains(ext)) {
+          } else if (['.mp4', '.avi', '.mov', '.mkv', '.webm'].contains(ext)) {
             fileType = 'video';
           } else if (['.pdf', '.doc', '.docx'].contains(ext)) {
             fileType = 'document';
@@ -472,86 +470,47 @@ class TransferController extends GetxController {
     }
   }
 
-  /// Sends a file to a receiver device over TCP
-  ///
-  /// **Purpose:** Connects to a receiver's TCP server (port 9090) and transmits file data.
-  ///             First sends file metadata, then streams the file bytes, and waits for ACK.
-  /// **Why:** This is the actual file transfer function that sends binary file data after
-  ///          pairing/offer negotiation is complete
-  /// **When called:** Called after PairingController.sendOffer() returns true (offer accepted)
-  /// **Side:** SENDER side - sends files to receivers
-  /// **Flow:** 1. Spawns isolate → 2. Connects to receiver TCP (port 9090) → 3. Sends metadata →
-  ///          4. Streams file data in chunks → 5. Waits for ACK → 6. Closes connection
-  /// **Note:** Runs in a background isolate to avoid blocking UI during large file transfers
-  // Future<void> sendFile(String path, String ip, int port) async {
-  //   print('📤 Starting file transfer: $path -> $ip:$port');
-  //   _sendStream = StreamController<double>.broadcast();
-  //   _sendStream!.stream.listen((v) => progress.sendProgress.value = v);
-  //   _receivePort?.close();
-  //   _receivePort = ReceivePort();
-  //   _receivePort!.listen((dynamic msg) {
-  //     if (msg is double) {
-  //       _sendStream?.add(msg);
-  //     } else if (msg is String) {
-  //       if (msg == 'done') progress.status.value = 'sent';
-  //       if (msg.startsWith('error')) progress.error.value = msg;
-  //     }
-  //   });
-  //   await Isolate.spawn(_sendIsolate, {
-  //     'path': path,
-  //     'ip': ip,
-  //     'port': port,
-  //     'sendPort': _receivePort!.sendPort,
-  //   });
-  // }
-
-  Future<void> sendFile(String path, String ip, int port) async {
-    // ========== VALIDATION: Ensure all args are valid before proceeding ==========
-    if (path.isEmpty) {
-      final err = 'File path is empty. Cannot start transfer.';
-      print('❌ sendFile validation failed: $err');
-      progress.error.value = err;
-      throw Exception(err);
-    }
-    if (ip.isEmpty) {
-      final err = 'Target IP address is empty. Cannot connect to receiver.';
-      print('❌ sendFile validation failed: $err');
-      progress.error.value = err;
-      throw Exception(err);
-    }
-    if (port <= 0 || port > 65535) {
-      final err = 'Target port is invalid ($port). Must be 1-65535.';
-      print('❌ sendFile validation failed: $err');
-      progress.error.value = err;
-      throw Exception(err);
-    }
-
+  /// [senderTempPath] If provided, deleted on success/error/cancel (no garbage)
+  /// [originalFileName] Use when [path] is staging/temp; preserves real name in metadata
+  Future<void> sendFile(
+    String path,
+    String ip,
+    int port, {
+    String? senderTempPath,
+    String? originalFileName,
+  }) async {
     print('📤 Starting file transfer: $path -> $ip:$port');
-    print('🔍 DEBUG: sendFile params validated - path=$path, ip=$ip, port=$port');
 
-    // Reset progress before starting
+    if (senderTempPath != null) _tempManager.registerTemp(senderTempPath);
+
+    // Reset progress and mark as transferring so sender UI shows progress bar
+    isCancelled.value = false;
+    sessionState.value = TransferSessionState.transferring;
     progress.sendProgress.value = 0.0;
     progress.sentMB.value = 0.0;
     progress.speedMBps.value = 0.0;
 
-    final file = File(path);
-    if (!await file.exists()) {
-      final err = 'File does not exist at path: $path';
-      print('❌ sendFile validation failed: $err');
-      progress.error.value = err;
-      throw Exception(err);
-    }
-    final fileSize = await file.length(); // bytes
+    final fileSize = await File(path).length(); // bytes
     final totalMB = fileSize / (1024 * 1024);
     progress.totalMB.value = totalMB;
+    final fileName = originalFileName ?? p.basename(path);
+
+    await TransferForegroundService.startTransferNotification(
+      isSender: true,
+      fileName: fileName,
+    );
+    await TransferStatePersistence.saveTransferStarted(
+      isSender: true,
+      fileName: fileName,
+      totalBytes: fileSize,
+    );
 
     final startTime = DateTime.now(); // ⏱ start time
     DateTime lastUpdateTime = startTime;
     double lastSentMB = 0.0;
 
-    final sendStream = StreamController<double>.broadcast();
-    _sendStream = sendStream;
-    sendStream.stream.listen((v) {
+    _sendStream = StreamController<double>.broadcast();
+    _sendStream!.stream.listen((v) {
       /// v = progress (0.0 - 1.0)
       final now = DateTime.now();
       final elapsed = now.difference(startTime).inMilliseconds / 1000;
@@ -580,13 +539,22 @@ class TransferController extends GetxController {
       }
 
       progress.status.value = "Uploading...";
+      TransferStatePersistence.updateProgress(v);
+      TransferForegroundService.updateProgress(
+        fileName: fileName,
+        progress: v,
+        sentMB: sentMB,
+        totalMB: totalMB,
+        speedMBps: progress.speedMBps.value,
+        isSender: true,
+      );
     });
 
     _receivePort?.close();
-    final receivePort = ReceivePort();
-    _receivePort = receivePort;
+    _receivePort = ReceivePort();
 
-    receivePort.listen((dynamic msg) {
+    final completer = Completer<void>();
+    _receivePort!.listen((dynamic msg) {
       if (msg is double) {
         // Progress update from isolate (0.0 - 1.0)
         _sendStream?.add(msg);
@@ -596,28 +564,34 @@ class TransferController extends GetxController {
           progress.sendProgress.value = 1.0;
           progress.sentMB.value = totalMB;
           progress.speedMBps.value = 0;
+          sessionState.value = TransferSessionState.completed;
+          _tempManager.cleanupCurrentSession();
+          TransferForegroundService.stopTransferNotification();
+          TransferStatePersistence.clearTransferState();
+          if (!completer.isCompleted) completer.complete();
         }
-        if (msg.startsWith('error')) progress.error.value = msg;
+        if (msg.startsWith('error')) {
+          progress.error.value = msg;
+          sessionState.value = TransferSessionState.error;
+          _tempManager.cleanupCurrentSession();
+          TransferForegroundService.stopTransferNotification();
+          TransferStatePersistence.clearTransferState();
+          if (!completer.isCompleted) completer.complete();
+        }
       }
     });
 
-    final isolateSendPort = receivePort.sendPort;
-    print('🔍 DEBUG: About to spawn isolate - path=$path, ip=$ip, port=$port, hasSendPort=${isolateSendPort != null}');
     await Isolate.spawn(_sendIsolate, {
       'path': path,
       'ip': ip,
       'port': port,
-      'sendPort': isolateSendPort,
+      'sendPort': _receivePort!.sendPort,
+      'originalFileName': originalFileName ?? p.basename(path),
     });
+
+    await completer.future;
   }
 
-  /// Opens file picker and returns selected file path
-  ///
-  /// **Purpose:** Handles file selection logic in the controller layer
-  /// **Why:** Keeps file selection business logic out of UI
-  /// **When called:** Called by initiateFileTransfer or directly for custom file selection
-  /// **Side:** SENDER side - file selection
-  /// **Returns:** File path if selected, null if cancelled
   Future<String?> selectFile({
     FileType type = FileType.any,
     List<String>? allowedExtensions,
@@ -637,7 +611,6 @@ class TransferController extends GetxController {
       } else {
         result = await FilePicker.platform.pickFiles(
           type: type,
-          allowedExtensions: allowedExtensions,
           withReadStream: true,
         );
       }
@@ -647,10 +620,6 @@ class TransferController extends GetxController {
       );
       if (result != null && result.files.isNotEmpty) {
         final path = result.files.first.path;
-        if (path == null || path.isEmpty) {
-          print('⚠️ File picker returned null or empty path (e.g. web/streaming mode)');
-          return null;
-        }
         print('📁 Selected file path: $path');
         return path;
       }
@@ -662,23 +631,8 @@ class TransferController extends GetxController {
     return null;
   }
 
-  /// Initiates a complete file transfer to a paired device
-  ///
-  /// **Purpose:** Handles the complete flow of selecting a file, sending offer, and transferring
-  /// **Why:** Centralizes transfer coordination logic in the controller layer
-  /// **When called:** Called from TransferScreen when user wants to send a file
-  /// **Side:** SENDER side - coordinates file selection and transfer
-  /// **Flow:** 1. Select file → 2. Send offer → 3. If accepted, transfer file
   Future<void> initiateFileTransfer(DeviceInfo targetDevice) async {
     try {
-      if (!targetDevice.isValidForTransfer) {
-        final err =
-            'Target device has invalid connection info (IP or port missing/invalid)';
-        print('❌ initiateFileTransfer: $err');
-        progress.error.value = err;
-        throw Exception(err);
-      }
-
       // Step 1: Select file
       final filePath = await selectFile();
       if (filePath == null) {
@@ -699,9 +653,13 @@ class TransferController extends GetxController {
       final accepted = await pairing.sendOffer(targetDevice, meta);
 
       if (accepted) {
-        print('✅ Offer accepted! Starting file transfer...');
-        // Step 4: Transfer the file
-        await sendFile(filePath, targetDevice.ip, targetDevice.transferPort);
+        print('✅ Offer accepted! Navigating to transfer progress...');
+        sessionState.value = TransferSessionState.transferring;
+        await AppNavigator.toTransferProgress(
+          device: targetDevice,
+          filePath: filePath,
+          fileName: p.basename(filePath),
+        );
       } else {
         print('❌ Offer was rejected or timed out');
         throw Exception(
@@ -714,99 +672,15 @@ class TransferController extends GetxController {
     }
   }
 
-  /// Background isolate that handles the actual file transmission
-  ///
-  /// **Purpose:** Runs in a separate isolate to send file data over TCP without blocking the UI.
-  ///             Reads file in chunks, sends to receiver, tracks progress, and waits for ACK.
-  /// **Why:** Large file transfers can take time and would freeze the UI if done on main thread
-  /// **When called:** Spawned by `sendFile()` function when sender initiates file transfer
-  /// **Side:** SENDER side - handles file transmission in background
-  /// **How:** Opens file, connects to receiver TCP socket, sends metadata + file data in 64KB chunks,
-  ///         updates progress, waits for receiver ACK, then closes connection
   static void _sendIsolate(Map<String, dynamic> params) async {
-    // Defensive logging: log param presence before any access
-    print('🔍 DEBUG: _sendIsolate received params - hasSendPort=${params['sendPort'] != null}, hasPath=${params['path'] != null}, hasIp=${params['ip'] != null}, hasPort=${params['port'] != null}');
-
-    final rawSendPort = params['sendPort'];
-    final rawPath = params['path'];
-    final rawIp = params['ip'];
-    final rawPort = params['port'];
-
-    if (rawSendPort == null || rawSendPort is! SendPort) {
-      print('❌ CRITICAL: Isolate sendPort is null or invalid');
-      return; // Cannot report error - no way to reach main isolate
-    }
-    final sendPort = rawSendPort;
-
-    if (rawPath == null || rawPath is! String) {
-      final error = 'Isolate: path is null or invalid type';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-    final path = rawPath;
-
-    if (rawIp == null || rawIp is! String) {
-      final error = 'Isolate: ip is null or invalid type';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-    final ip = rawIp;
-
-    if (rawPort == null || (rawPort is! int && rawPort is! double)) {
-      final error = 'Isolate: port is null or invalid type';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-    final port = (rawPort is int) ? rawPort : (rawPort as double).toInt();
-
-    print('🔍 DEBUG: _sendIsolate started with: path=$path, ip=$ip, port=$port');
-
-    // ========== CRITICAL VALIDATION IN ISOLATE ==========
-    // Validate parameters in isolate
-    if (path.isEmpty) {
-      final error = 'Isolate: File path is empty';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-
-    if (ip.isEmpty) {
-      final error = 'Isolate: IP address is empty';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-
-    if (port <= 0 || port > 65535) {
-      final error = 'Isolate: Invalid port number: $port';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-
+    final sendPort = params['sendPort'] as SendPort;
+    final path = params['path'] as String;
+    final ip = params['ip'] as String;
+    final port = params['port'] as int;
+    final originalFileName = params['originalFileName'] as String?;
     final file = File(path);
-    if (!await file.exists()) {
-      final error = 'Isolate: File does not exist at path: $path';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-
     final size = await file.length();
-    if (size <= 0) {
-      final error = 'Isolate: File is empty or size cannot be determined';
-      print('❌ CRITICAL: $error');
-      sendPort.send('error:$error');
-      return;
-    }
-
-    print('✅ Isolate: All validations passed');
-    print('✅ Isolate: File size: $size bytes');
     print('🔌 Connecting to receiver: $ip:$port');
-
     try {
       final socket = await Socket.connect(
         ip,
@@ -818,9 +692,9 @@ class TransferController extends GetxController {
       print('✅ Connected to receiver TCP socket');
       socket.setOption(SocketOption.tcpNoDelay, true);
 
-      // Send file metadata
+      // Send file metadata (always use original filename, never staging path basename)
       final meta = FileMeta(
-        name: p.basename(path),
+        name: originalFileName ?? p.basename(path),
         size: size,
         type: _extType(path),
       );
@@ -952,17 +826,31 @@ class TransferController extends GetxController {
     }
   }
 
-  /// Determines file type from file extension
-  ///
-  /// **Purpose:** Maps file extensions to file type categories (apk, video, image, file)
-  /// **Why:** Used to categorize files for display and determine how to handle them
-  /// **When called:** Called internally when creating FileMeta objects for file transfers
-  /// **Side:** Used by both sender and receiver
   static String _extType(String path) {
     final ext = p.extension(path).toLowerCase();
     if (ext == '.apk') return 'apk';
     if (ext == '.mp4' || ext == '.mov') return 'video';
     if (ext == '.jpg' || ext == '.jpeg' || ext == '.png') return 'image';
     return 'file';
+  }
+
+  void cancelTransfer() {
+    print('🛑 User requested transfer cancel');
+
+    isCancelled.value = true;
+    sessionState.value = TransferSessionState.error;
+    progress.status.value = 'cancelled';
+
+    _tempManager.cleanupCurrentSession();
+    _cancelSendPort?.send('cancel');
+
+    _sendStream?.close();
+    _recvStream?.close();
+
+    progress.sendProgress.value = 0;
+    progress.receiveProgress.value = 0;
+
+    TransferForegroundService.stopTransferNotification();
+    TransferStatePersistence.clearTransferState();
   }
 }

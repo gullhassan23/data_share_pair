@@ -9,7 +9,6 @@ import 'package:share_app_latest/components/custom_upload_bar.dart';
 
 import 'package:share_app_latest/utils/constants.dart';
 
-
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
@@ -39,11 +38,15 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     final args = Get.arguments;
     print('🔍 DEBUG: TransferProgressScreen raw Get.arguments: $args');
     if (args != null && args is Map) {
-      print('🔍 DEBUG: args keys=${args.keys.toList()}, device type=${args['device']?.runtimeType}, filePath type=${args['filePath']?.runtimeType}, fileName type=${args['fileName']?.runtimeType}');
+      print(
+        '🔍 DEBUG: args keys=${args.keys.toList()}, device type=${args['device']?.runtimeType}, filePath type=${args['filePath']?.runtimeType}, fileName type=${args['fileName']?.runtimeType}',
+      );
     }
 
     if (args == null || args is! Map) {
-      print("❌ Invalid arguments passed to TransferProgressScreen (null or not Map)");
+      print(
+        "❌ Invalid arguments passed to TransferProgressScreen (null or not Map)",
+      );
       _showErrorAndExit('Invalid navigation data. Please try again.');
       return;
     }
@@ -66,7 +69,9 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
 
     if (device == null) {
       print("❌ CRITICAL: Missing device in TransferProgressScreen");
-      _showErrorAndExit('Device information is missing. Please restart the pairing process.');
+      _showErrorAndExit(
+        'Device information is missing. Please restart the pairing process.',
+      );
       return;
     }
 
@@ -81,7 +86,9 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     }
 
     if (deviceTransferPort <= 0) {
-      print("❌ CRITICAL: Device transfer port is invalid in TransferProgressScreen");
+      print(
+        "❌ CRITICAL: Device transfer port is invalid in TransferProgressScreen",
+      );
       _showErrorAndExit('Device transfer port is invalid');
       return;
     }
@@ -135,10 +142,10 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
             duration: const Duration(seconds: 2),
           );
 
-          // Navigate back to ChooseFileScreen after successful transfer
+          // Navigate back to SendReceiveScreen after successful transfer
           Future.delayed(const Duration(seconds: 2), () {
             if (mounted) {
-              AppNavigator.toOnboarding();
+              AppNavigator.toHome();
             }
           });
         } else {
@@ -172,7 +179,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
       print('  - device?.name: ${device?.name}');
       print('  - device?.ip: ${device?.ip}');
       print('  - device?.transferPort: ${device?.transferPort}');
-      
+
       // ========== CRITICAL VALIDATION SECTION ==========
       // Extract filePath safely to avoid null check errors
       final safeFilePath = filePath;
@@ -195,7 +202,9 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
       final safeDevice = device;
       if (safeDevice == null) {
         print('❌ CRITICAL: Device is null in _startTransfer');
-        throw Exception('Device information is missing. Cannot start transfer.');
+        throw Exception(
+          'Device information is missing. Cannot start transfer.',
+        );
       }
       print('✅ Device validated: ${safeDevice.name}');
 
@@ -203,7 +212,9 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
       final deviceIp = safeDevice.ip;
       if (deviceIp.isEmpty) {
         print('❌ CRITICAL: Device IP is empty');
-        throw Exception('Device IP address is missing. Cannot connect to receiver.');
+        throw Exception(
+          'Device IP address is missing. Cannot connect to receiver.',
+        );
       }
       print('✅ Device IP validated: $deviceIp');
 
@@ -211,25 +222,29 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
       final devicePort = safeDevice.transferPort;
       if (devicePort <= 0 || devicePort > 65535) {
         print('❌ CRITICAL: Device transfer port is invalid: $devicePort');
-        throw Exception('Device transfer port is invalid. Cannot connect to receiver.');
+        throw Exception(
+          'Device transfer port is invalid. Cannot connect to receiver.',
+        );
       }
       print('✅ Device port validated: $devicePort');
 
       // Use DeviceInfo helper for consistency
-      if (!safeDevice.isValidForTransfer) {
-        print('❌ CRITICAL: Device failed isValidForTransfer check');
-        throw Exception('Device connection info is invalid. Please restart pairing.');
-      }
+      // if (!safeDevice.isValidForTransfer) {
+      //   print('❌ CRITICAL: Device failed isValidForTransfer check');
+      //   throw Exception('Device connection info is invalid. Please restart pairing.');
+      // }
 
       // ========== ALL VALIDATIONS PASSED ==========
       print("✅ All transfer validations passed");
       print("✅ Sending to: $deviceIp:$devicePort");
       print("✅ File: $safeFilePath (${fileSize} bytes)");
-      print("🔍 DEBUG: Calling sendFile with path=$safeFilePath, ip=$deviceIp, port=$devicePort");
+      print(
+        "🔍 DEBUG: Calling sendFile with path=$safeFilePath, ip=$deviceIp, port=$devicePort",
+      );
 
       // Start the transfer with validated, non-null variables
       await transfer.sendFile(safeFilePath, deviceIp, devicePort);
-      
+
       print("✅ Transfer initiated successfully");
     } catch (e, stackTrace) {
       print("❌ CRITICAL ERROR in _startTransfer: $e");
@@ -403,7 +418,9 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
         // Device Name
         if (device != null)
           Text(
-            isSender ? "To: ${device?.name ?? 'Unknown'}" : "From: ${device?.name ?? 'Unknown'}",
+            isSender
+                ? "To: ${device?.name ?? 'Unknown'}"
+                : "From: ${device?.name ?? 'Unknown'}",
             style: GoogleFonts.roboto(
               fontSize: 12,
               color: Colors.grey.shade500,
@@ -528,12 +545,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: () {
-              final d = device;
-              if (d != null) {
-                AppNavigator.toChooseFile(device: d);
-              } else {
-                Get.back();
-              }
+              AppNavigator.toSendReceive();
             },
             icon: const Icon(Icons.refresh),
             label: const Text("Try Again"),

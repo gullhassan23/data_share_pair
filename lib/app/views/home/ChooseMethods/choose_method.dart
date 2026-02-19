@@ -1,32 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:share_app_latest/app/controllers/progress_controller.dart';
+import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
 
-import 'package:share_app_latest/components/transfer_option_card.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
-import 'package:share_app_latest/utils/images_resource.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class ChooseMethod extends StatefulWidget {
+  const ChooseMethod({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<ChooseMethod> createState() => _ChooseMethodState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Reset all transfer state when entering this screen
-    // This ensures sender side starts fresh after completing a transfer
-    final progress = Get.find<ProgressController>();
-    progress.reset();
-    print('✅ Transfer state reset in SendReceiveScreen');
-  }
-
+class _ChooseMethodState extends State<ChooseMethod> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,6 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 40),
+
+              /// Main White Card
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(18),
@@ -76,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   children: [
                     Text(
-                      "Start Transfer",
+                      "Choose Transfer Method",
                       style: GoogleFonts.roboto(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -84,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Send files to another device or receive files.",
+                      "Use either our core transfer method through\nWiFi or rely on third party services.",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.roboto(
                         fontSize: 14,
@@ -96,64 +85,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     Divider(color: Colors.grey.shade300),
 
                     const SizedBox(height: 20),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        TransferOptionCard(
-                          title: "Send Files",
-                          image: ImageRes.sendFiles,
-                          onTap: () => AppNavigator.toConnectionMethod(isReceiver: false),
+                        TransferOptionIconCard(
+                          title: "WiFi",
+                          icon: Icons.wifi,
+                          onTap: () => AppNavigator.tochooseMethodscan(),
+                          // onTap: () => AppNavigator.toPairing(),
                         ),
 
-                        TransferOptionCard(
-                          title: 'Receive Files',
-                          image: ImageRes.recieveFiles,
-                          onTap: () => AppNavigator.toConnectionMethod(isReceiver: true),
+                        TransferOptionIconCard(
+                          title: 'Bluetooth',
+
+                          icon: Icons.bluetooth_rounded,
+                          onTap: () => null,
+                          // onTap: () => AppNavigator.toBluetoothConnection(),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-
-              /// ACTION BUTTONS
-              // Padding(
-              //   padding: const EdgeInsets.all(8.0),
-              //   child: Row(
-              //     mainAxisAlignment: MainAxisAlignment.center,
-              //     children: [
-              //       // Send Button
-              //       Expanded(
-              //         child: Custombutton(
-              //           textColor: Colors.white,
-              //           colors: [Color(0xff04E0FF), Color(0xff6868FF)],
-              //           text: "Send Files",
-              //           ontap: () async {
-              //             // Show file selection dialog first
-              //             // _showFileSelectionDialog();
-              //             // showSendOptions(context );
-              //             showSendOptions(context);
-              //           },
-              //         ),
-              //       ),
-
-              //       const SizedBox(width: 16),
-
-              //       // Receive Button
-              //       Expanded(
-              //         child: Custombutton(
-              //           textColor: Colors.white,
-              //           colors: [Color(0xffFF6B6B), Color(0xffFF8E53)],
-              //           text: "Receive Files",
-              //           ontap: () {
-              //             showReceiveOptions(context);
-              //             // AppNavigator.toQrReceiver();
-              //           },
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
             ],
           ),
         ),

@@ -21,36 +21,56 @@ class AppNavigator {
     Get.toNamed(AppRoutes.signup);
   }
 
+  static void tochooseMethod() {
+    Get.toNamed(AppRoutes.chooseMethod);
+  }
+
+  static void tochooseMethodscan() {
+    Get.toNamed(AppRoutes.choosemethodscan);
+  }
+
   static void toHome() {
     Get.offAllNamed(AppRoutes.home);
   }
 
-  // static void toChooseFile() {
-  //   Get.offAllNamed(AppRoutes.chooseFile);
-  // }
- static Future<dynamic>? toTransferProgress({
+  static void toSendReceive() {
+    Get.offAllNamed(AppRoutes.home);
+  }
+
+  static Future<dynamic>? toTransferProgress({
     required DeviceInfo device,
     required String filePath,
     required String fileName,
   }) {
     return Get.toNamed(
       AppRoutes.transferProgress,
-      arguments: {
-        'device': device,
-        'filePath': filePath,
-        'fileName': fileName,
-      },
+      arguments: {'device': device, 'filePath': filePath, 'fileName': fileName},
     );
   }
-  static void toPairing() {
-    Get.toNamed(AppRoutes.pairing);
+
+  static void toPairing({required bool isReceiver}) {
+    Get.toNamed(
+      AppRoutes.pairing,
+      arguments: <String, dynamic>{'isReceiver': isReceiver},
+    );
   }
 
-  // static void toChooseFile({required DeviceInfo device}) {
-  //   Get.toNamed(AppRoutes.chooseFile, arguments: device);
-  // }
-  static Future<dynamic>? toChooseFile({required DeviceInfo device}) {
-    return Get.toNamed(AppRoutes.chooseFile, arguments: device);
+  static void toConnectionMethod({required bool isReceiver}) {
+    Get.toNamed(
+      AppRoutes.connectionMethod,
+      arguments: <String, dynamic>{'isReceiver': isReceiver},
+    );
+  }
+
+  static void toQrSender(List<String> selectedFilePaths) {
+    Get.toNamed(
+      AppRoutes.qrSender,
+      arguments: <String, dynamic>{'selectedFiles': selectedFilePaths},
+    );
+  }
+
+  static void toQrReceiver() {
+    Get.toNamed(AppRoutes.qrReceiver);
   }
 
   static Future<dynamic>? toTransferFile({required DeviceInfo device}) {
