@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -485,11 +486,10 @@ class PairingController extends GetxController {
     final port = receiver.wsPort ?? 7070;
     final uri = Uri.parse('ws://${receiver.ip}:$port');
     WebSocket? ws;
+    StreamSubscription? sub;
     try {
       ws = await WebSocket.connect(uri.toString())
           .timeout(const Duration(seconds: 5));
-      // First message is receiver's device_info; consume it
-      await ws.first;
       final senderName = deviceName.value.trim().isNotEmpty
           ? deviceName.value.trim()
           : await _getDeviceName();
@@ -500,28 +500,50 @@ class PairingController extends GetxController {
         wsPort: wsPort,
         transferPort: transferPort,
       );
-      ws.add(jsonEncode({
+      final handshakeJson = jsonEncode({
         'type': 'pairing_handshake',
         'sender': senderInfo.toJson(),
-      }));
-      final response = await ws
-          .timeout(const Duration(seconds: 10))
-          .map((e) {
-            try {
-              return jsonDecode(e as String) as Map<String, dynamic>;
-            } catch (_) {
-              return <String, dynamic>{};
+      });
+      final completer = Completer<bool>();
+      var gotFirst = false;
+      sub = ws.listen(
+        (data) {
+          if (completer.isCompleted) return;
+          try {
+            final m = jsonDecode(data as String) as Map<String, dynamic>;
+            if (!gotFirst) {
+              gotFirst = true;
+              ws?.add(handshakeJson);
+              return;
             }
-          })
-          .firstWhere(
-            (m) => m['type'] == 'receiver_confirmed',
-            orElse: () => <String, dynamic>{'type': 'timeout'},
-          );
-      await ws.close();
-      return response['type'] == 'receiver_confirmed';
+            if (m['type'] == 'receiver_confirmed') {
+              completer.complete(true);
+              sub?.cancel();
+              ws?.close();
+            }
+          } catch (_) {}
+        },
+        onError: (e, st) {
+          if (!completer.isCompleted) completer.completeError(e, st);
+        },
+        onDone: () {
+          if (!completer.isCompleted) completer.complete(false);
+        },
+        cancelOnError: false,
+      );
+      final result = await completer.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          sub?.cancel();
+          ws?.close();
+          return false;
+        },
+      );
+      return result;
     } catch (e) {
       print('❌ confirmReceiverReady failed: $e');
       try {
+        sub?.cancel();
         await ws?.close();
       } catch (_) {}
       return false;

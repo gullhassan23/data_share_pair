@@ -8,6 +8,7 @@ import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import '../../../controllers/pairing_controller.dart';
+import '../../../controllers/QR_controller.dart';
 import '../../../controllers/transfer_controller.dart';
 import '../../../models/file_meta.dart';
 import '../../../models/device_info.dart';
@@ -68,6 +69,13 @@ class _PairingScreenState extends State<PairingScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _askPermissions();
+      // Free port 7070 and clear QR state so Wi‑Fi Direct flow can use it
+      final qrController = Get.find<QrController>();
+      await qrController.stopServer();
+      await qrController.stopP2P();
+      qrController.devices.clear();
+      qrController.incomingOffer.value = null;
+      qrController.incomingPairingRequest.value = null;
       await pairing.startServer();
       pairing.discover();
       // Periodic discovery so receiver gets sender reliably (mergeResults: true)
@@ -156,6 +164,10 @@ class _PairingScreenState extends State<PairingScreen>
     _discoveryTimer = null;
     _radarCtrl.dispose();
     nameCtrl.dispose();
+    // Free port 7070 and clear state so QR flow can use it when user switches
+    pairing.stopServer();
+    pairing.devices.clear();
+    pairing.incomingOffer.value = null;
     super.dispose();
   }
 

@@ -17,6 +17,7 @@ import 'package:vibration/vibration.dart';
 
 import '../../../controllers/hotspot_controller.dart';
 import '../../../controllers/QR_controller.dart';
+import '../../../controllers/pairing_controller.dart';
 import '../../../../routes/app_navigator.dart';
 
 class QrReceiverDisplayScreen extends StatefulWidget {
@@ -141,6 +142,11 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     });
 
     try {
+      // Free port 7070 and clear Wi‑Fi Direct state so QR flow can use it
+      final pairing = Get.find<PairingController>();
+      await pairing.stopServer();
+      pairing.devices.clear();
+      pairing.incomingOffer.value = null;
       await qrController.stopServer();
       await fileTransferController.stopServer();
       if (Platform.isAndroid) {
@@ -173,6 +179,11 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
       if (!mounted) return;
 
       _startHotspot();
+      if (!mounted) return;
+
+      // Start Wi‑Fi P2P discovery so this device can be found (e.g. when not on same Wi‑Fi).
+      // Non-blocking: receiver UI is already usable via pairing server; P2P is an extra path.
+      initP2P();
     } catch (e) {
       print('❌ Receiver init failed: $e');
       if (mounted) {
@@ -197,24 +208,67 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   }
 
   Future<void> initP2P() async {
-    await qrController.startP2P();
+    try {
+      final started = await qrController.startP2P();
+      if (!mounted) return;
 
-    // ❗ ONLY show error if NO network at all
-    if (!_hasUsableNetwork && mounted) {
-      Get.dialog(
-        AlertDialog(
-          title: const Text('No Network Available'),
-          content: const Text(
-            'Please connect both devices to the same Wi-Fi or enable Hotspot.',
+      if (!started) {
+        // P2P discovery failed but we may still have pairing server over Wi‑Fi
+        if (_hasUsableNetwork) {
+          if (mounted) {
+            Get.snackbar(
+              'Wi‑Fi Direct unavailable',
+              'You can still receive via same Wi‑Fi or hotspot.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.orange.withOpacity(0.9),
+              colorText: Colors.white,
+              duration: const Duration(seconds: 4),
+            );
+          }
+        } else {
+          Get.dialog(
+            AlertDialog(
+              title: const Text('No Network Available'),
+              content: const Text(
+                'Please connect both devices to the same Wi-Fi or enable Hotspot.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      // ❗ ONLY show error dialog if NO network at all (startP2P succeeded but no connectivity)
+      if (!_hasUsableNetwork && mounted) {
+        Get.dialog(
+          AlertDialog(
+            title: const Text('No Network Available'),
+            content: const Text(
+              'Please connect both devices to the same Wi-Fi or enable Hotspot.',
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      print('❌ initP2P failed: $e');
+      if (mounted && _hasUsableNetwork) {
+        Get.snackbar(
+          'Wi‑Fi Direct unavailable',
+          'You can still receive via same Wi‑Fi or hotspot.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange.withOpacity(0.9),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      }
     }
   }
 
   void _showIncomingPairDialog(Map<String, dynamic> request) async {
     if (_pairingDialogShown) return;
     _pairingDialogShown = true;
+    // Clear so a delayed duplicate doesn't trigger the popup again after user accepts
+    qrController.incomingPairingRequest.value = null;
     final fromIp = request['fromIp'] as String;
     final senderName = request['senderName'] as String? ?? 'Unknown';
     bool responded = false;
@@ -334,6 +388,9 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   @override
   void dispose() {
     _pairingDialogShown = false;
+    // Free port 7070 and P2P so Wi‑Fi Direct flow can use them when user switches
+    qrController.stopServer();
+    qrController.stopP2P();
     super.dispose();
   }
 

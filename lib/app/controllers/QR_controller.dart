@@ -958,6 +958,11 @@ class QrController extends GetxController {
                 if (map['type'] == 'pairing_request') {
                   final senderName = map['senderName'] as String? ?? 'Unknown';
                   print("[QR] Pairing request received from $fromIp (senderName: $senderName)");
+                  // Only show pairing popup once per sender: ignore duplicate connection from same IP
+                  if (_pendingSockets.containsKey(fromIp)) {
+                    print("[QR] Ignoring duplicate pairing_request from $fromIp (popup already shown)");
+                    return;
+                  }
                   _pendingSockets[fromIp] = socket;
                   incomingPairingRequest.value = {
                     'fromIp': fromIp,
