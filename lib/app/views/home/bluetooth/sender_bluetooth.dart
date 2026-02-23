@@ -27,11 +27,14 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
     if (!mounted) return;
     if (_navigated) return;
     if (bluetooth.devices.isEmpty) return;
+    _navigateToSelectDevice();
+  }
 
+  void _navigateToSelectDevice() {
+    if (!mounted || _navigated) return;
     _navigated = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Bluetooth list comes from bluetooth.devices in SelectDeviceScreen; pass empty list.
       Get.to(
         () => SelectDeviceScreen(
           devices: const [],
@@ -46,6 +49,15 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
     super.initState();
     bluetooth = Get.put(BluetoothController(), tag: "sender");
 
+    // If already connected, go straight to select device screen (shows "Already connected")
+    if (bluetooth.connectedDevice.value != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _navigateToSelectDevice();
+      });
+      return;
+    }
+
     // Watch for scanned devices and navigate when at least one is found
     _devicesWorker = ever(
       bluetooth.devices,
@@ -54,6 +66,7 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
 
     // Request permissions and start scanning
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final granted = await askPermissions();
       if (!granted) {
         bluetooth.error.value = 'Bluetooth permission denied';
@@ -140,6 +153,34 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
                 child: Obx(() {
                   if (bluetooth.error.value.isNotEmpty) {
                     return _ErrorView(bluetooth.error.value);
+                  }
+                  // Already connected → navigating to select device (shows connected device)
+                  if (bluetooth.connectedDevice.value != null) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.bluetooth_connected, size: 64, color: Colors.green.shade700),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Already connected',
+                            style: GoogleFonts.roboto(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Opening device selection...',
+                            style: GoogleFonts.roboto(
+                              fontSize: 14,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   }
                   if (bluetooth.isScanning.value) {
                     return _SearchingView(bluetooth);

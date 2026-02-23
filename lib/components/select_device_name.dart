@@ -145,6 +145,37 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                         ),
                       );
                     }
+                    // Already connected: show the connected device (no scan list)
+                    final connected = bluetooth.connectedDevice.value;
+                    if (connected != null) {
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              "Already connected",
+                              style: GoogleFonts.roboto(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "You are connected to the device below. Tap to send files or disconnect.",
+                              style: GoogleFonts.roboto(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _BluetoothDeviceTile(
+                              device: connected,
+                              bluetooth: bluetooth,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
                     final devices = bluetooth.devices;
                     if (bluetooth.isScanning.value && devices.isEmpty) {
                       return Center(
