@@ -1,24 +1,37 @@
 import 'dart:io';
 
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:ui_background_task/ui_background_task.dart';
 
-/// Wraps flutter_foreground_task to keep transfers alive when app is backgrounded.
+/// Wraps flutter_foreground_task (Android) and ui_background_task (iOS) to keep transfers alive when app is backgrounded.
 /// - Android: Foreground service with notification prevents process kill
+/// - iOS: beginBackgroundTask gives ~30s to finish; long transfers should stay in foreground
 /// - Transfer logic runs in main process; service only keeps it alive
 /// - NEVER cancel transfer on lifecycle — only on explicit user cancel
 class TransferForegroundService {
   static const int _serviceId = 0x54464253; // "TFBS" hex
+
+  /// iOS: task ID from beginBackgroundTask; end when transfer completes/fails.
+  static int? _iosBackgroundTaskId;
 
   /// Call from main() before runApp
   static void init() {
     FlutterForegroundTask.initCommunicationPort();
   }
 
-  /// Start foreground service when transfer begins. Keeps process alive.
+  /// Start foreground service (Android) or background task (iOS) when transfer begins.
   static Future<bool> startTransferNotification({
     required bool isSender,
     required String fileName,
   }) async {
+    if (Platform.isIOS) {
+      try {
+        _iosBackgroundTaskId = await UiBackgroundTask.instance.beginBackgroundTask();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
     if (!Platform.isAndroid) return true;
 
     try {
@@ -74,8 +87,18 @@ class TransferForegroundService {
     } catch (_) {}
   }
 
-  /// Stop foreground service when transfer completes or user cancels.
+  /// Stop foreground service (Android) or end background task (iOS) when transfer completes or user cancels.
   static Future<void> stopTransferNotification() async {
+    if (Platform.isIOS) {
+      final taskId = _iosBackgroundTaskId;
+      _iosBackgroundTaskId = null;
+      if (taskId != null) {
+        try {
+          await UiBackgroundTask.instance.endBackgroundTask(taskId);
+        } catch (_) {}
+      }
+      return;
+    }
     if (!Platform.isAndroid) return;
 
     try {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/services/transfer_state_persistence.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -39,8 +40,14 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
-  void _goNext() {
-    AppNavigator.toOnboarding();
+  void _goNext() async {
+    final hadTransfer = await TransferStatePersistence.hadTransferInProgress();
+    if (hadTransfer) {
+      final persisted = await TransferStatePersistence.getPersistedState();
+      AppNavigator.toTransferRecovery(persisted);
+    } else {
+      AppNavigator.toOnboarding();
+    }
   }
 
   @override

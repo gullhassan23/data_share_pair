@@ -81,6 +81,11 @@ class AppNavigator {
     Get.toNamed(AppRoutes.receivedFiles, arguments: device);
   }
 
+  /// Navigate to transfer recovery screen (after app relaunch when a transfer was interrupted).
+  static void toTransferRecovery(Object? persistedState) {
+    Get.offNamed(AppRoutes.transferRecovery, arguments: persistedState);
+  }
+
   static void back() {
     if (Get.key.currentState?.canPop() ?? false) {
       Get.back();

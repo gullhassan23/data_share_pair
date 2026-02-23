@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -30,6 +31,56 @@ class TransferController extends GetxController {
   StreamController<double>? _sendStream;
   StreamController<double>? _recvStream;
   final _tempManager = TransferTempManager();
+
+  Worker? _completionWorker;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _completionWorker = ever<String>(progress.status, _onTransferStatusChanged);
+  }
+
+  @override
+  void onClose() {
+    _completionWorker?.dispose();
+    super.onClose();
+  }
+
+  /// Handles transfer completion (sent/received) from a long-lived controller so completion
+  /// runs even when TransferProgressScreen is disposed (e.g. app backgrounded).
+  void _onTransferStatusChanged(String status) {
+    final isSuccess = status == 'sent' || status == 'received';
+    final hasError = progress.error.value.isNotEmpty;
+    if (!isSuccess || hasError) return;
+
+    if (status == 'sent') {
+      print('✅ File successfully sent to receiver!');
+      Get.snackbar(
+        'Transfer Completed',
+        'Your file transferred successfully 🎉',
+        backgroundColor: Colors.green.withOpacity(0.8),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+      Future.delayed(const Duration(seconds: 2), () {
+        AppNavigator.toHome();
+      });
+    } else if (status == 'received') {
+      print('✅ File successfully received from sender!');
+      Get.snackbar(
+        'Transfer Completed',
+        'File received successfully 🎉',
+        backgroundColor: Colors.green.withOpacity(0.8),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+      Future.delayed(const Duration(seconds: 2), () {
+        AppNavigator.toReceivedFiles(device: null);
+      });
+    }
+  }
 
   Future<void> startServer() async {
     if (_server != null) {
@@ -79,11 +130,8 @@ class TransferController extends GetxController {
       try {
         print('⏳ Starting file reception process...');
 
-        // Reset receiver progress for new transfer; set Receiving immediately so UI shows correctly
-        progress.receiveProgress.value = 0.0;
-        progress.receivedMB.value = 0.0;
-        progress.receiveTotalMB.value = 0.0;
-        progress.receiveSpeedMBps.value = 0.0;
+        // Reset progress for new receiver connection (single source of truth; do not reset in UI dispose)
+        progress.reset();
         progress.status.value = 'Receiving...';
         progress.error.value = '';
 
@@ -315,7 +363,8 @@ class TransferController extends GetxController {
           await file.delete();
         }
         client.destroy();
-        progress.error.value = 'receive_failed';
+        progress.error.value =
+            'Connection lost. The sender may have closed the app or turned off. Try again.';
       }
     });
   }
@@ -483,7 +532,8 @@ class TransferController extends GetxController {
 
     if (senderTempPath != null) _tempManager.registerTemp(senderTempPath);
 
-    // Reset progress and mark as transferring so sender UI shows progress bar
+    // Reset progress when starting a new transfer (single source of truth; do not reset in UI dispose)
+    progress.reset();
     isCancelled.value = false;
     sessionState.value = TransferSessionState.transferring;
     progress.sendProgress.value = 0.0;
@@ -571,7 +621,7 @@ class TransferController extends GetxController {
           if (!completer.isCompleted) completer.complete();
         }
         if (msg.startsWith('error')) {
-          progress.error.value = msg;
+          progress.error.value = msg.length > 6 ? msg.substring(6) : msg;
           sessionState.value = TransferSessionState.error;
           _tempManager.cleanupCurrentSession();
           TransferForegroundService.stopTransferNotification();
@@ -672,6 +722,11 @@ class TransferController extends GetxController {
     }
   }
 
+  /// Max connection attempts (initial + retries)
+  static const int _senderMaxAttempts = 3;
+  /// Backoff delays in ms between attempts: after 1st failure wait 2s, after 2nd wait 5s
+  static const List<int> _senderBackoffMs = [2000, 5000];
+
   static void _sendIsolate(Map<String, dynamic> params) async {
     final sendPort = params['sendPort'] as SendPort;
     final path = params['path'] as String;
@@ -680,16 +735,38 @@ class TransferController extends GetxController {
     final originalFileName = params['originalFileName'] as String?;
     final file = File(path);
     final size = await file.length();
-    print('🔌 Connecting to receiver: $ip:$port');
+    Socket? socket;
+    Exception? lastError;
+    for (int attempt = 1; attempt <= _senderMaxAttempts; attempt++) {
+      print('🔌 Connecting to receiver: $ip:$port (attempt $attempt/$_senderMaxAttempts)');
+      try {
+        socket = await Socket.connect(
+          ip,
+          port,
+          timeout: const Duration(seconds: 10),
+        );
+        print('✅ Connected to receiver TCP socket');
+        lastError = null;
+        break;
+      } catch (e) {
+        lastError = e is Exception ? e : Exception(e.toString());
+        print('❌ Connection attempt $attempt failed: $e');
+        if (attempt < _senderMaxAttempts) {
+          final delayMs = _senderBackoffMs[attempt - 1];
+          print('⏳ Retrying in ${delayMs}ms...');
+          await Future.delayed(Duration(milliseconds: delayMs));
+        }
+      }
+    }
+    if (socket == null) {
+      final msg = lastError != null
+          ? 'Connection lost. The other device may be off or the app closed. Try again.'
+          : 'Could not connect to receiver. Try again.';
+      print('❌ Error sending file after $_senderMaxAttempts attempts: $lastError');
+      sendPort.send('error:$msg');
+      return;
+    }
     try {
-      final socket = await Socket.connect(
-        ip,
-        port,
-        timeout: const Duration(
-          seconds: 10,
-        ), // Increased timeout for Wi-Fi latency
-      );
-      print('✅ Connected to receiver TCP socket');
       socket.setOption(SocketOption.tcpNoDelay, true);
 
       // Send file metadata (always use original filename, never staging path basename)
@@ -822,7 +899,12 @@ class TransferController extends GetxController {
       sendPort.send('done');
     } catch (e) {
       print('❌ Error sending file: $e');
-      sendPort.send('error:$e');
+      final msg = e is SocketException
+          ? 'Connection lost. The other device may be off or the app closed. Try again.'
+          : (e is Exception ? e.toString() : 'Transfer failed. Try again.');
+      sendPort.send('error:$msg');
+    } finally {
+      socket.destroy();
     }
   }
 

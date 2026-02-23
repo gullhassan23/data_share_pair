@@ -9,6 +9,7 @@ abstract class AppRoutes {
   static const qrSender = '/send-scan-qr'; // Sender scans QR
   static const qrReceiver = '/receive-show-qr'; // Receiver shows QR
   static const transferProgress = '/transfer-progress';
+  static const transferRecovery = '/transfer-recovery';
   static const transferFile = '/transfer-file';
   static const chooseMethod = '/choose-method';
   static const receivedFiles = '/received-files';

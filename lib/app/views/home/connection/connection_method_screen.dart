@@ -43,12 +43,31 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
         child: SafeArea(
           child: Column(
             children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Get.back();
+                    },
+                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Back",
+                    style: GoogleFonts.roboto(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 19),
               StepProgressBar(
                 currentStep: 2,
                 totalSteps: kTransferFlowTotalSteps,
-                activeColor: Colors.blue,
-                inactiveColor: Colors.white.withOpacity(0.6),
+                activeColor: Theme.of(context).colorScheme.primary,
+                inactiveColor: Colors.grey.shade300,
                 height: 6,
                 segmentSpacing: 5,
                 padding: const EdgeInsets.symmetric(horizontal: 24),

@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -32,6 +33,25 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
           child: Column(
             children: [
               const SizedBox(height: 19),
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Get.back();
+                    },
+                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Back",
+                    style: GoogleFonts.roboto(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
 
               /// Back Row
 
@@ -39,8 +59,8 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
               StepProgressBar(
                 currentStep: 2,
                 totalSteps: kTransferFlowTotalSteps,
-                activeColor: Colors.blue,
-                inactiveColor: Colors.white.withOpacity(0.6),
+                activeColor: Theme.of(context).colorScheme.primary,
+                inactiveColor: Colors.grey.shade300,
                 height: 6,
                 segmentSpacing: 5,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -95,7 +115,9 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                           icon: Icons.wifi,
 
                           onTap:
-                              () => AppNavigator.toPairing(isReceiver: widget.isReciver),
+                              () => AppNavigator.toPairing(
+                                isReceiver: widget.isReciver,
+                              ),
                         ),
                         TransferOptionIconCard(
                           title: "QR",

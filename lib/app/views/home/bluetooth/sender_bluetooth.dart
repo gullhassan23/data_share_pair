@@ -5,7 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 
-
 import 'package:share_app_latest/components/select_device_name.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
@@ -32,7 +31,13 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
     _navigated = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Get.to(() => SelectDeviceScreen(devices: const [], isBluetooth: true));
+      // Bluetooth list comes from bluetooth.devices in SelectDeviceScreen; pass empty list.
+      Get.to(
+        () => SelectDeviceScreen(
+          devices: const [],
+          isBluetooth: true,
+        ),
+      );
     });
   }
 
@@ -116,6 +121,18 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
                   color: Colors.blue,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  'Make sure the receiver has opened Receive via Bluetooth.',
+                  style: GoogleFonts.roboto(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
               // Main Content

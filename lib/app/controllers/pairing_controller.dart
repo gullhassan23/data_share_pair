@@ -205,6 +205,40 @@ class PairingController extends GetxController {
                   };
 
                   print("✅ incomingOffer set for UI: ${incomingOffer.value}");
+                } else if (map['type'] == 'discovery_peer') {
+                  final peerIp = map['ip'] as String?;
+                  final peerName = (map['name'] as String?)?.trim() ?? 'Unknown';
+                  if (peerIp == null ||
+                      peerIp.isEmpty ||
+                      peerIp == wifiIp ||
+                      peerIp == InternetAddress.anyIPv4.address) {
+                    return;
+                  }
+                  final peer = DeviceInfo(
+                    name: peerName,
+                    ip: peerIp,
+                    wsPort: (map['wsPort'] as num?)?.toInt() ?? 7070,
+                    transferPort:
+                        (map['transferPort'] as num?)?.toInt() ?? 9090,
+                  );
+                  final existingIndex =
+                      devices.indexWhere((e) => e.ip == peer.ip);
+                  if (existingIndex >= 0) {
+                    devices[existingIndex] = peer;
+                  } else {
+                    devices.add(peer);
+                  }
+                  devices.refresh();
+                  print(
+                    "✅ [discovery_peer] Added/updated sender: $peerName at $peerIp",
+                  );
+                } else if (map['type'] == 'pairing_handshake') {
+                  print("📥 Pairing handshake from $remoteIp, confirming...");
+                  try {
+                    socket.add(jsonEncode({'type': 'receiver_confirmed'}));
+                  } catch (e) {
+                    print("❌ Error sending receiver_confirmed: $e");
+                  }
                 }
               } catch (e) {
                 print("❌ Error parsing socket data: $e");
@@ -313,6 +347,8 @@ class PairingController extends GetxController {
               '✅ [DISCOVER] Added actively responding device: ${d.name} at ${d.ip} (${devices.length} total)',
             );
           }
+          // Force reactive update so ever(devices) in PairingScreen fires immediately
+          devices.refresh();
         } catch (e) {
           print('❌ [DISCOVER] Error parsing device info: $e');
         }
@@ -323,9 +359,14 @@ class PairingController extends GetxController {
     });
 
     final sendPort = _scanReceivePort!.sendPort;
+    final myName = deviceName.value.trim().isNotEmpty
+        ? deviceName.value.trim()
+        : await _getDeviceName();
     await Isolate.spawn(_scanIsolate, {
       'prefix': prefix,
       'sendPort': sendPort,
+      'myName': myName,
+      'myIp': localIp,
     });
   }
 
@@ -433,6 +474,60 @@ class PairingController extends GetxController {
     }
   }
 
+  /// Confirms that the receiver is ready before sender navigates to transfer.
+  ///
+  /// **Purpose:** Sender connects to receiver, sends pairing_handshake with sender info,
+  ///             waits for receiver_confirmed so navigation only happens after receiver is ready.
+  /// **Why:** Ensures receiver has detected sender and is ready before transfer screen opens.
+  /// **When called:** From SelectDeviceScreen when sender taps a receiver device (Wi‑Fi path).
+  /// **Side:** SENDER side - initiates handshake; RECEIVER side handles in server socket.listen.
+  Future<bool> confirmReceiverReady(DeviceInfo receiver) async {
+    final port = receiver.wsPort ?? 7070;
+    final uri = Uri.parse('ws://${receiver.ip}:$port');
+    WebSocket? ws;
+    try {
+      ws = await WebSocket.connect(uri.toString())
+          .timeout(const Duration(seconds: 5));
+      // First message is receiver's device_info; consume it
+      await ws.first;
+      final senderName = deviceName.value.trim().isNotEmpty
+          ? deviceName.value.trim()
+          : await _getDeviceName();
+      final senderIp = await ReceiverReadinessService.discoverLocalIp() ?? '';
+      final senderInfo = DeviceInfo(
+        name: senderName,
+        ip: senderIp,
+        wsPort: wsPort,
+        transferPort: transferPort,
+      );
+      ws.add(jsonEncode({
+        'type': 'pairing_handshake',
+        'sender': senderInfo.toJson(),
+      }));
+      final response = await ws
+          .timeout(const Duration(seconds: 10))
+          .map((e) {
+            try {
+              return jsonDecode(e as String) as Map<String, dynamic>;
+            } catch (_) {
+              return <String, dynamic>{};
+            }
+          })
+          .firstWhere(
+            (m) => m['type'] == 'receiver_confirmed',
+            orElse: () => <String, dynamic>{'type': 'timeout'},
+          );
+      await ws.close();
+      return response['type'] == 'receiver_confirmed';
+    } catch (e) {
+      print('❌ confirmReceiverReady failed: $e');
+      try {
+        await ws?.close();
+      } catch (_) {}
+      return false;
+    }
+  }
+
   /// Responds to an incoming file transfer offer from a sender
   ///
   /// **Purpose:** When a sender sends a file transfer offer, this function sends back an
@@ -483,6 +578,8 @@ class PairingController extends GetxController {
   static void _scanIsolate(Map<String, dynamic> params) async {
     final prefix = params['prefix'] as String;
     final sendPort = params['sendPort'] as SendPort;
+    final myName = params['myName'] as String? ?? 'Unknown';
+    final myIp = params['myIp'] as String? ?? '';
     const wsPort = 7070;
     const batchSize = 32; // Parallel connections per batch for fast symmetric discovery
     const timeoutMs = 400;
@@ -495,9 +592,18 @@ class PairingController extends GetxController {
         final ws = await WebSocket.connect(uri.toString())
             .timeout(const Duration(milliseconds: timeoutMs));
         final data = await ws.first;
-        ws.close();
         final jsonMap = jsonDecode(data as String) as Map<String, dynamic>;
         jsonMap['ip'] = ip;
+        sendPort.send(jsonMap);
+        // Tell receiver we are here so it can add us to its devices immediately
+        ws.add(jsonEncode({
+          'type': 'discovery_peer',
+          'name': myName,
+          'ip': myIp,
+          'wsPort': wsPort,
+          'transferPort': 9090,
+        }));
+        await ws.close();
         return jsonMap;
       } catch (_) {
         return null;
@@ -510,10 +616,7 @@ class PairingController extends GetxController {
         for (int i = start; i < start + batchSize && i < 255; i++) {
           futures.add(tryIp(i));
         }
-        final results = await Future.wait(futures);
-        for (final r in results) {
-          if (r != null) sendPort.send(r);
-        }
+        await Future.wait(futures);
       }
     } finally {
       try {

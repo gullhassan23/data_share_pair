@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/components/select_device_name.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
@@ -31,54 +30,66 @@ class _PairingScreenState extends State<PairingScreen>
   Timer? _discoveryTimer;
   bool _isReceiver = false;
   Worker? _devicesWorker;
-
+  late Worker _offerWorker;
   bool _offerDialogShown = false; // Track if offer dialog is currently showing
 
   void _maybeNavigateToSelectDevice() {
     if (!mounted) return;
-    if (_isReceiver) return;
     if (_navigated) return;
     if (pairing.devices.isEmpty) return;
     _navigated = true;
+    // Stop periodic discovery so radar/scanning stops and we don't re-scan in background
+    _discoveryTimer?.cancel();
+    _discoveryTimer = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Get.to(() => SelectDeviceScreen(devices: pairing.devices.toList()));
+      Get.to(
+        () => SelectDeviceScreen(
+          devices: pairing.devices.toList(),
+          isReceiver: _isReceiver,
+        ),
+      );
     });
   }
 
   @override
   void initState() {
     super.initState();
+
     final args = Get.arguments as Map<String, dynamic>?;
     _isReceiver = args?['isReceiver'] as bool? ?? false;
-    print('✅ PairingScreen init (isReceiver: $_isReceiver)');
 
     _radarCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat();
+
     pairing.devices.clear();
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _askPermissions();
       await pairing.startServer();
-      if (!_isReceiver) {
-        pairing.discover();
-        _discoveryTimer = Timer.periodic(const Duration(milliseconds: 2500), (
-          _,
-        ) {
-          if (!mounted) return;
-          if (!pairing.isScanning.value) {
-            pairing.discover(mergeResults: true);
-          }
-        });
-      } else {
-        print('✅ WiFi receiver: server started, waiting for sender');
+      pairing.discover();
+      // Periodic discovery so receiver gets sender reliably (mergeResults: true)
+      _discoveryTimer?.cancel();
+      _discoveryTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+        if (!mounted || _navigated) return;
+        if (pairing.isScanning.value) return;
+        pairing.discover(mergeResults: true);
+      });
+    });
+
+    // ✅ Device detection worker
+    _devicesWorker = ever(pairing.devices, (_) {
+      _maybeNavigateToSelectDevice();
+    });
+
+    // ✅ Incoming offer worker (THIS FIXES YOUR ERROR)
+    _offerWorker = ever(pairing.incomingOffer, (offer) {
+      if (offer != null && mounted && !_offerDialogShown) {
+        _showIncomingOfferDialog(offer);
       }
     });
-    _devicesWorker = ever(
-      pairing.devices,
-      (_) => _maybeNavigateToSelectDevice(),
-    );
   }
 
   void pairWithDevice(DeviceInfo device) async {
@@ -140,6 +151,7 @@ class _PairingScreenState extends State<PairingScreen>
   void dispose() {
     _devicesWorker?.dispose();
     _devicesWorker = null;
+    _offerWorker.dispose();
     _discoveryTimer?.cancel();
     _discoveryTimer = null;
     _radarCtrl.dispose();
@@ -147,8 +159,104 @@ class _PairingScreenState extends State<PairingScreen>
     super.dispose();
   }
 
+  // void _showIncomingOfferDialog(Map<String, dynamic> offer) {
+  //   // Prevent showing multiple dialogs
+  //   if (_offerDialogShown) {
+  //     print('⚠️ Offer dialog already showing, skipping...');
+  //     return;
+  //   }
+
+  //   final ip = offer['fromIp'] as String;
+  //   final meta = FileMeta.fromJson(offer['meta'] as Map<String, dynamic>);
+
+  //   _offerDialogShown = true;
+  //   Get.dialog(
+  //     AlertDialog(
+  //       content: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Column(children: [Lottie.asset('assets/lottie/wifi.json')]),
+  //           Text('Incoming File Transfer'),
+  //           const SizedBox(height: 8),
+  //           Container(
+  //             decoration: BoxDecoration(
+  //               color: Colors.grey.shade200,
+  //               borderRadius: BorderRadius.circular(10),
+  //             ),
+
+  //             child: Row(
+  //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //               children: [
+  //                 Image.asset(
+  //                   'assets/icons/document_image.png',
+  //                   width: 50,
+  //                   height: 50,
+  //                 ),
+  //                 Column(
+  //                   children: [
+  //                     Text(meta.name),
+  //                     SizedBox(height: 8),
+  //                     Text(meta.size.toString()),
+  //                   ],
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           // Text('Size: ${_formatFileSize(meta.size)}'),
+  //           const SizedBox(height: 16),
+  //           const Text(
+  //             'Do you want to accept this file?',
+  //             style: TextStyle(fontSize: 14, color: Colors.grey),
+  //           ),
+  //         ],
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () {
+  //             print('❌ User rejected file transfer from $ip');
+  //             _offerDialogShown = false;
+  //             pairing.respondToOffer(ip, false);
+  //             Get.back();
+  //           },
+  //           child: const Text('Reject', style: TextStyle(color: Colors.red)),
+  //         ),
+  //         ElevatedButton(
+  //           onPressed: () async {
+  //             print('✅ User accepted file transfer from $ip');
+  //             _offerDialogShown = false;
+  //             pairing.respondToOffer(ip, true);
+  //             Get.back();
+
+  //             // Start transfer server so we can accept the incoming connection
+  //             print('🔄 Starting transfer server for receiver...');
+  //             final transferController = Get.find<TransferController>();
+  //             await transferController.startServer();
+
+  //             // Build sender device info for progress screen (receiver only has fromIp)
+  //             final senderDevice = DeviceInfo(
+  //               name: 'Sender',
+  //               ip: ip,
+  //               wsPort: 7070,
+  //               transferPort: 9090,
+  //             );
+
+  //             // Navigate to TransferProgressScreen (receiver mode) for real-time progress
+  //             transfer.progress.reset();
+  //             await AppNavigator.toTransferProgress(
+  //               device: senderDevice,
+  //               filePath: '',
+  //               fileName: meta.name,
+  //             );
+  //           },
+  //           child: const Text('Accept'),
+  //         ),
+  //       ],
+  //     ),
+  //     barrierDismissible: false, // Prevent dismissing bfy tapping outside
+  //   );
+  // }
   void _showIncomingOfferDialog(Map<String, dynamic> offer) {
-    // Prevent showing multiple dialogs
     if (_offerDialogShown) {
       print('⚠️ Offer dialog already showing, skipping...');
       return;
@@ -158,90 +266,98 @@ class _PairingScreenState extends State<PairingScreen>
     final meta = FileMeta.fromJson(offer['meta'] as Map<String, dynamic>);
 
     _offerDialogShown = true;
+
     Get.dialog(
-      AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Column(children: [Lottie.asset('assets/lottie/wifi.json')]),
-            Text('Incoming File Transfer'),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(10),
-              ),
+      Center(
+        child: Card(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Optional Lottie animation
+                ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: Color(0xFF5DADE2),
+                    child: Icon(Icons.phone_android, color: Colors.white),
+                  ),
+                  title: Text(meta.name),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Reject button
+                    ElevatedButton(
+                      onPressed: () {
+                        print('❌ User rejected file transfer from $ip');
+                        _offerDialogShown = false;
+                        pairing.respondToOffer(ip, false);
+                        Get.back();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text(
+                        'Reject',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
 
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Image.asset(
-                    'assets/icons/document_image.png',
-                    width: 50,
-                    height: 50,
-                  ),
-                  Column(
-                    children: [
-                      Text(meta.name),
-                      SizedBox(height: 8),
-                      Text(meta.size.toString()),
-                    ],
-                  ),
-                ],
-              ),
+                    // Accept button
+                    ElevatedButton(
+                      onPressed: () async {
+                        print('✅ User accepted file transfer from $ip');
+                        _offerDialogShown = false;
+                        pairing.respondToOffer(ip, true);
+                        Get.back();
+
+                        // Start transfer server for receiver
+                        final transferController =
+                            Get.find<TransferController>();
+                        await transferController.startServer();
+
+                        final senderDevice = DeviceInfo(
+                          name: 'Sender',
+                          ip: ip,
+                          wsPort: 7070,
+                          transferPort: 9090,
+                        );
+
+                        transfer.progress.reset();
+                        await AppNavigator.toTransferProgress(
+                          device: senderDevice,
+                          filePath: '',
+                          fileName: meta.name,
+                        );
+
+                        Get.snackbar(
+                          'Accepted',
+                          'Accepted transfer from ${meta.name}',
+                          backgroundColor: Colors.green.withOpacity(0.8),
+                          colorText: Colors.white,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5DADE2),
+                      ),
+                      child: const Text(
+                        'Accept',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            // Text('Size: ${_formatFileSize(meta.size)}'),
-            const SizedBox(height: 16),
-            const Text(
-              'Do you want to accept this file?',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              print('❌ User rejected file transfer from $ip');
-              _offerDialogShown = false;
-              pairing.respondToOffer(ip, false);
-              Get.back();
-            },
-            child: const Text('Reject', style: TextStyle(color: Colors.red)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              print('✅ User accepted file transfer from $ip');
-              _offerDialogShown = false;
-              pairing.respondToOffer(ip, true);
-              Get.back();
-
-              // Start transfer server so we can accept the incoming connection
-              print('🔄 Starting transfer server for receiver...');
-              final transferController = Get.find<TransferController>();
-              await transferController.startServer();
-
-              // Build sender device info for progress screen (receiver only has fromIp)
-              final senderDevice = DeviceInfo(
-                name: 'Sender',
-                ip: ip,
-                wsPort: 7070,
-                transferPort: 9090,
-              );
-
-              // Navigate to TransferProgressScreen (receiver mode) for real-time progress
-              transfer.progress.reset();
-              await AppNavigator.toTransferProgress(
-                device: senderDevice,
-                filePath: '',
-                fileName: meta.name,
-              );
-            },
-            child: const Text('Accept'),
-          ),
-        ],
       ),
-      barrierDismissible: false, // Prevent dismissing bfy tapping outside
+      barrierDismissible: false,
     );
   }
 
@@ -254,19 +370,19 @@ class _PairingScreenState extends State<PairingScreen>
         // Main content
         _buildMainContent(),
         // Overlay for incoming offer dialog
-        Obx(() {
-          final offer = pairing.incomingOffer.value;
-          if (offer != null) {
-            // Show dialog when offer is received (regardless of pairing status)
-            // The receiver can receive offers even before pairing if their server is running
-            print('🎯 Incoming offer detected, showing dialog...');
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              print('📱 Triggering offer dialog display');
-              _showIncomingOfferDialog(offer);
-            });
-          }
-          return const SizedBox.shrink();
-        }),
+        // Obx(() {
+        //   final offer = pairing.incomingOffer.value;
+        //   if (offer != null) {
+        //     // Show dialog when offer is received (regardless of pairing status)
+        //     // The receiver can receive offers even before pairing if their server is running
+        //     print('🎯 Incoming offer detected, showing dialog...');
+        //     WidgetsBinding.instance.addPostFrameCallback((_) {
+        //       print('📱 Triggering offer dialog display');
+        //       _showIncomingOfferDialog(offer);
+        //     });
+        //   }
+        //   return const SizedBox.shrink();
+        // }),
       ],
     );
   }
@@ -342,141 +458,147 @@ class _PairingScreenState extends State<PairingScreen>
                 // Radar Views
                 SizedBox(height: 15),
                 // Radar View
-                Obx(() {
-                  final sweep = _radarCtrl.value * 2 * math.pi;
-                  // if (pairing.isScanning.value && !_radarCtrl.isAnimating)
-                  //   _radarCtrl.repeat();
-                  // if (!pairing.isScanning.value && _radarCtrl.isAnimating)
-                  //   _radarCtrl.stop();
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      RadarView(
-                        size: 150,
-                        devices: pairing.devices.toList(),
-                        sweep: sweep,
-                      ),
-                      // Enhanced scanning animation overlay
-                      AnimatedOpacity(
-                        opacity: pairing.isScanning.value ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 300),
-                        child:
-                            pairing.isScanning.value
-                                ? Container(
-                                  width: 160,
-                                  height: 160,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        Colors.green.withOpacity(0.1),
-                                        Colors.green.withOpacity(0.05),
-                                        Colors.transparent,
-                                      ],
-                                      stops: const [0.0, 0.7, 1.0],
-                                    ),
-                                  ),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      // Pulsing rings animation
-                                      ...List.generate(3, (index) {
-                                        return AnimatedBuilder(
-                                          animation: _radarCtrl,
-                                          builder: (context, child) {
-                                            final pulseProgress =
-                                                (_radarCtrl.value * 2 +
-                                                    index * 0.3) %
-                                                1.0;
-                                            final scale =
-                                                0.5 + pulseProgress * 0.5;
-                                            return Transform.scale(
-                                              scale: scale,
-                                              child: Container(
-                                                width: 220,
-                                                height: 220,
-                                                decoration: BoxDecoration(
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(
-                                                    color: Colors.green
-                                                        .withOpacity(
-                                                          (1.0 - pulseProgress) *
-                                                              0.3,
+                AnimatedBuilder(
+                  animation: _radarCtrl,
+                  builder: (BuildContext context, Widget? child) {
+                    return Obx(() {
+                      final sweep = _radarCtrl.value * 2 * math.pi;
+
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          RadarView(
+                            size: 150,
+                            devices: pairing.devices.toList(),
+                            sweep: sweep,
+                          ),
+                          // Enhanced scanning animation overlay
+                          AnimatedOpacity(
+                            opacity: pairing.isScanning.value ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 300),
+                            child:
+                                pairing.isScanning.value
+                                    ? Container(
+                                      width: 160,
+                                      height: 160,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        gradient: RadialGradient(
+                                          colors: [
+                                            Colors.green.withOpacity(0.1),
+                                            Colors.green.withOpacity(0.05),
+                                            Colors.transparent,
+                                          ],
+                                          stops: const [0.0, 0.7, 1.0],
+                                        ),
+                                      ),
+                                      child: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          // Pulsing rings animation
+                                          ...List.generate(3, (index) {
+                                            return AnimatedBuilder(
+                                              animation: _radarCtrl,
+                                              builder: (context, child) {
+                                                final pulseProgress =
+                                                    (_radarCtrl.value * 2 +
+                                                        index * 0.3) %
+                                                    1.0;
+                                                final scale =
+                                                    0.5 + pulseProgress * 0.5;
+                                                return Transform.scale(
+                                                  scale: scale,
+                                                  child: Container(
+                                                    width: 220,
+                                                    height: 220,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                        color: Colors.green
+                                                            .withOpacity(
+                                                              (1.0 - pulseProgress) *
+                                                                  0.3,
+                                                            ),
+                                                        width: 2,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          }),
+
+                                          // Rotating radar sweep lines
+                                          AnimatedBuilder(
+                                            animation: _radarCtrl,
+                                            builder: (context, child) {
+                                              return Transform.rotate(
+                                                angle:
+                                                    _radarCtrl.value *
+                                                    2 *
+                                                    3.14159,
+                                                child: Container(
+                                                  width: 220,
+                                                  height: 220,
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: CustomPaint(
+                                                    painter:
+                                                        ScanningRadarPainter(
+                                                          devices:
+                                                              pairing.devices
+                                                                  .toList(),
+                                                          sweep: sweep,
                                                         ),
-                                                    width: 2,
                                                   ),
                                                 ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      }),
+                                              );
+                                            },
+                                          ),
 
-                                      // Rotating radar sweep lines
-                                      AnimatedBuilder(
-                                        animation: _radarCtrl,
-                                        builder: (context, child) {
-                                          return Transform.rotate(
-                                            angle:
-                                                _radarCtrl.value * 2 * 3.14159,
-                                            child: Container(
-                                              width: 220,
-                                              height: 220,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: CustomPaint(
-                                                painter: ScanningRadarPainter(
-                                                  devices:
-                                                      pairing.devices.toList(),
-                                                  sweep: sweep,
+                                          // Central pulsing dot
+                                          AnimatedBuilder(
+                                            animation: _radarCtrl,
+                                            builder: (context, child) {
+                                              final pulse =
+                                                  (math.sin(
+                                                        _radarCtrl.value *
+                                                            4 *
+                                                            3.14159,
+                                                      ) +
+                                                      1) /
+                                                  2;
+                                              return Container(
+                                                width: 8 + pulse * 4,
+                                                height: 8 + pulse * 4,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.blue,
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.blue
+                                                          .withOpacity(0.6),
+                                                      blurRadius: pulse * 8,
+                                                      spreadRadius: pulse * 2,
+                                                    ),
+                                                  ],
                                                 ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                              );
+                                            },
+                                          ),
 
-                                      // Central pulsing dot
-                                      AnimatedBuilder(
-                                        animation: _radarCtrl,
-                                        builder: (context, child) {
-                                          final pulse =
-                                              (math.sin(
-                                                    _radarCtrl.value *
-                                                        4 *
-                                                        3.14159,
-                                                  ) +
-                                                  1) /
-                                              2;
-                                          return Container(
-                                            width: 8 + pulse * 4,
-                                            height: 8 + pulse * 4,
-                                            decoration: BoxDecoration(
-                                              color: Colors.blue,
-                                              shape: BoxShape.circle,
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.blue
-                                                      .withOpacity(0.6),
-                                                  blurRadius: pulse * 8,
-                                                  spreadRadius: pulse * 2,
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
+                                          // Scanning text with fade effect
+                                        ],
                                       ),
-
-                                      // Scanning text with fade effect
-                                    ],
-                                  ),
-                                )
-                                : const SizedBox.shrink(),
-                      ),
-                    ],
-                  );
-                }),
+                                    )
+                                    : const SizedBox.shrink(),
+                          ),
+                        ],
+                      );
+                    });
+                  },
+                ),
 
                 const SizedBox(height: 16),
                 Obx(
@@ -627,31 +749,31 @@ class _PairingScreenState extends State<PairingScreen>
                 //             ),
                 //   ),
                 // ),
-                Expanded(
-                  child: Obx(
-                    () => Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.radar, size: 60, color: Colors.grey),
-                          const SizedBox(height: 14),
-                          Text(
-                            _isReceiver
-                                ? "Waiting for sender..."
-                                : (pairing.devices.isEmpty
-                                    ? "Searching for devices..."
-                                    : "Device found! Redirecting..."),
-                            style: GoogleFonts.roboto(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                // Expanded(
+                //   child: Obx(
+                //     () => Center(
+                //       child: Column(
+                //         mainAxisAlignment: MainAxisAlignment.center,
+                //         children: [
+                //           const Icon(Icons.radar, size: 60, color: Colors.grey),
+                //           const SizedBox(height: 14),
+                //           Text(
+                //             _isReceiver
+                //                 ? "Waiting for sender..."
+                //                 : (pairing.devices.isEmpty
+                //                     ? "Searching for devices..."
+                //                     : "Device found! Redirecting..."),
+                //             style: GoogleFonts.roboto(
+                //               fontSize: 16,
+                //               fontWeight: FontWeight.w500,
+                //               color: Colors.grey.shade700,
+                //             ),
+                //           ),
+                //         ],
+                //       ),
+                //     ),
+                //   ),
+                // ),
                 // Bluetooth devices
               ],
             ),

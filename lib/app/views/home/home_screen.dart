@@ -22,8 +22,10 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Reset all transfer state when entering this screen
     // This ensures sender side starts fresh after completing a transfer
-    final progress = Get.find<ProgressController>();
-    progress.reset();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final progress = Get.find<ProgressController>();
+      progress.reset();
+    });
     print('✅ Transfer state reset in SendReceiveScreen');
   }
 
@@ -51,8 +53,8 @@ class _HomeScreenState extends State<HomeScreen> {
               StepProgressBar(
                 currentStep: 1,
                 totalSteps: kTransferFlowTotalSteps,
-                activeColor: Colors.blue,
-                inactiveColor: Colors.white.withOpacity(0.6),
+                activeColor: Theme.of(context).colorScheme.primary,
+                inactiveColor: Colors.grey.shade300,
                 height: 6,
                 segmentSpacing: 5,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -102,13 +104,19 @@ class _HomeScreenState extends State<HomeScreen> {
                         TransferOptionCard(
                           title: "Send Files",
                           image: ImageRes.sendFiles,
-                          onTap: () => AppNavigator.toConnectionMethod(isReceiver: false),
+                          onTap:
+                              () => AppNavigator.toConnectionMethod(
+                                isReceiver: false,
+                              ),
                         ),
 
                         TransferOptionCard(
                           title: 'Receive Files',
                           image: ImageRes.recieveFiles,
-                          onTap: () => AppNavigator.toConnectionMethod(isReceiver: true),
+                          onTap:
+                              () => AppNavigator.toConnectionMethod(
+                                isReceiver: true,
+                              ),
                         ),
                       ],
                     ),

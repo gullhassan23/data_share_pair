@@ -241,7 +241,7 @@ Widget _ReceiverStatusView({String? connectedSenderName}) {
       const SizedBox(height: 16),
       Text(
         isConnected
-            ? 'Connected to sender device ($connectedSenderName)'
+            ? 'Connected with $connectedSenderName'
             : 'Waiting for sender to connect…',
         style: GoogleFonts.roboto(fontSize: 16),
         textAlign: TextAlign.center,

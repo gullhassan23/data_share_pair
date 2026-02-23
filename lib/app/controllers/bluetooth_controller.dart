@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:path/path.dart' as p;
@@ -36,7 +37,8 @@ class BluetoothController extends GetxController {
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription? _connectionStreamSub;
   StreamSubscription? _dataStreamSub;
-  final int distanceThreshold = -70;
+  /// RSSI threshold: devices with signal weaker than this are filtered out. -80 allows receivers at edge of range.
+  final int distanceThreshold = -80;
 
   // New Peripheral Service
   final _peripheralService = BluetoothPeripheralService();
@@ -357,28 +359,44 @@ class BluetoothController extends GetxController {
       _connectionStreamSub?.cancel();
       _dataStreamSub?.cancel();
 
-      // Listen for central (sender) connection so receiver UI updates as soon as sender connects
       _connectionStreamSub = _peripheralService.connectionStream.listen((event) {
         final connected = event["connected"] == true;
         if (connected) {
           final name = event["name"]?.toString().trim();
           connectedSenderName.value =
               (name != null && name.isNotEmpty) ? name : "Sender device";
+          assert(() {
+            // ignore: avoid_print
+            debugPrint('[BT] Receiver: connection event, name=${connectedSenderName.value}');
+            return true;
+          }());
         } else {
           connectedSenderName.value = null;
         }
       });
 
-      // Listen for incoming offers from the peripheral service
+      // Listen for incoming offers and any BLE writes so receiver UI shows "Connected with X" reliably.
       _dataStreamSub = _peripheralService.dataStream.listen((data) {
         if (data["type"] == "offer") {
           incomingOffer.value = data;
-          // Refine display name from offer if sender sent deviceName (e.g. Samsung, Vivo)
           final offerName = data["deviceName"]?.toString().trim();
           connectedSenderName.value =
               (offerName != null && offerName.isNotEmpty)
                   ? offerName
                   : (connectedSenderName.value ?? "Sender");
+          assert(() {
+            // ignore: avoid_print
+            debugPrint('[BT] Receiver: offer received, connectedSenderName=${connectedSenderName.value}');
+            return true;
+          }());
+        } else {
+          // Fallback: on any write, if we still don't have a name, set generic so UI shows "Connected"
+          final current = connectedSenderName.value;
+          if (current == null || current.isEmpty) {
+            final name = data["deviceName"]?.toString().trim();
+            connectedSenderName.value =
+                (name != null && name.isNotEmpty) ? name : "Sender device";
+          }
         }
       });
     } catch (e) {
@@ -386,7 +404,6 @@ class BluetoothController extends GetxController {
     }
   }
 
-  // Optionally cancel the timer when not needed
   void stopReceiverMode() {
     _connectionStreamSub?.cancel();
     _connectionStreamSub = null;
@@ -399,6 +416,13 @@ class BluetoothController extends GetxController {
     _pollTimer = null;
   }
 
+  @override
+  void onClose() {
+    stopScan();
+    stopReceiverMode();
+    super.onClose();
+  }
+
   Future<void> startScan() async {
     stopReceiverMode();
     devices.clear();
@@ -406,14 +430,12 @@ class BluetoothController extends GetxController {
     error.value = '';
     isScanning.value = true;
 
-    // ✅ Permissions
     if (!await askPermissions()) {
       error.value = 'Bluetooth permission denied';
       isScanning.value = false;
       return;
     }
 
-    // ✅ Android: BLE scan requires location to discover devices
     if (Platform.isAndroid) {
       final locationStatus = await Permission.location.status;
       if (!locationStatus.isGranted) {
@@ -424,49 +446,39 @@ class BluetoothController extends GetxController {
       }
     }
 
-    // ✅ Bluetooth ON
     final isOn = await FlutterBluePlus.isOn;
     if (!isOn) {
-      await FlutterBluePlus.turnOn();
+      try {
+        await FlutterBluePlus.turnOn();
+      } catch (e) {
+        error.value = 'Please turn on Bluetooth in settings';
+        isScanning.value = false;
+        return;
+      }
     }
 
     try {
-      // ✅ Check support
       final supported = await FlutterBluePlus.isSupported;
       if (!supported) {
-        error.value = 'Bluetooth not supported';
+        error.value = 'Bluetooth not supported on this device';
         isScanning.value = false;
         return;
       }
 
-      // ✅ Start Scan — ONLY devices advertising our app's service (ShareMe receivers)
-      // withServices filters at platform level: no random/dummy BLE devices
-      final serviceGuid = Guid.parse(SERVICE_UUID);
-      if (serviceGuid == null) {
-        error.value = 'Invalid service UUID';
-        isScanning.value = false;
-        return;
-      }
-      await FlutterBluePlus.startScan(
-        withServices: [serviceGuid],
-        timeout: null,
-      );
+      // ✅ Subscribe to scan results FIRST so we don't miss early results, then start scan.
+      final serviceGuid = Guid(SERVICE_UUID);
 
       await _scanSubscription?.cancel();
       _scanSubscription = null;
 
-      // Scan results — only our receivers (service filter). Add/update; UI filters by name.
       _scanSubscription = FlutterBluePlus.scanResults.listen(
         (results) {
           for (final r in results) {
             final d = r.device;
-
             if (r.rssi < distanceThreshold) continue;
-
             final index = devices.indexWhere(
               (e) => e.remoteId.str == d.remoteId.str,
             );
-
             if (index == -1) {
               devices.add(d);
             } else {
@@ -482,9 +494,24 @@ class BluetoothController extends GetxController {
           isScanning.value = false;
         },
       );
+
+      await FlutterBluePlus.startScan(
+        withServices: [serviceGuid],
+        timeout: null,
+      );
+      assert(() {
+        // ignore: avoid_print
+        debugPrint('[BT] Scan started; waiting for receivers advertising service.');
+        return true;
+      }());
     } catch (e) {
-      error.value = 'Bluetooth plugin unavailable';
+      error.value = 'Bluetooth unavailable. Please try again.';
       isScanning.value = false;
+      assert(() {
+        // ignore: avoid_print
+        debugPrint('[BT] startScan error: $e');
+        return true;
+      }());
     }
   }
 
@@ -495,6 +522,11 @@ class BluetoothController extends GetxController {
     await _scanSubscription?.cancel();
     _scanSubscription = null;
     isScanning.value = false;
+    assert(() {
+      // ignore: avoid_print
+      debugPrint('[BT] Scan stopped.');
+      return true;
+    }());
   }
 
   /// Only devices with valid, identifiable names. Filters out Unknown/dummy placeholders.

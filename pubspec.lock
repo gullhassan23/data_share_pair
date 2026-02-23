@@ -653,6 +653,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.12.1"
+  stop_watch_timer:
+    dependency: transitive
+    description:
+      name: stop_watch_timer
+      sha256: "01441a71ea3d804b73025c172313f2f1bb253da40ecd1390bd3ada7553548c43"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.2"
   stream_channel:
     dependency: transitive
     description:
@@ -693,6 +701,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  ui_background_task:
+    dependency: "direct main"
+    description:
+      name: ui_background_task
+      sha256: fcf76187016e7e42408afaf7ca418be1959bf0aa01f0c5e5e70eb2a0488c2c64
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   vector_math:
     dependency: transitive
     description:
@@ -705,10 +721,10 @@ packages:
     dependency: "direct main"
     description:
       name: vibration
-      sha256: "3cbdf4c93b469ec27b212c8dd0c720f85acc1186a68d08b56087f4e32b4c8e20"
+      sha256: "7c080254dada753eb298c11c8f7dd56e0e0cae7208088f7af8d91e731fef8ce7"
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.6"
+    version: "3.1.7"
   vibration_platform_interface:
     dependency: transitive
     description:
@@ -717,6 +733,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.1.1"
+  video_thumbnail:
+    dependency: "direct main"
+    description:
+      name: video_thumbnail
+      sha256: "181a0c205b353918954a881f53a3441476b9e301641688a581e0c13f00dc588b"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.6"
   vm_service:
     dependency: transitive
     description:

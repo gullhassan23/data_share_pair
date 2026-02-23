@@ -27,8 +27,6 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
 
   late final ProgressController progress;
   late final TransferController transfer;
-  Worker? _transferCompleteWorker;
-  bool _didAutoNavigate = false;
 
   @override
   void initState() {
@@ -109,65 +107,15 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     print("✅ Device: ${device?.name ?? 'Unknown'}");
     print("✅ File: $fileName");
 
-    // Safety reset: ensure we start with clean state
-    // (already reset in previous screens, but this is defensive)
-    progress.reset();
-    print('✅ Transfer state safety reset in TransferProgressScreen');
+    // Completion handling (snackbar + navigation) lives in TransferController so it runs
+    // even when this screen is disposed (e.g. app backgrounded). Progress reset is done
+    // when starting a new transfer in TransferController.sendFile / receiver callback.
 
-    // Only start transfer if we're the sender
     if (isSender) {
       _startTransfer();
     } else {
       print("🔄 Receiver mode - waiting for incoming file...");
     }
-
-    // Listen for transfer completion
-    _transferCompleteWorker = ever<String>(progress.status, (status) {
-      if (_didAutoNavigate) return;
-
-      final isSuccess = isSender ? (status == 'sent') : (status == 'received');
-      final hasError = progress.error.value.isNotEmpty;
-
-      if (isSuccess && !hasError) {
-        _didAutoNavigate = true;
-
-        if (isSender) {
-          print("✅ File successfully sent to receiver!");
-          Get.snackbar(
-            "Transfer Completed",
-            "Your file transferred successfully 🎉",
-            backgroundColor: Colors.green.withOpacity(0.8),
-            colorText: Colors.white,
-            snackPosition: SnackPosition.BOTTOM,
-            duration: const Duration(seconds: 2),
-          );
-
-          // Navigate back to SendReceiveScreen after successful transfer
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              AppNavigator.toHome();
-            }
-          });
-        } else {
-          print("✅ File successfully received from sender!");
-          Get.snackbar(
-            "Transfer Completed",
-            "File received successfully 🎉",
-            backgroundColor: Colors.green.withOpacity(0.8),
-            colorText: Colors.white,
-            snackPosition: SnackPosition.BOTTOM,
-            duration: const Duration(seconds: 2),
-          );
-
-          // Navigate to ReceivedFilesScreen after successful reception
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              AppNavigator.toReceivedFiles(device: device);
-            }
-          });
-        }
-      }
-    });
   }
 
   Future<void> _startTransfer() async {
@@ -273,11 +221,8 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
 
   @override
   void dispose() {
-    _transferCompleteWorker?.dispose();
-    // Reset progress state when leaving screen
-    // This ensures next transfer starts completely fresh
-    progress.reset();
-    print('✅ Transfer state cleaned up in dispose');
+    // Do not reset progress here: transfer may still be running. Reset only when
+    // a new transfer starts (TransferController.sendFile / receiver callback).
     super.dispose();
   }
 
@@ -482,7 +427,64 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
             ),
           );
         }),
+
+        const SizedBox(height: 24),
+
+        // Cancel Button (only while transfer running)
+        Obx(() {
+          final status = progress.status.value;
+          final isComplete =
+              isSender ? (status == 'sent') : (status == 'received');
+
+          if (isComplete || progress.error.value.isNotEmpty) {
+            return const SizedBox.shrink();
+          }
+
+          return SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                _confirmCancel();
+              },
+              icon: const Icon(Icons.close),
+              label: const Text("Cancel Transfer"),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: const BorderSide(color: Colors.red),
+                foregroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          );
+        }),
       ],
+    );
+  }
+
+  void _confirmCancel() {
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Cancel Transfer?"),
+        content: const Text(
+          "Are you sure you want to cancel the file transfer?",
+        ),
+        actions: [
+          TextButton(onPressed: () => Get.back(), child: const Text("No")),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              transfer.cancelTransfer();
+              Get.back(); // exit screen
+            },
+            child: const Text(
+              "Yes, Cancel",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

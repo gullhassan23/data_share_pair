@@ -53,7 +53,9 @@ dependencies:
   google_fonts: ^6.3.2
   ble_peripheral: ^2.4.0
   shared_preferences: ^2.3.3
-  vibration: ^3.1.6
+  ui_background_task: ^0.2.0
+  vibration: ^3.1.7
+  video_thumbnail: ^0.5.6
   # fluttertoast: ^9.0.0
 
 dev_dependencies:

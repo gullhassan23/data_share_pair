@@ -360,12 +360,12 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                   children: [
                     IconButton(
                       onPressed: () => Get.back(),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: const Icon(Icons.arrow_back, color: Colors.black),
                     ),
                     Text(
                       'Receive Files',
                       style: GoogleFonts.roboto(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -463,7 +463,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                                   : 'Check Wi-Fi and try again.',
                               style: GoogleFonts.roboto(
                                 fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
+                                color: Colors.black,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -475,7 +475,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                             label: const Text('Retry'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF5DADE2),
-                              foregroundColor: Colors.white,
+                              foregroundColor: Colors.black,
                             ),
                           ),
                         ],
@@ -492,7 +492,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                                 ? 'Starting receiver...\nPlease wait'
                                 : 'Starting receiver server...\nPlease wait',
                             style: GoogleFonts.roboto(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.black.withOpacity(0.9),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -559,7 +559,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                             statusColor = Colors.green;
                           } else if (qrController.wsRunning.value) {
                             statusText = 'Connected via Wi-Fi';
-                            statusColor = Colors.white;
+                            statusColor = Colors.black;
                           } else {
                             statusText = 'No Network';
                             statusColor = Colors.orange;
@@ -605,7 +605,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                         Text(
                           'Show this QR code to the sender',
                           style: GoogleFonts.roboto(
-                            color: Colors.white,
+                            color: Colors.black,
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
                           ),
@@ -616,7 +616,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                         Text(
                           'The sender will scan this code to start transfer',
                           style: GoogleFonts.roboto(
-                            color: Colors.white.withOpacity(0.8),
+                            color: Colors.black.withOpacity(0.8),
                             fontSize: 14,
                           ),
                           textAlign: TextAlign.center,
@@ -630,7 +630,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                                 Text(
                                   'Hotspot is not active. Please enable it manually if required by your device.',
                                   style: GoogleFonts.roboto(
-                                    color: Colors.white.withOpacity(0.9),
+                                    color: Colors.black.withOpacity(0.9),
                                     fontSize: 13,
                                   ),
                                   textAlign: TextAlign.center,

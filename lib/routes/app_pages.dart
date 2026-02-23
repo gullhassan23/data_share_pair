@@ -12,6 +12,7 @@ import 'package:share_app_latest/app/views/home/home_screen.dart';
 import 'package:share_app_latest/app/views/home/pairing/pairing_page.dart';
 import 'package:share_app_latest/app/views/home/received_files_screen.dart';
 import 'package:share_app_latest/app/views/onboarding/onboarding_screen.dart';
+import 'package:share_app_latest/app/views/transfer_recovery/transfer_recovery_screen.dart';
 import 'package:share_app_latest/components/transfer_progress_screen.dart';
 import 'package:share_app_latest/app/views/splash/splash_screen.dart';
 import 'app_routes.dart';
@@ -96,6 +97,11 @@ class AppPages {
       name: AppRoutes.transferProgress,
       page: () => const TransferProgressScreen(),
       transition: Transition.downToUp,
+    ),
+    GetPage(
+      name: AppRoutes.transferRecovery,
+      page: () => const TransferRecoveryScreen(),
+      transition: Transition.fade,
     ),
     GetPage(
       name: AppRoutes.receivedFiles,
