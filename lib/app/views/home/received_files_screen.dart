@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +8,7 @@ import 'package:share_app_latest/app/models/device_info.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../controllers/transfer_controller.dart';
 
@@ -20,6 +22,15 @@ class ReceivedFilesScreen extends StatefulWidget {
 
 class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
   final transfer = Get.put(TransferController());
+
+  Future<Uint8List?> _generateThumbnail(String path) async {
+    return await VideoThumbnail.thumbnailData(
+      video: path,
+      imageFormat: ImageFormat.JPEG,
+      maxWidth: 200,
+      quality: 75,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -265,50 +276,55 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                                     ],
                                   ),
                                   child:
-                                      fileType == 'image'
-                                          ? ClipRRect(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                            child: Image.file(
-                                              File(filePath),
-                                              fit: BoxFit.cover,
-                                            ),
-                                          )
-                                          : Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                fileType == 'video'
-                                                    ? Icons.video_file
-                                                    : fileType == 'document'
-                                                    ? Icons.description
-                                                    : fileType == 'apk'
-                                                    ? Icons.android
-                                                    : Icons.insert_drive_file,
-                                                size: 36,
-                                                color: Colors.blueGrey,
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                    ),
-                                                child: Text(
-                                                  fileName,
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
+                                  // fileType == 'image'
+                                  //     ? ClipRRect(
+                                  //       borderRadius: BorderRadius.circular(
+                                  //         10,
+                                  //       ),
+                                  //       child: Image.file(
+                                  //         File(filePath),
+                                  //         fit: BoxFit.cover,
+                                  //       ),
+                                  //     )
+                                  //     : Column(
+                                  //       mainAxisAlignment:
+                                  //           MainAxisAlignment.center,
+                                  //       children: [
+                                  //         Icon(
+                                  //           fileType == 'video'
+                                  //               ? Icons.video_file
+                                  //               : fileType == 'document'
+                                  //               ? Icons.description
+                                  //               : fileType == 'apk'
+                                  //               ? Icons.android
+                                  //               : Icons.insert_drive_file,
+                                  //           size: 36,
+                                  //           color: Colors.blueGrey,
+                                  //         ),
+                                  //         const SizedBox(height: 6),
+                                  //         Padding(
+                                  //           padding:
+                                  //               const EdgeInsets.symmetric(
+                                  //                 horizontal: 6,
+                                  //               ),
+                                  //           child: Text(
+                                  //             fileName,
+                                  //             maxLines: 2,
+                                  //             overflow:
+                                  //                 TextOverflow.ellipsis,
+                                  //             textAlign: TextAlign.center,
+                                  //             style: const TextStyle(
+                                  //               fontSize: 12,
+                                  //             ),
+                                  //           ),
+                                  //         ),
+                                  //       ],
+                                  //     ),
+                                  _buildFilePreview(
+                                    fileType,
+                                    filePath,
+                                    fileName,
+                                  ),
                                 ),
                               );
                             },
@@ -323,6 +339,78 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFilePreview(String fileType, String filePath, String fileName) {
+    if (fileType == 'image') {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.file(File(filePath), fit: BoxFit.cover),
+      );
+    }
+
+    if (fileType == 'video') {
+      return FutureBuilder<Uint8List?>(
+        future: _generateThumbnail(filePath),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done &&
+              snapshot.data != null) {
+            return Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.memory(snapshot.data!, fit: BoxFit.cover),
+                ),
+                Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(10),
+                    child: const Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 30,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+    }
+
+    // fallback for docs, apk, etc
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          fileType == 'document'
+              ? Icons.description
+              : fileType == 'apk'
+              ? Icons.android
+              : Icons.insert_drive_file,
+          size: 36,
+          color: Colors.blueGrey,
+        ),
+        const SizedBox(height: 6),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: Text(
+            fileName,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+      ],
     );
   }
 
