@@ -183,7 +183,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
 
       // Start Wi‑Fi P2P discovery so this device can be found (e.g. when not on same Wi‑Fi).
       // Non-blocking: receiver UI is already usable via pairing server; P2P is an extra path.
-      initP2P();
+      // initP2P();
     } catch (e) {
       print('❌ Receiver init failed: $e');
       if (mounted) {
