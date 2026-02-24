@@ -333,8 +333,11 @@ class _PairingScreenState extends State<PairingScreen>
                             Get.find<TransferController>();
                         await transferController.startServer();
 
+                        final raw = offer['senderName'];
+                        final s = raw is String ? raw.trim() : '';
+                        final senderName = s.isEmpty ? 'Sender' : s;
                         final senderDevice = DeviceInfo(
-                          name: 'Sender',
+                          name: senderName,
                           ip: ip,
                           wsPort: 7070,
                           transferPort: 9090,

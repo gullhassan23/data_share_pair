@@ -360,12 +360,12 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
 
         const SizedBox(height: 8),
 
-        // Device Name
+        // Device Name (receiver: show sender name; sender: show receiver name)
         if (device != null)
           Text(
             isSender
-                ? "To: ${device?.name ?? 'Unknown'}"
-                : "From: ${device?.name ?? 'Unknown'}",
+                ? "To: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Unknown'}"
+                : "From: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Sender'}",
             style: GoogleFonts.roboto(
               fontSize: 12,
               color: Colors.grey.shade500,

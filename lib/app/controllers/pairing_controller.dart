@@ -193,12 +193,15 @@ class PairingController extends GetxController {
 
                 if (map['type'] == 'offer') {
                   final fromIp = remoteIp ?? '';
-                  print("📥 File offer received from $fromIp");
+                  final senderName =
+                      (map['senderName'] as String?)?.trim() ?? 'Sender';
+                  print("📥 File offer received from $fromIp (sender: $senderName)");
 
                   _pendingSockets[fromIp] = socket;
 
                   incomingOffer.value = {
                     'fromIp': fromIp,
+                    'senderName': senderName,
                     'meta':
                         FileMeta.fromJson(
                           map['meta'] as Map<String, dynamic>,
@@ -416,12 +419,23 @@ class PairingController extends GetxController {
     final uri = Uri.parse('ws://${device.ip}:$port');
     WebSocket? ws;
     try {
+      // Ensure sender device name is set so receiver can show "From: <name>"
+      if (deviceName.value.trim().isEmpty) {
+        deviceName.value = await _getDeviceName();
+      }
       ws = await WebSocket.connect(
         uri.toString(),
       ).timeout(const Duration(seconds: 5)); // Increased timeout for connection
       print('✅ Connected to receiver WS. Sending offer data...');
 
-      final offerJson = jsonEncode({'type': 'offer', 'meta': meta.toJson()});
+      final senderName = deviceName.value.trim().isNotEmpty
+          ? deviceName.value.trim()
+          : 'Sender';
+      final offerJson = jsonEncode({
+        'type': 'offer',
+        'meta': meta.toJson(),
+        'senderName': senderName,
+      });
       ws.add(offerJson);
       print('📤 Offer sent: $offerJson');
       print('[QR] offer sent');
