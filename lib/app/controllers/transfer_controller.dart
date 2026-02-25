@@ -8,6 +8,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:gal/gal.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
 import 'package:share_app_latest/services/transfer_state_persistence.dart';
@@ -339,6 +341,12 @@ class TransferController extends GetxController {
               // Auto-save images and videos to gallery
               await _autoSaveToGalleryIfMedia(savePath, meta.name);
 
+              // Auto-import contact (VCF) files to device contacts
+              if (meta.type == 'contacts' ||
+                  p.extension(meta.name).toLowerCase() == '.vcf') {
+                await _autoImportContactsIfVcf(savePath, meta.name);
+              }
+
               sessionState.value = TransferSessionState.completed;
               await TransferForegroundService.stopTransferNotification();
               await TransferStatePersistence.clearTransferState();
@@ -403,6 +411,107 @@ class TransferController extends GetxController {
     } catch (e) {
       // Silently handle errors - don't interrupt the file reception flow
       print('⚠️ Auto-save to gallery failed (non-critical): $e');
+    }
+  }
+
+  /// Imports VCF file into device contacts. Non-blocking; logs errors only.
+  Future<void> _autoImportContactsIfVcf(
+    String sourcePath,
+    String fileName,
+  ) async {
+    try {
+      final extName = p.extension(fileName).toLowerCase();
+      final extPath = p.extension(sourcePath).toLowerCase();
+      if (extName != '.vcf' && extPath != '.vcf') return;
+
+      final permission = await FlutterContacts.requestPermission(readonly: false);
+      if (!permission) {
+        print('⚠️ Contacts permission denied; skipping VCF import.');
+        Get.snackbar(
+          'Contact received',
+          'Saved to Received files. Tap it to add to your contacts, or grant Contacts permission in Settings.',
+          mainButton: TextButton(
+            onPressed: () => openAppSettings(),
+            child: const Text('Settings'),
+          ),
+          duration: const Duration(seconds: 5),
+        );
+        return;
+      }
+
+      final content = await File(sourcePath).readAsString();
+      final parts = content.split(RegExp(r'(?=BEGIN:VCARD)', caseSensitive: false));
+      int added = 0;
+
+      for (final part in parts) {
+        final vcard = part.trim();
+        if (vcard.isEmpty) continue;
+        if (!vcard.toUpperCase().startsWith('BEGIN:VCARD')) continue;
+        if (!vcard.toUpperCase().contains('END:VCARD')) continue;
+
+        try {
+          final contact = Contact.fromVCard(vcard);
+          _ensureContactDisplayName(contact);
+          await contact.insert();
+          added++;
+        } catch (e) {
+          print('⚠️ Failed to import one contact from VCF: $e');
+        }
+      }
+
+      if (added > 0) {
+        print('✅ Imported $added contact(s) from VCF: $fileName');
+      }
+    } catch (e) {
+      print('⚠️ Auto-import contacts from VCF failed (non-critical): $e');
+    }
+  }
+
+  /// Ensures contact has a non-empty display name so insert() succeeds on devices that require it.
+  void _ensureContactDisplayName(Contact contact) {
+    if (contact.displayName.trim().isEmpty) {
+      final fallback = contact.phones.isNotEmpty
+          ? contact.phones.first.number
+          : 'Unknown';
+      contact.name.first = fallback;
+    }
+  }
+
+  /// Imports contacts from a VCF file (e.g. when user taps a contact file in ReceivedFilesScreen).
+  /// Returns the number of contacts added, or null if permission denied / not a VCF / error.
+  Future<int?> importContactsFromVcfFile(String filePath) async {
+    try {
+      final fileName = p.basename(filePath);
+      if (p.extension(fileName).toLowerCase() != '.vcf') return null;
+
+      final permission = await FlutterContacts.requestPermission(readonly: false);
+      if (!permission) return null;
+
+      final content = await File(filePath).readAsString();
+      final parts =
+          content.split(RegExp(r'(?=BEGIN:VCARD)', caseSensitive: false));
+      int added = 0;
+
+      for (final part in parts) {
+        final vcard = part.trim();
+        if (vcard.isEmpty) continue;
+        if (!vcard.toUpperCase().startsWith('BEGIN:VCARD')) continue;
+        if (!vcard.toUpperCase().contains('END:VCARD')) continue;
+
+        try {
+          final contact = Contact.fromVCard(vcard);
+          _ensureContactDisplayName(contact);
+          await contact.insert();
+          added++;
+        } catch (e) {
+          print('⚠️ Failed to import one contact from VCF (tap): $e');
+        }
+      }
+
+      return added;
+    } catch (e) {
+      print('⚠️ importContactsFromVcfFile failed: $e');
+      return null;
     }
   }
 
@@ -502,6 +611,8 @@ class TransferController extends GetxController {
             fileType = 'video';
           } else if (['.pdf', '.doc', '.docx'].contains(ext)) {
             fileType = 'document';
+          } else if (ext == '.vcf') {
+            fileType = 'contacts';
           }
 
           receivedFiles.add({

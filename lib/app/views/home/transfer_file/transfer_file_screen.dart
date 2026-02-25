@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:path/path.dart' as p;
 
@@ -31,6 +33,8 @@ class TransferFileScreen extends StatefulWidget {
 class _TransferFileScreenState extends State<TransferFileScreen> {
   DeviceInfo? device;
   bool isSender = false;
+  /// When sending contacts, path to the temp VCF file so progress screen can register it for cleanup.
+  String? _senderTempPath;
 
   final transfer = Get.put(TransferController());
   final pairing = Get.put(PairingController());
@@ -165,10 +169,10 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                 children: [
                   Expanded(
                     child: _buildFileTypeContainer(
-                      icon: Icons.android,
-                      label: 'APK',
-                      color: Colors.green,
-                      onTap: () => _pickFileWithType(FileType.custom, ['apk']),
+                      icon: Icons.contacts,
+                      label: 'Contacts',
+                      color: Colors.teal,
+                      onTap: _openContactsFlow,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -243,6 +247,48 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     } catch (e) {
       print('❌ File picker error: $e');
       Get.snackbar('File Picker Error', e.toString());
+    }
+  }
+
+  Future<void> _openContactsFlow() async {
+    try {
+      final permission = await FlutterContacts.requestPermission();
+      if (!permission) {
+        Get.snackbar(
+          'Permission needed',
+          'Contacts permission is required to share contacts.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+      final contacts = await FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
+      if (contacts.isEmpty) {
+        Get.snackbar(
+          'No contacts',
+          'There are no contacts on this device.',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+        return;
+      }
+      final path = await Get.to<String?>(
+        () => _ContactsSelectionPage(contacts: contacts),
+        fullscreenDialog: true,
+      );
+      if (path != null && mounted) {
+        _senderTempPath = path;
+        await _sendSelectedFile(path);
+        _senderTempPath = null;
+      }
+    } catch (e) {
+      print('❌ Contacts flow error: $e');
+      Get.snackbar(
+        'Contacts',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -390,7 +436,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
             device: finalDevice,
             filePath: path,
             fileName: fileName,
+            senderTempPath: _senderTempPath,
           );
+          _senderTempPath = null;
           print('✅ Navigation to TransferProgressScreen completed');
         } catch (navError, navStack) {
           print(
@@ -503,7 +551,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
         device: receiverDevice,
         filePath: path,
         fileName: fileName,
+        senderTempPath: _senderTempPath,
       );
+      _senderTempPath = null;
     });
 
     timeoutTimer = Timer(const Duration(seconds: 15), () {
@@ -555,6 +605,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
 
   String _extType(String path) {
     final ext = p.extension(path).toLowerCase();
+    if (ext == '.vcf') return 'contacts';
     if (ext == '.apk') return 'apk';
     if (ext == '.mp4' || ext == '.mov') return 'video';
     if (ext == '.jpg' || ext == '.jpeg' || ext == '.png') return 'image';
@@ -667,15 +718,11 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                                 children: [
                                   Expanded(
                                     child: BuildChooseOption(
-                                      icon: Icons.android,
-                                      title: 'APK',
+                                      icon: Icons.contacts,
+                                      title: 'Contacts',
                                       subtitle: "",
-                                      color: Colors.green,
-                                      onTap:
-                                          () => _pickFileWithType(
-                                            FileType.custom,
-                                            ['apk'],
-                                          ),
+                                      color: Colors.teal,
+                                      onTap: _openContactsFlow,
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -737,6 +784,103 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Full-screen page to select contacts and export to VCF.
+class _ContactsSelectionPage extends StatefulWidget {
+  const _ContactsSelectionPage({required this.contacts});
+
+  final List<Contact> contacts;
+
+  @override
+  State<_ContactsSelectionPage> createState() => _ContactsSelectionPageState();
+}
+
+class _ContactsSelectionPageState extends State<_ContactsSelectionPage> {
+  final Set<int> _selectedIndices = {};
+
+  Future<void> _exportAndSend() async {
+    if (_selectedIndices.isEmpty) {
+      Get.snackbar(
+        'Select contacts',
+        'Select at least one contact to send.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    try {
+      final sb = StringBuffer();
+      for (final i in _selectedIndices) {
+        if (i >= 0 && i < widget.contacts.length) {
+          sb.writeln(widget.contacts[i].toVCard());
+        }
+      }
+      final vcfContent = sb.toString();
+      if (vcfContent.isEmpty) return;
+      final dir = await getTemporaryDirectory();
+      final name = 'contacts_export_${DateTime.now().millisecondsSinceEpoch}.vcf';
+      final path = p.join(dir.path, name);
+      await File(path).writeAsString(vcfContent);
+      if (!mounted) return;
+      Get.back(result: path);
+    } catch (e) {
+      print('❌ Export contacts error: $e');
+      Get.snackbar('Export failed', e.toString(), snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedCount = _selectedIndices.length;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Select contacts',
+          style: GoogleFonts.roboto(fontWeight: FontWeight.w600),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Get.back(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: selectedCount > 0 ? _exportAndSend : null,
+            child: Text(
+              'Send $selectedCount',
+              style: GoogleFonts.roboto(
+                fontWeight: FontWeight.w600,
+                color: selectedCount > 0 ? Theme.of(context).colorScheme.primary : Colors.grey,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView.builder(
+        itemCount: widget.contacts.length,
+        itemBuilder: (context, index) {
+          final c = widget.contacts[index];
+          final name = c.displayName.isNotEmpty ? c.displayName : 'Unknown';
+          final subtitle = c.phones.isNotEmpty ? c.phones.first.number : '';
+          final selected = _selectedIndices.contains(index);
+          return CheckboxListTile(
+            value: selected,
+            onChanged: (v) {
+              setState(() {
+                if (v == true) {
+                  _selectedIndices.add(index);
+                } else {
+                  _selectedIndices.remove(index);
+                }
+              });
+            },
+            title: Text(name, style: GoogleFonts.roboto()),
+            subtitle: subtitle.isNotEmpty ? Text(subtitle, style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey)) : null,
+            activeColor: Colors.teal,
+          );
+        },
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -256,6 +257,37 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                                             ),
                                           ),
                                     );
+                                  } else if (fileType == 'contacts') {
+                                    final added = await transfer
+                                        .importContactsFromVcfFile(filePath);
+                                    if (added != null && added > 0) {
+                                      Get.snackbar(
+                                        'Contacts',
+                                        'Added $added contact(s) to your contacts.',
+                                      );
+                                    } else if (added == 0) {
+                                      Get.snackbar(
+                                        'Contacts',
+                                        'No contacts could be added. Check Contacts permission in Settings.',
+                                        mainButton: TextButton(
+                                          onPressed: () =>
+                                              openAppSettings(),
+                                          child: const Text('Settings'),
+                                        ),
+                                        duration: const Duration(seconds: 4),
+                                      );
+                                    } else {
+                                      Get.snackbar(
+                                        'Contacts',
+                                        'Could not add contacts. Grant Contacts permission in Settings.',
+                                        mainButton: TextButton(
+                                          onPressed: () =>
+                                              openAppSettings(),
+                                          child: const Text('Settings'),
+                                        ),
+                                        duration: const Duration(seconds: 5),
+                                      );
+                                    }
                                   } else {
                                     try {
                                       await OpenFilex.open(filePath);
@@ -386,7 +418,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
       );
     }
 
-    // fallback for docs, apk, etc
+    // fallback for docs, apk, contacts, etc
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -394,8 +426,10 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
           fileType == 'document'
               ? Icons.description
               : fileType == 'apk'
-              ? Icons.android
-              : Icons.insert_drive_file,
+                  ? Icons.android
+                  : fileType == 'contacts'
+                      ? Icons.contacts
+                      : Icons.insert_drive_file,
           size: 36,
           color: Colors.blueGrey,
         ),
@@ -434,6 +468,10 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
       case 'apk':
         icon = Icons.android;
         color = Colors.green;
+        break;
+      case 'contacts':
+        icon = Icons.contacts;
+        color = Colors.teal;
         break;
       default:
         icon = Icons.insert_drive_file;

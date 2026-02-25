@@ -23,6 +23,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
   DeviceInfo? device;
   String? filePath;
   String? fileName;
+  String? senderTempPath;
   bool isSender = true; // Determine mode based on filePath
 
   late final ProgressController progress;
@@ -52,6 +53,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     device = args['device'] is DeviceInfo ? args['device'] as DeviceInfo : null;
     filePath = args['filePath'] is String ? args['filePath'] as String : null;
     fileName = args['fileName'] is String ? args['fileName'] as String : null;
+    senderTempPath = args['senderTempPath'] is String ? args['senderTempPath'] as String : null;
 
     print('🔍 DEBUG: TransferProgressScreen arguments parsed:');
     print('  - device: $device');
@@ -191,7 +193,12 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
       );
 
       // Start the transfer with validated, non-null variables
-      await transfer.sendFile(safeFilePath, deviceIp, devicePort);
+      await transfer.sendFile(
+        safeFilePath,
+        deviceIp,
+        devicePort,
+        senderTempPath: senderTempPath,
+      );
 
       print("✅ Transfer initiated successfully");
     } catch (e, stackTrace) {

@@ -41,10 +41,16 @@ class AppNavigator {
     required DeviceInfo device,
     required String filePath,
     required String fileName,
+    String? senderTempPath,
   }) {
     return Get.toNamed(
       AppRoutes.transferProgress,
-      arguments: {'device': device, 'filePath': filePath, 'fileName': fileName},
+      arguments: {
+        'device': device,
+        'filePath': filePath,
+        'fileName': fileName,
+        if (senderTempPath != null) 'senderTempPath': senderTempPath,
+      },
     );
   }
 

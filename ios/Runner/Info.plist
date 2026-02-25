@@ -49,5 +49,7 @@
 	<string>Used to find nearby devices on the same Wi-Fi for file sharing.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need permission to save received photos and videos to your gallery.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Used to share selected contacts with the other device.</string>
 </dict>
 </plist>

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:get/get.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import 'package:share_app_latest/services/receiver_readiness_service.dart';
 import '../models/device_info.dart';
 import '../models/file_meta.dart';
@@ -19,6 +20,25 @@ class PairingController extends GetxController {
   final incomingOffer = Rxn<Map<String, dynamic>>();
   final Map<String, WebSocket> _pendingSockets = {};
   final isScanning = false.obs;
+  final wifiSsid = Rx<String?>(null);
+
+  /// Fetches the currently connected WiFi name (SSID) and updates [wifiSsid].
+  /// Does not block pairing flow; call without await from UI. Trims Android quotes.
+  Future<void> refreshWifiSsid() async {
+    try {
+      final info = NetworkInfo();
+      String? name = await info.getWifiName();
+      if (name != null && name.isNotEmpty) {
+        name = name.trim().replaceAll(RegExp(r'^"+|"+$'), '').trim();
+        wifiSsid.value = name.isEmpty ? null : name;
+      } else {
+        wifiSsid.value = null;
+      }
+    } catch (e) {
+      print('Error getting WiFi SSID: $e');
+      wifiSsid.value = null;
+    }
+  }
 
   /// Gets the device name from platform-specific device info
   ///

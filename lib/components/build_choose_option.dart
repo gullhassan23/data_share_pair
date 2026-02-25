@@ -40,17 +40,13 @@ class BuildChooseOption extends StatelessWidget {
                   color: color.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  icon,
-                  size: 40,
-                  color: color,
-                ),
+                child: Icon(icon, size: 40, color: color),
               ),
               const SizedBox(height: 14),
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -58,10 +54,7 @@ class BuildChooseOption extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   subtitle,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    color: Colors.grey,
-                  ),
+                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
                 ),
               ],
             ],

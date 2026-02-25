@@ -85,6 +85,7 @@ class _PairingScreenState extends State<PairingScreen>
         if (pairing.isScanning.value) return;
         pairing.discover(mergeResults: true);
       });
+      pairing.refreshWifiSsid();
     });
 
     // ✅ Device detection worker
@@ -470,6 +471,19 @@ class _PairingScreenState extends State<PairingScreen>
                     color: Colors.grey.shade600,
                   ),
                 ),
+                const SizedBox(height: 6),
+                Obx(() {
+                  final ssid = pairing.wifiSsid.value;
+                  return Text(
+                    'Connected to: ${ssid != null && ssid.isNotEmpty ? ssid : 'Unknown network'}',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.roboto(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  );
+                }),
                 // Radar Views
                 SizedBox(height: 15),
                 // Radar View
