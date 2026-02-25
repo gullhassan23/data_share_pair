@@ -33,7 +33,8 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
   Worker? _connectedDeviceWorker;
   bool _navigatedToTransfer = false;
   bool _handshakeInProgress = false;
-
+  int? _selectedBluetoothIndex;
+  bool _bluetoothConnecting = false;
   @override
   void initState() {
     super.initState();
@@ -88,8 +89,181 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
     return _buildWiFiContent();
   }
 
+  // Widget _buildBluetoothContent() {
+  //   final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+  //   return Scaffold(
+  //     body: Container(
+  //       width: double.infinity,
+  //       height: double.infinity,
+  //       decoration: const BoxDecoration(
+  //         gradient: LinearGradient(
+  //           begin: Alignment.topLeft,
+  //           end: Alignment.bottomRight,
+  //           colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
+  //         ),
+  //       ),
+  //       child: SafeArea(
+  //         child: Padding(
+  //           padding: const EdgeInsets.all(18.0),
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Row(
+  //                 children: [
+  //                   IconButton(
+  //                     onPressed: () => Get.back(),
+  //                     icon: const Icon(Icons.arrow_back),
+  //                   ),
+  //                   Text(
+  //                     "Back",
+  //                     style: GoogleFonts.roboto(
+  //                       fontSize: 16,
+  //                       fontWeight: FontWeight.w500,
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //               StepProgressBar(
+  //                 currentStep: 3,
+  //                 totalSteps: kTransferFlowTotalSteps,
+  //                 activeColor: Theme.of(context).colorScheme.primary,
+  //                 inactiveColor: Colors.grey.shade300,
+  //                 height: 6,
+  //                 segmentSpacing: 5,
+  //                 padding: const EdgeInsets.only(top: 8, bottom: 16),
+  //               ),
+  //               const SizedBox(height: 30),
+  //               Expanded(
+  //                 child: Obx(() {
+  //                   if (bluetooth.error.value.isNotEmpty) {
+  //                     return Center(
+  //                       child: Text(
+  //                         bluetooth.error.value,
+  //                         style: const TextStyle(
+  //                           color: Colors.red,
+  //                           fontSize: 16,
+  //                         ),
+  //                       ),
+  //                     );
+  //                   }
+  //                   // Already connected: show the connected device (no scan list)
+  //                   final connected = bluetooth.connectedDevice.value;
+  //                   if (connected != null) {
+  //                     return SingleChildScrollView(
+  //                       child: Column(
+  //                         crossAxisAlignment: CrossAxisAlignment.stretch,
+  //                         children: [
+  //                           Text(
+  //                             "Already connected",
+  //                             style: GoogleFonts.roboto(
+  //                               fontSize: 22,
+  //                               fontWeight: FontWeight.bold,
+  //                             ),
+  //                           ),
+  //                           const SizedBox(height: 6),
+  //                           Text(
+  //                             "You are connected to the device below. Tap to send files or disconnect.",
+  //                             style: GoogleFonts.roboto(
+  //                               fontSize: 13,
+  //                               color: Colors.grey.shade700,
+  //                             ),
+  //                           ),
+  //                           const SizedBox(height: 16),
+  //                           _BluetoothDeviceTile(
+  //                             device: connected,
+  //                             bluetooth: bluetooth,
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     );
+  //                   }
+  //                   final devices = bluetooth.devices;
+  //                   if (bluetooth.isScanning.value && devices.isEmpty) {
+  //                     return Center(
+  //                       child: Column(
+  //                         mainAxisAlignment: MainAxisAlignment.center,
+  //                         children: [
+  //                           const CircularProgressIndicator(),
+  //                           const SizedBox(height: 16),
+  //                           Text(
+  //                             'Searching for devices...',
+  //                             style: GoogleFonts.roboto(
+  //                               color: Colors.grey.shade700,
+  //                             ),
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     );
+  //                   }
+  //                   if (devices.isEmpty) {
+  //                     return Center(
+  //                       child: Column(
+  //                         mainAxisAlignment: MainAxisAlignment.center,
+  //                         children: [
+  //                           Icon(
+  //                             Icons.bluetooth_disabled,
+  //                             size: 64,
+  //                             color: Colors.grey.shade400,
+  //                           ),
+  //                           const SizedBox(height: 16),
+  //                           Text(
+  //                             'No Bluetooth devices found',
+  //                             style: GoogleFonts.roboto(
+  //                               color: Colors.grey.shade700,
+  //                             ),
+  //                           ),
+  //                           const SizedBox(height: 16),
+  //                           OutlinedButton.icon(
+  //                             onPressed: () => bluetooth.startScan(),
+  //                             icon: const Icon(Icons.refresh),
+  //                             label: const Text('Scan again'),
+  //                           ),
+  //                         ],
+  //                       ),
+  //                     );
+  //                   }
+  //                   return SingleChildScrollView(
+  //                     child: Column(
+  //                       crossAxisAlignment: CrossAxisAlignment.stretch,
+  //                       children: [
+  //                         Text(
+  //                           "Select The Device",
+  //                           style: GoogleFonts.roboto(
+  //                             fontSize: 22,
+  //                             fontWeight: FontWeight.bold,
+  //                           ),
+  //                         ),
+  //                         const SizedBox(height: 6),
+  //                         Text(
+  //                           "Tap Connect on the device you want to send files to",
+  //                           style: GoogleFonts.roboto(
+  //                             fontSize: 13,
+  //                             color: Colors.grey.shade700,
+  //                           ),
+  //                         ),
+  //                         const SizedBox(height: 16),
+  //                         ...devices.map(
+  //                           (device) => _BluetoothDeviceTile(
+  //                             device: device,
+  //                             bluetooth: bluetooth,
+  //                           ),
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   );
+  //                 }),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
   Widget _buildBluetoothContent() {
     final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -122,105 +296,23 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                     ),
                   ],
                 ),
-                StepProgressBar(
-                  currentStep: 3,
-                  totalSteps: kTransferFlowTotalSteps,
-                  activeColor: Theme.of(context).colorScheme.primary,
-                  inactiveColor: Colors.grey.shade300,
-                  height: 6,
-                  segmentSpacing: 5,
-                  padding: const EdgeInsets.only(top: 8, bottom: 16),
-                ),
+
                 const SizedBox(height: 30),
+
                 Expanded(
                   child: Obx(() {
-                    if (bluetooth.error.value.isNotEmpty) {
-                      return Center(
-                        child: Text(
-                          bluetooth.error.value,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 16,
-                          ),
-                        ),
-                      );
-                    }
-                    // Already connected: show the connected device (no scan list)
-                    final connected = bluetooth.connectedDevice.value;
-                    if (connected != null) {
-                      return SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              "Already connected",
-                              style: GoogleFonts.roboto(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              "You are connected to the device below. Tap to send files or disconnect.",
-                              style: GoogleFonts.roboto(
-                                fontSize: 13,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            _BluetoothDeviceTile(
-                              device: connected,
-                              bluetooth: bluetooth,
-                            ),
-                          ],
-                        ),
-                      );
-                    }
                     final devices = bluetooth.devices;
+
                     if (bluetooth.isScanning.value && devices.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Searching for devices...',
-                              style: GoogleFonts.roboto(
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
+                      return const Center(child: CircularProgressIndicator());
                     }
+
                     if (devices.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.bluetooth_disabled,
-                              size: 64,
-                              color: Colors.grey.shade400,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No Bluetooth devices found',
-                              style: GoogleFonts.roboto(
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            OutlinedButton.icon(
-                              onPressed: () => bluetooth.startScan(),
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Scan again'),
-                            ),
-                          ],
-                        ),
+                      return const Center(
+                        child: Text("No Bluetooth devices found"),
                       );
                     }
+
                     return SingleChildScrollView(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -232,21 +324,113 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            "Tap Connect on the device you want to send files to",
-                            style: GoogleFonts.roboto(
-                              fontSize: 13,
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
                           const SizedBox(height: 16),
-                          ...devices.map(
-                            (device) => _BluetoothDeviceTile(
-                              device: device,
-                              bluetooth: bluetooth,
-                            ),
-                          ),
+
+                          ...devices.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final device = entry.value;
+
+                            return GestureDetector(
+                              onTap: () async {
+                                if (_bluetoothConnecting) return;
+
+                                setState(() {
+                                  _bluetoothConnecting = true;
+                                  _selectedBluetoothIndex = index;
+                                });
+
+                                await bluetooth.connect(device);
+
+                                if (!mounted) return;
+
+                                setState(() {
+                                  _bluetoothConnecting = false;
+                                });
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xffE7ECFF),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color:
+                                        _selectedBluetoothIndex == index
+                                            ? Colors.blue
+                                            : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.blue,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: Center(
+                                        child: Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color:
+                                                _selectedBluetoothIndex == index
+                                                    ? Colors.blue
+                                                    : Colors.transparent,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+
+                                    const SizedBox(width: 12),
+
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            getDisplayName(device),
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            device.remoteId.str,
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    if (_bluetoothConnecting &&
+                                        _selectedBluetoothIndex == index)
+                                      const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
                         ],
                       ),
                     );
@@ -518,8 +702,8 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
   }
 }
 
-class _BluetoothDeviceTile extends StatelessWidget {
-  const _BluetoothDeviceTile({required this.device, required this.bluetooth});
+class BluetoothDeviceTile extends StatelessWidget {
+  const BluetoothDeviceTile({required this.device, required this.bluetooth});
 
   final BluetoothDevice device;
   final BluetoothController bluetooth;

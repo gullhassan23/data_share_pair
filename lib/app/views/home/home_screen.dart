@@ -48,6 +48,26 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 19),
 
               /// Back Row
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Get.back();
+                    },
+                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Back",
+                    style: GoogleFonts.roboto(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 19),
 
               /// Progress Barss
               StepProgressBar(
@@ -86,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Send files to another device or receive files.",
+                      "Choose an option to start transferring between devices.",
                       textAlign: TextAlign.center,
                       style: GoogleFonts.roboto(
                         fontSize: 14,

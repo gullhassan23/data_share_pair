@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/components/bg_curve_Ellipes.dart';
+import 'package:share_app_latest/components/on_boardingbutton.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/utils/transfer_animation.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -63,76 +65,78 @@ class OnboardingScreen extends StatelessWidget {
                 const SizedBox(height: 50),
 
                 /// WHITE CARD / CONTAINER
-                Container(
-                  width: 350,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: SizedBox(
-                    height: 210, // define height or Stack will collapse
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.topCenter,
-                      children: [
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              "assets/icons/transfer_image.png",
-                              height: 190,
-                              fit: BoxFit.contain,
-                            ),
-                            const SizedBox(height: 20),
-                          ],
+                Padding(
+                  padding: const EdgeInsets.only(left: 20, right: 20),
+                  child: Container(
+                    // height: 250,
+                    // width: 350,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Column(
+                        //   mainAxisSize: MainAxisSize.min,
+                        //   children: [
+                        //     Image.asset(
+                        //       "assets/icons/transfer_image.png",
+                        //       height: 190,
+                        //       fit: BoxFit.contain,
+                        //     ),
+                        //   ],
+                        // ),
+                        // pending
+                        TransferAnimation(height: 160, isTransferring: true),
 
-                        Positioned(
-                          top: 155,
-                          left: 20,
-                          right: 20,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xff00E5FF),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            onPressed: () {
-                              AppNavigator.toHome();
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    "Start Transferring",
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.roboto(
-                                      color: Colors.white,
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(
-                                  Icons.arrow_forward,
-                                  size: 18,
-                                  color: Colors.white,
-                                ),
-                              ],
-                            ),
-                          ),
+                        // ElevatedButton(
+                        //   style: ElevatedButton.styleFrom(
+                        //     backgroundColor: const Color(0xff00E5FF),
+                        //     shape: RoundedRectangleBorder(
+                        //       borderRadius: BorderRadius.circular(12),
+                        //     ),
+                        //   ),
+                        //   onPressed: () {
+                        //     AppNavigator.toHome();
+                        //   },
+                        //   child: Row(
+                        //     mainAxisAlignment: MainAxisAlignment.center,
+                        //     mainAxisSize: MainAxisSize.min,
+                        //     children: [
+                        //       Flexible(
+                        //         child: Text(
+                        //           "Start Transferring",
+                        //           overflow: TextOverflow.ellipsis,
+                        //           style: GoogleFonts.roboto(
+                        //             color: Colors.white,
+                        //             fontSize: 17,
+                        //             fontWeight: FontWeight.w700,
+                        //           ),
+                        //         ),
+                        //       ),
+                        //       const SizedBox(width: 8),
+                        //       const Icon(
+                        //         Icons.arrow_forward,
+                        //         size: 18,
+                        //         color: Colors.white,
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
+                        On_BoardingButton(
+                          ontap: () => AppNavigator.toHome(),
+                          height: 40,
+                          width: double.infinity,
+                          text: "Start Transferring",
+                          color: Color(0xff00E5FF),
                         ),
                       ],
                     ),
@@ -143,11 +147,15 @@ class OnboardingScreen extends StatelessWidget {
                 /// DESCRIPTION
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Text(
-                    "Connect with friends nearby or across the world and share memories in original quality without delays.",
-                    textAlign: TextAlign.center,
-                    // style: TextStyle(color: Colors.grey.shade600),
-                    style: GoogleFonts.roboto(color: Color(0xff72777F)),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Easily transfer photos, videos, and files easily using WiFi Direct, Bluetooth, or QR Code.",
+                        textAlign: TextAlign.center,
+                        // style: TextStyle(color: Colors.grey.shade600),
+                        style: GoogleFonts.roboto(color: Color(0xff72777F)),
+                      ),
+                    ],
                   ),
                 ),
 
