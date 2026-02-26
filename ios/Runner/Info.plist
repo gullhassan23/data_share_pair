@@ -47,6 +47,10 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Used to find nearby devices on the same Wi-Fi for file sharing.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Used to scan QR codes to connect with the other device for file transfer.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Used to find nearby devices and transfer files via Bluetooth.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need permission to save received photos and videos to your gallery.</string>
 	<key>NSContactsUsageDescription</key>
