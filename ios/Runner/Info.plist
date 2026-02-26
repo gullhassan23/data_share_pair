@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>File transfer</string>
+	<string>File Transfer</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>share_app_latest</string>
+	<string>File Transfer</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -47,8 +47,10 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Used to find nearby devices on the same Wi-Fi for file sharing.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need access to find duplicate photos and videos in your gallery.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Used to scan QR codes to connect with the other device for file transfer.</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Used to find nearby devices and transfer files via Bluetooth.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>We need permission to save received photos and videos to your gallery.</string>
 	<key>NSContactsUsageDescription</key>

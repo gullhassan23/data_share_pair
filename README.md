@@ -14,3 +14,17 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Reducing app size
+
+Release builds use **minification** and **resource shrinking** (Android). For the smallest output:
+
+- **Android APK (per device, smaller):**
+  ```bash
+  flutter build apk --release --split-per-abi --obfuscate --split-debug-info=./debug-info/
+  ```
+- **Android App Bundle (for Play Store, recommended):**
+  ```bash
+  flutter build appbundle --release --obfuscate --split-debug-info=./debug-info/
+  ```
+- **iOS:** Release builds strip symbols by default.

@@ -84,17 +84,6 @@ class OnboardingScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        // Column(
-                        //   mainAxisSize: MainAxisSize.min,
-                        //   children: [
-                        //     Image.asset(
-                        //       "assets/icons/transfer_image.png",
-                        //       height: 190,
-                        //       fit: BoxFit.contain,
-                        //     ),
-                        //   ],
-                        // ),
-                        // pending
                         TransferAnimation(height: 160, isTransferring: true),
 
                         // ElevatedButton(

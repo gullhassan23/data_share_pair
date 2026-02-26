@@ -201,11 +201,7 @@ class _PairingScreenState extends State<PairingScreen>
   //             child: Row(
   //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
   //               children: [
-  //                 Image.asset(
-  //                   'assets/icons/document_image.png',
-  //                   width: 50,
-  //                   height: 50,
-  //                 ),
+  //                 Icon(Icons.insert_drive_file, size: 50),
   //                 Column(
   //                   children: [
   //                     Text(meta.name),

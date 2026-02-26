@@ -744,10 +744,10 @@ class QrController extends GetxController {
   final serverBindIp = ''.obs;
   // P2P channels
   final MethodChannel _p2pMethod = const MethodChannel(
-    'com.example.share_app_latest/p2p',
+    'com.share.transfer.file.all.data.app/p2p',
   );
   final EventChannel _p2pEvents = const EventChannel(
-    'com.example.share_app_latest/p2p_events',
+    'com.share.transfer.file.all.data.app/p2p_events',
   );
   final incomingOffer = Rxn<Map<String, dynamic>>();
   /// Pairing request from a sender that scanned our QR (receiver shows "Device X wants to pair").
