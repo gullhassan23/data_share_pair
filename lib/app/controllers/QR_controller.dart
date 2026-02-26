@@ -1282,7 +1282,10 @@ class QrController extends GetxController {
     WebSocket? ws;
     StreamSubscription? sub;
     try {
-      print('[QR] Connecting to receiver at ${receiver.ip}:$port');
+      print(
+        '[QR] Sender[requestPairing]: Connecting to receiver at '
+        '${receiver.ip}:$port (transferPort=${receiver.transferPort})',
+      );
       ws = await WebSocket.connect(uri.toString())
           .timeout(const Duration(seconds: 5));
 
@@ -1295,6 +1298,7 @@ class QrController extends GetxController {
           messageCount++;
           try {
             final map = jsonDecode(data as String) as Map<String, dynamic>;
+            print('[QR] Sender[requestPairing]: message#$messageCount = $map');
             if (messageCount == 1) {
               peer = DeviceInfo.fromJson(map);
               _getDeviceName().then((senderName) {
@@ -1304,21 +1308,30 @@ class QrController extends GetxController {
                   'senderName': senderName,
                 });
                 ws.add(pairingRequestJson);
-                print('[QR] Pairing request sent to ${receiver.ip} (senderName: $senderName)');
+                print(
+                  '[QR] Sender[requestPairing]: pairing_request sent to '
+                  '${receiver.ip} (senderName: $senderName)',
+                );
               });
             } else if (messageCount >= 2 && map['type'] == 'pairing_response') {
               if (!responseCompleter.isCompleted) {
+                print(
+                  '[QR] Sender[requestPairing]: pairing_response received '
+                  'accept=${map['accept']} full=$map',
+                );
                 responseCompleter.complete(map);
               }
             }
           } catch (_) {}
         },
         onError: (e) {
+          print('[QR] Sender[requestPairing]: WebSocket onError: $e');
           if (!responseCompleter.isCompleted) {
             responseCompleter.complete(<String, dynamic>{'type': 'error'});
           }
         },
         onDone: () {
+          print('[QR] Sender[requestPairing]: WebSocket onDone (closed by peer)');
           if (!responseCompleter.isCompleted) {
             responseCompleter.complete(<String, dynamic>{'type': 'timeout'});
           }
@@ -1327,23 +1340,29 @@ class QrController extends GetxController {
 
       Timer(const Duration(seconds: 20), () {
         if (!responseCompleter.isCompleted) {
+          print('[QR] Sender[requestPairing]: global 20s timeout fired');
           responseCompleter.complete(<String, dynamic>{'type': 'timeout'});
         }
       });
 
       final response = await responseCompleter.future;
+      print('[QR] Sender[requestPairing]: final response map = $response');
       await sub.cancel();
       await ws.close();
       ws = null;
       sub = null;
 
       if (response['type'] == 'timeout' || response['type'] == 'error') {
-        print('[QR] Pairing rejected or timed out, no navigation');
+        print(
+          '[QR] Sender[requestPairing]: pairing failed due to ${response['type']}',
+        );
         return false;
       }
       final accepted = response['accept'] == true;
       if (!accepted) {
-        print('[QR] Pairing rejected or timed out, no navigation');
+        print(
+          '[QR] Sender[requestPairing]: pairing_response.accept is false/absent',
+        );
         return false;
       }
       final acceptedPeer = peer;
@@ -1351,15 +1370,26 @@ class QrController extends GetxController {
         final info = NetworkInfo();
         final localIp = await info.getWifiIP();
         if (acceptedPeer.ip != localIp) {
-          final existing = devices.where((e) => e.ip == acceptedPeer.ip).isEmpty;
-          if (existing) devices.add(acceptedPeer);
+          final exists =
+              devices.where((e) => e.ip == acceptedPeer.ip).isNotEmpty;
+          if (!exists) {
+            devices.add(acceptedPeer);
+            print(
+              '[QR] Sender[requestPairing]: added acceptedPeer '
+              '${acceptedPeer.name}@${acceptedPeer.ip}:${acceptedPeer.wsPort}',
+            );
+          } else {
+            print(
+              '[QR] Sender[requestPairing]: acceptedPeer already in devices '
+              'list, skipping add (${acceptedPeer.ip})',
+            );
+          }
         }
       }
-      print('[QR] Pairing accepted by receiver');
+      print('[QR] Sender[requestPairing]: Pairing accepted by receiver');
       return true;
     } catch (e) {
-      print('[QR] Pairing rejected or timed out, no navigation');
-      print('[QR] requestPairing error: $e');
+      print('[QR] Sender[requestPairing]: exception during pairing: $e');
       await sub?.cancel();
       try {
         await ws?.close();

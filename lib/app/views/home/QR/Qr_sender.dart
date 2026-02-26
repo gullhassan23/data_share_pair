@@ -305,6 +305,7 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
 
     try {
       // Parse QR code data - should contain receiver's connection info
+      print('[QR] Sender: raw qrData = $qrData');
       final hotspotInfo = hotspotController.parseQrCodeData(qrData);
 
       if (hotspotInfo == null) {
@@ -346,6 +347,11 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                     : 'Resolving receiver…',
       );
 
+      print(
+        '[QR] Sender: parsed hotspotInfo ip=${hotspotInfo.ip} '
+        'port=${hotspotInfo.port} deviceName=${hotspotInfo.deviceName}',
+      );
+
       final tempDevice = DeviceInfo(
         name: displayName ?? 'Unknown',
         ip: hotspotInfo.ip,
@@ -355,7 +361,12 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
 
       // Handshake: send pairing_request and wait for receiver to accept.
       // After accept: only navigate to TransferFileScreen. No file dialog, no sendOffer here.
+      print(
+        '[QR] Sender: calling requestPairing to '
+        '${tempDevice.ip}:${tempDevice.wsPort} (transferPort=${tempDevice.transferPort})',
+      );
       final pairingAccepted = await qrController.requestPairing(tempDevice);
+      print('[QR] Sender: requestPairing result = $pairingAccepted');
       if (!pairingAccepted) {
         _dialogShown = false;
         setState(() => _isProcessing = false);
@@ -376,12 +387,22 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
       _dialogShown = false;
 
       if (receiver != null) {
+        print(
+          '[QR] Sender: receiver found after pairing '
+          'name=${receiver.name} ip=${receiver.ip} wsPort=${receiver.wsPort} '
+          'transferPort=${receiver.transferPort}',
+        );
         // Pairing only: set flow state and navigate. File selection and sendOffer happen on TransferFileScreen.
         qrController.flowState.value = TransferFlowState.paired;
         Get.back();
         AppNavigator.toTransferFile(device: receiver);
       } else {
         // Edge case: pairing accepted but receiver not in devices list
+        print(
+          '[QR] Sender: pairingAccepted=$pairingAccepted but receiver not found '
+          'in qrController.devices for ip=${hotspotInfo.ip}. '
+          'Devices list=${qrController.devices.map((d) => '${d.name}@${d.ip}:${d.wsPort}').toList()}',
+        );
         Get.snackbar(
           'Receiver Not Found',
           'Pairing was accepted but the receiver could not be found. Try again.',
