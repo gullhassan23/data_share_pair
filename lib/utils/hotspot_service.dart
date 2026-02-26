@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 
 class HotspotService {
   static const MethodChannel _channel = MethodChannel(
-    'com.example.share_app_latest/hotspot',
+    'com.share.transfer.file.all.data.app/hotspot',
   );
 
   /// Starts a Wi-Fi hotspot with the given SSID and password

@@ -1,4 +1,4 @@
-package com.example.share_app_latest
+package com.share.transfer.file.all.data.app
 
 import android.content.Context
 import android.content.Intent
@@ -19,9 +19,9 @@ import io.flutter.plugin.common.EventChannel
 
 class MainActivity : FlutterFragmentActivity() {
 
-    private val HOTSPOT_CHANNEL = "com.example.share_app_latest/hotspot"
-    private val P2P_CHANNEL = "com.example.share_app_latest/p2p"
-    private val P2P_EVENT_CHANNEL = "com.example.share_app_latest/p2p_events"
+    private val HOTSPOT_CHANNEL = "com.share.transfer.file.all.data.app/hotspot"
+    private val P2P_CHANNEL = "com.share.transfer.file.all.data.app/p2p"
+    private val P2P_EVENT_CHANNEL = "com.share.transfer.file.all.data.app/p2p_events"
 
     private var wifiP2pManager: WifiP2pManager? = null
     private var p2pChannel: WifiP2pManager.Channel? = null
