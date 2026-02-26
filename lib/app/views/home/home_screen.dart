@@ -7,6 +7,7 @@ import 'package:share_app_latest/components/transfer_option_card.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/images_resource.dart';
+import 'package:share_app_latest/utils/media_permissions.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -52,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      Get.back();
+                      AppNavigator.toOnboarding();
                     },
                     icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
                   ),
@@ -140,48 +141,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 16),
+                    // _RemoveDuplicatesButton(),
+                    TransferOptionCard(
+                      title: 'Remove Duplications',
+                      image: ImageRes.delete,
+                      onTap: () async {
+                        final granted = await requestMediaPermissions();
+                        if (!granted) {
+                          Get.snackbar(
+                            'Permission needed',
+                            'Gallery access is required to find duplicate photos and videos.',
+                            backgroundColor: Colors.orange.withOpacity(0.8),
+                            colorText: Colors.white,
+                          );
+                          return;
+                        }
+                        AppNavigator.toRemoveDuplicates();
+                      },
+                    ),
                   ],
                 ),
               ),
-
-              /// ACTION BUTTONS
-              // Padding(
-              //   padding: const EdgeInsets.all(8.0),
-              //   child: Row(
-              //     mainAxisAlignment: MainAxisAlignment.center,
-              //     children: [
-              //       // Send Button
-              //       Expanded(
-              //         child: Custombutton(
-              //           textColor: Colors.white,
-              //           colors: [Color(0xff04E0FF), Color(0xff6868FF)],
-              //           text: "Send Files",
-              //           ontap: () async {
-              //             // Show file selection dialog first
-              //             // _showFileSelectionDialog();
-              //             // showSendOptions(context );
-              //             showSendOptions(context);
-              //           },
-              //         ),
-              //       ),
-
-              //       const SizedBox(width: 16),
-
-              //       // Receive Button
-              //       Expanded(
-              //         child: Custombutton(
-              //           textColor: Colors.white,
-              //           colors: [Color(0xffFF6B6B), Color(0xffFF8E53)],
-              //           text: "Receive Files",
-              //           ontap: () {
-              //             showReceiveOptions(context);
-              //             // AppNavigator.toQrReceiver();
-              //           },
-              //         ),
-              //       ),
-              //     ],
-              //   ),
-              // ),
             ],
           ),
         ),

@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import 'package:share_app_latest/app/views/auth/login/login.dart';
 import 'package:share_app_latest/app/views/auth/sign_up/signup.dart';
-import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method.dart';
 import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
 import 'package:share_app_latest/app/views/home/QR/Qr_reciever.dart';
 import 'package:share_app_latest/app/views/home/QR/Qr_sender.dart';
@@ -11,6 +10,8 @@ import 'package:share_app_latest/app/views/home/transfer_file/transfer_file_scre
 import 'package:share_app_latest/app/views/home/home_screen.dart';
 import 'package:share_app_latest/app/views/home/pairing/pairing_page.dart';
 import 'package:share_app_latest/app/views/home/received_files_screen.dart';
+import 'package:share_app_latest/app/views/home/remove_duplicates/duplicate_preview_screen.dart';
+import 'package:share_app_latest/app/views/home/remove_duplicates/duplicate_scan_screen.dart';
 import 'package:share_app_latest/app/views/onboarding/onboarding_screen.dart';
 import 'package:share_app_latest/app/views/transfer_recovery/transfer_recovery_screen.dart';
 import 'package:share_app_latest/components/transfer_progress_screen.dart';
@@ -39,11 +40,7 @@ class AppPages {
       page: () => const SignUpScreen(),
       transition: Transition.rightToLeft,
     ),
-    GetPage(
-      name: AppRoutes.chooseMethod,
-      page: () => const ChooseMethod(),
-      transition: Transition.fade,
-    ),
+
     GetPage(
       name: AppRoutes.choosemethodscan,
       page: () {
@@ -107,6 +104,16 @@ class AppPages {
       name: AppRoutes.receivedFiles,
       page: () => const ReceivedFilesScreen(),
       transition: Transition.rightToLeft,
+    ),
+    GetPage(
+      name: AppRoutes.removeDuplicates,
+      page: () => const DuplicateScanScreen(),
+      transition: Transition.fade,
+    ),
+    GetPage(
+      name: AppRoutes.duplicatePreview,
+      page: () => const DuplicatePreviewScreen(),
+      transition: Transition.fade,
     ),
   ];
 }

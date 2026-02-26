@@ -630,6 +630,11 @@ class TransferController extends GetxController {
     }
   }
 
+  /// Refreshes the received files list from app documents (e.g. after duplicate removal).
+  Future<void> refreshReceivedFiles() async {
+    await _loadReceivedFiles();
+  }
+
   /// [senderTempPath] If provided, deleted on success/error/cancel (no garbage)
   /// [originalFileName] Use when [path] is staging/temp; preserves real name in metadata
   Future<void> sendFile(

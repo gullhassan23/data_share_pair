@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/transfer_state_persistence.dart';
+import 'package:share_app_latest/utils/images_resource.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -73,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const Spacer(),
 
             /// LOGO
-            Image.asset("assets/icons/logo.png", width: 100, height: 100),
+            Image.asset(ImageRes.logo, width: 100, height: 100),
 
             const SizedBox(height: 16),
 
