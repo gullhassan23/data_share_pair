@@ -67,10 +67,10 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/logo/logo.png"
+  image_path: "assets/logo/app_icon.png"
 
   android_adaptive_icon_background: "#FFFFFF"
-  android_adaptive_icon_foreground: "assets/logo/logo.png"
+  android_adaptive_icon_foreground: "assets/logo/app_icon.png"
 
   adaptive_icon_foreground_inset: 10
 
@@ -92,10 +92,10 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
+  # Only bundle assets used at runtime (logo/ is used only by flutter_launcher_icons at build time)
   assets:
     - assets/icons/
     - assets/lottie/
-    - assets/logo/
 
   #   - images/a_dot_ham.jpeg
 
