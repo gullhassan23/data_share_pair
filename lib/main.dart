@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:share_app_latest/app/controllers/QR_controller.dart';
 import 'package:share_app_latest/app/controllers/hotspot_controller.dart';
@@ -10,7 +11,11 @@ import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Restrict to portrait only
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // Initialize foreground task plugin before runApp (required for transfer notifications)
   TransferForegroundService.init();
 

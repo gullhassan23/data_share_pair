@@ -57,6 +57,8 @@ dependencies:
   vibration: ^3.1.7
   video_thumbnail: ^0.5.6
   flutter_contacts: ^1.1.7+1
+  photo_manager: ^3.0.0
+  crypto: ^3.0.3
   # fluttertoast: ^9.0.0
 
 dev_dependencies:

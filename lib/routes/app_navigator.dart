@@ -92,6 +92,10 @@ class AppNavigator {
     Get.offNamed(AppRoutes.transferRecovery, arguments: persistedState);
   }
 
+  static void toRemoveDuplicates() {
+    Get.toNamed(AppRoutes.removeDuplicates);
+  }
+
   static void back() {
     if (Get.key.currentState?.canPop() ?? false) {
       Get.back();
