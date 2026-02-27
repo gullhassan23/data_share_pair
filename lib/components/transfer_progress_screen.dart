@@ -53,7 +53,11 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     device = args['device'] is DeviceInfo ? args['device'] as DeviceInfo : null;
     filePath = args['filePath'] is String ? args['filePath'] as String : null;
     fileName = args['fileName'] is String ? args['fileName'] as String : null;
-    senderTempPath = args['senderTempPath'] is String ? args['senderTempPath'] as String : null;
+    senderTempPath =
+        args['senderTempPath'] is String
+            ? args['senderTempPath'] as String
+            : null;
+    final resume = args['resume'] == true;
 
     print('🔍 DEBUG: TransferProgressScreen arguments parsed:');
     print('  - device: $device');
@@ -62,6 +66,19 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     print('  - device?.transferPort: ${device?.transferPort}');
     print('  - filePath: $filePath');
     print('  - fileName: $fileName');
+    print('  - resume: $resume');
+
+    // Resume mode: show live progress only; transfer already running
+    if (resume) {
+      if (device == null) {
+        device = DeviceInfo(name: 'Sender', ip: '0.0.0.0', transferPort: 9090);
+      }
+      progress = Get.find<ProgressController>();
+      transfer = Get.find<TransferController>();
+      isSender = args['isSender'] == true;
+      print("✅ TransferProgressScreen initialized (resume mode)");
+      return;
+    }
 
     // Determine mode: if filePath is not null and not empty, we're sender
     final hasFilePath = (filePath ?? '').isNotEmpty;
@@ -76,7 +93,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     }
 
     final safeDevice = device!;
-    // Validate device has required connection info
+    // Validate device has required connection info (skip for placeholder 0.0.0.0 when receiver)
     final deviceIp = safeDevice.ip;
     final deviceTransferPort = safeDevice.transferPort;
     if (deviceIp.isEmpty) {
@@ -114,7 +131,10 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     // when starting a new transfer in TransferController.sendFile / receiver callback.
 
     if (isSender) {
-      _startTransfer();
+      // Only start if transfer is not already in progress (e.g. not resuming)
+      if (transfer.sessionState.value != TransferSessionState.transferring) {
+        _startTransfer();
+      }
     } else {
       print("🔄 Receiver mode - waiting for incoming file...");
     }
@@ -198,6 +218,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
         deviceIp,
         devicePort,
         senderTempPath: senderTempPath,
+        deviceName: safeDevice.name,
       );
 
       print("✅ Transfer initiated successfully");
@@ -268,6 +289,40 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
                 children: [
                   // Header
                   const SizedBox(height: 16),
+
+                  // iOS: remind user to keep app open for large transfers (background time is limited)
+                  if (!isSender && Platform.isIOS)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: Colors.orange.shade700,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'For large files, keep the app open.',
+                              style: GoogleFonts.roboto(
+                                fontSize: 12,
+                                color: Colors.orange.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // Step Progress Bar
                   StepProgressBar(
@@ -454,7 +509,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
                 _confirmCancel();
               },
               icon: const Icon(Icons.close),
-              label: const Text("Cancel Transfer"),
+              label: Text(isSender ? "Cancel Transfer" : "Cancel Recieve"),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: const BorderSide(color: Colors.red),

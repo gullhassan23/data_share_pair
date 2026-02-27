@@ -19,16 +19,30 @@ class DuplicateController extends GetxController {
   final deleting = false.obs;
 
   static const _imageExtensions = [
-    '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.heic'
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.webp',
+    '.bmp',
+    '.heic',
   ];
   static const _videoExtensions = [
-    '.mp4', '.avi', '.mov', '.mkv', '.webm', '.m4v', '.3gp'
+    '.mp4',
+    '.avi',
+    '.mov',
+    '.mkv',
+    '.webm',
+    '.m4v',
+    '.3gp',
   ];
 
   bool get hasDuplicates => duplicateGroups.isNotEmpty;
   bool get isEmpty => duplicateGroups.isEmpty;
-  int get totalDuplicateCount =>
-      duplicateGroups.fold<int>(0, (s, g) => s + g.where((e) => !e.isOriginal).length);
+  int get totalDuplicateCount => duplicateGroups.fold<int>(
+    0,
+    (s, g) => s + g.where((e) => !e.isOriginal).length,
+  );
 
   Future<bool> requestPermissions() async {
     error.value = '';
@@ -82,7 +96,9 @@ class DuplicateController extends GetxController {
     }
   }
 
-  static List<List<DuplicateItem>> _findDuplicateGroups(List<DuplicateItem> items) {
+  static List<List<DuplicateItem>> _findDuplicateGroups(
+    List<DuplicateItem> items,
+  ) {
     final keyToItems = <String, List<DuplicateItem>>{};
     for (final item in items) {
       final key = '${item.name}_${item.size}';
@@ -123,7 +139,8 @@ class DuplicateController extends GetxController {
         );
         if (assets.isEmpty) break;
         for (final asset in assets) {
-          if (asset.type != AssetType.image && asset.type != AssetType.video) continue;
+          if (asset.type != AssetType.image && asset.type != AssetType.video)
+            continue;
           final name = asset.title ?? asset.id;
           int size = 0;
           try {
@@ -133,23 +150,26 @@ class DuplicateController extends GetxController {
             }
           } catch (_) {}
           final type = asset.type == AssetType.video ? 'video' : 'image';
-          list.add(DuplicateItem(
-            id: asset.id,
-            assetId: asset.id,
-            path: null,
-            name: name,
-            size: size,
-            type: type,
-            source: DuplicateSource.gallery,
-            isOriginal: false,
-          ));
+          list.add(
+            DuplicateItem(
+              id: asset.id,
+              assetId: asset.id,
+              path: null,
+              name: name,
+              size: size,
+              type: type,
+              source: DuplicateSource.gallery,
+              isOriginal: false,
+            ),
+          );
         }
         if (assets.length < pageSize) break;
         page++;
       }
     } on MissingPluginException catch (e) {
       debugPrint('DuplicateController: photo_manager plugin not linked: $e');
-      error.value = 'Gallery access is not available. Try a full restart of the app.';
+      error.value =
+          'Gallery access is not available. Try a full restart of the app.';
     } catch (e) {
       debugPrint('DuplicateController: gallery load error: $e');
     }
@@ -165,19 +185,22 @@ class DuplicateController extends GetxController {
       for (final file in files) {
         final fileName = p.basename(file.path);
         final ext = p.extension(fileName).toLowerCase();
-        if (!_imageExtensions.contains(ext) && !_videoExtensions.contains(ext)) continue;
+        if (!_imageExtensions.contains(ext) && !_videoExtensions.contains(ext))
+          continue;
         final stat = await file.stat();
         final type = _videoExtensions.contains(ext) ? 'video' : 'image';
-        list.add(DuplicateItem(
-          id: file.path,
-          assetId: null,
-          path: file.path,
-          name: fileName,
-          size: stat.size,
-          type: type,
-          source: DuplicateSource.app_docs,
-          isOriginal: false,
-        ));
+        list.add(
+          DuplicateItem(
+            id: file.path,
+            assetId: null,
+            path: file.path,
+            name: fileName,
+            size: stat.size,
+            type: type,
+            source: DuplicateSource.app_docs,
+            isOriginal: false,
+          ),
+        );
       }
     } catch (e) {
       debugPrint('DuplicateController: app docs load error: $e');
@@ -196,19 +219,23 @@ class DuplicateController extends GetxController {
           if (entity is! File) continue;
           final fileName = p.basename(entity.path);
           final ext = p.extension(fileName).toLowerCase();
-          if (!_imageExtensions.contains(ext) && !_videoExtensions.contains(ext)) continue;
+          if (!_imageExtensions.contains(ext) &&
+              !_videoExtensions.contains(ext))
+            continue;
           final stat = await entity.stat();
           final type = _videoExtensions.contains(ext) ? 'video' : 'image';
-          list.add(DuplicateItem(
-            id: entity.path,
-            assetId: null,
-            path: entity.path,
-            name: fileName,
-            size: stat.size,
-            type: type,
-            source: DuplicateSource.app_cache,
-            isOriginal: false,
-          ));
+          list.add(
+            DuplicateItem(
+              id: entity.path,
+              assetId: null,
+              path: entity.path,
+              name: fileName,
+              size: stat.size,
+              type: type,
+              source: DuplicateSource.app_cache,
+              isOriginal: false,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -217,13 +244,20 @@ class DuplicateController extends GetxController {
     return list;
   }
 
+  // void toggleSelection(String id) {
+  //   if (selectedIds.contains(id)) {
+  //     selectedIds.remove(id);
+  //   } else {
+  //     selectedIds.add(id);
+  //   }
+  //   selectedIds.refresh();
+  // }
   void toggleSelection(String id) {
     if (selectedIds.contains(id)) {
       selectedIds.remove(id);
     } else {
       selectedIds.add(id);
     }
-    selectedIds.refresh();
   }
 
   void selectAllDuplicates() {
@@ -261,7 +295,8 @@ class DuplicateController extends GetxController {
               await f.delete();
               if (item.source == DuplicateSource.app_docs) {
                 transfer.receivedFiles.removeWhere(
-                    (m) => (m['path'] as String?) == item.path);
+                  (m) => (m['path'] as String?) == item.path,
+                );
               }
             }
           }

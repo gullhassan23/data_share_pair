@@ -118,6 +118,12 @@ class TransferController extends GetxController {
       );
       client.setOption(SocketOption.tcpNoDelay, true);
 
+      // Start foreground service immediately so process stays alive if user backgrounds or turns screen off
+      await TransferForegroundService.startTransferNotification(
+        isSender: false,
+        fileName: 'Incoming file...',
+      );
+
       File? file;
       IOSink? sink;
       String? savePath;
@@ -208,9 +214,28 @@ class TransferController extends GetxController {
                   received += remainingData.length;
                   print('📊 Initial file data: ${remainingData.length} bytes');
 
+                  // Update progress (same as file-data branch) so UI/notification update for small files (e.g. contacts)
+                  final progressValue = received / meta.size;
+                  _recvStream?.add(progressValue);
+                  progress.receiveProgress.value = progressValue;
+                  TransferStatePersistence.updateProgress(progressValue);
+                  final receivedMB = received / (1024 * 1024);
+                  progress.receivedMB.value = receivedMB;
+                  TransferForegroundService.updateProgress(
+                    fileName: meta.name,
+                    progress: progressValue,
+                    sentMB: receivedMB,
+                    totalMB: meta.size / (1024 * 1024),
+                    speedMBps: progress.receiveSpeedMBps.value,
+                    isSender: false,
+                  );
+
                   // Check if we've received all data
                   if (received >= meta.size) {
                     transferComplete = true;
+                    progress.receiveProgress.value = 1.0;
+                    progress.receivedMB.value = meta.size / (1024 * 1024);
+                    progress.receiveSpeedMBps.value = 0.0;
                     print(
                       '📤 All bytes received in initial chunk, transfer complete',
                     );
@@ -643,6 +668,7 @@ class TransferController extends GetxController {
     int port, {
     String? senderTempPath,
     String? originalFileName,
+    String? deviceName,
   }) async {
     print('📤 Starting file transfer: $path -> $ip:$port');
 
@@ -669,6 +695,10 @@ class TransferController extends GetxController {
       isSender: true,
       fileName: fileName,
       totalBytes: fileSize,
+      deviceName: deviceName,
+      deviceIp: ip,
+      devicePort: port,
+      filePath: path,
     );
 
     final startTime = DateTime.now(); // ⏱ start time

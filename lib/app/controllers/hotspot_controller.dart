@@ -180,7 +180,11 @@ class HotspotController extends GetxController {
   /// Parses QR code data and returns HotspotInfo
   HotspotInfo? parseQrCodeData(String qrData) {
     try {
-      return HotspotInfo.fromJson(qrData);
+      String cleaned = qrData.trim();
+      if (cleaned.startsWith('\uFEFF')) {
+        cleaned = cleaned.substring(1);
+      }
+      return HotspotInfo.fromJson(cleaned);
     } catch (e) {
       print('❌ Failed to parse QR code data: $e');
       return null;

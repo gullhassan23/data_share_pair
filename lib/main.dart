@@ -10,6 +10,8 @@ import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
+import 'package:share_app_latest/utils/constants.dart';
+import 'package:share_app_latest/routes/app_navigator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +36,6 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
@@ -43,9 +44,53 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      // GETX ROUTING
       initialRoute: AppRoutes.splash,
       getPages: AppPages.pages,
+      builder: (context, child) => _TransferLifecycleWrapper(child: child!),
     );
+  }
+}
+
+/// When app resumes and a transfer is in progress, navigates to transfer progress screen.
+class _TransferLifecycleWrapper extends StatefulWidget {
+  const _TransferLifecycleWrapper({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_TransferLifecycleWrapper> createState() =>
+      _TransferLifecycleWrapperState();
+}
+
+class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _onResumed();
+  }
+
+  Future<void> _onResumed() async {
+    if (!Get.isRegistered<TransferController>()) return;
+    final transfer = Get.find<TransferController>();
+    if (transfer.sessionState.value != TransferSessionState.transferring) return;
+    final currentRoute = Get.currentRoute;
+    if (currentRoute == AppRoutes.transferProgress) return;
+    await AppNavigator.toTransferProgressResume();
   }
 }

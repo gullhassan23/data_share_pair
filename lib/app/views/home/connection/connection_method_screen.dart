@@ -9,8 +9,7 @@ import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart'
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
-/// Connection method selection: QR, Bluetooth, or WiFi Direct.
-/// [isReceiver] is required and must be passed via route arguments.
+
 class ConnectionMethodScreen extends StatefulWidget {
   const ConnectionMethodScreen({super.key, required this.isReceiver});
 

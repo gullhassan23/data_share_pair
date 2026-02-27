@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:ui_background_task/ui_background_task.dart';
 
 /// Wraps flutter_foreground_task (Android) and ui_background_task (iOS) to keep transfers alive when app is backgrounded.
@@ -26,6 +27,8 @@ class TransferForegroundService {
   }) async {
     if (Platform.isIOS) {
       try {
+        // iOS: request notification permission (parity with Android) so we can show transfer status if needed
+        await Permission.notification.request();
         _iosBackgroundTaskId = await UiBackgroundTask.instance.beginBackgroundTask();
         return true;
       } catch (e) {
@@ -35,6 +38,9 @@ class TransferForegroundService {
     if (!Platform.isAndroid) return true;
 
     try {
+      // Android 13+ requires runtime notification permission for foreground service notification
+      await Permission.notification.request();
+
       final title = isSender ? 'Sending' : 'Receiving';
       final text = fileName.isNotEmpty ? fileName : 'File transfer in progress';
 

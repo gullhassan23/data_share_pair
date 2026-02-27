@@ -26,6 +26,9 @@ class BluetoothController extends GetxController {
 
   /// Receiver only: set when a sender has connected and we know its name (from offer or connection).
   final connectedSenderName = Rxn<String>();
+
+  /// True when BLE advertising has started successfully (receiver mode ready).
+  final receiverReady = false.obs;
   String? selectedFilePath;
   String? receiverIp;
   int? receiverPort;
@@ -37,8 +40,8 @@ class BluetoothController extends GetxController {
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription? _connectionStreamSub;
   StreamSubscription? _dataStreamSub;
-  /// RSSI threshold: devices with signal weaker than this are filtered out. -80 allows receivers at edge of range.
-  final int distanceThreshold = -80;
+  /// RSSI threshold: devices with signal weaker than this are filtered out. -90 allows receivers at edge of range.
+  final int distanceThreshold = -90;
 
   // New Peripheral Service
   final _peripheralService = BluetoothPeripheralService();
@@ -355,6 +358,7 @@ class BluetoothController extends GetxController {
 
     try {
       await _peripheralService.start();
+      receiverReady.value = true;
 
       _connectionStreamSub?.cancel();
       _dataStreamSub?.cancel();
@@ -400,6 +404,7 @@ class BluetoothController extends GetxController {
         }
       });
     } catch (e) {
+      receiverReady.value = false;
       error.value = "Failed to start receiver mode: $e";
     }
   }
@@ -410,6 +415,7 @@ class BluetoothController extends GetxController {
     _dataStreamSub?.cancel();
     _dataStreamSub = null;
     _peripheralService.stop();
+    receiverReady.value = false;
     isReceiver = false;
     connectedSenderName.value = null;
     _pollTimer?.cancel();

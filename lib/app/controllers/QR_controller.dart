@@ -958,17 +958,22 @@ class QrController extends GetxController {
                 if (map['type'] == 'pairing_request') {
                   final senderName = map['senderName'] as String? ?? 'Unknown';
                   print("[QR] Pairing request received from $fromIp (senderName: $senderName)");
-                  // Only show pairing popup once per sender: ignore duplicate connection from same IP
+                  // If same IP reconnected (e.g. sender retried), replace socket so response goes to live connection
                   if (_pendingSockets.containsKey(fromIp)) {
-                    print("[QR] Ignoring duplicate pairing_request from $fromIp (popup already shown)");
-                    return;
+                    final oldSocket = _pendingSockets[fromIp];
+                    try {
+                      await oldSocket?.close();
+                    } catch (_) {}
+                    print("[QR] Replaced pending socket for $fromIp (sender reconnected)");
+                    // Do not set incomingPairingRequest again — dialog already shown
+                  } else {
+                    incomingPairingRequest.value = {
+                      'fromIp': fromIp,
+                      'senderName': senderName,
+                    };
+                    print("✅ incomingPairingRequest set for UI: ${incomingPairingRequest.value}");
                   }
                   _pendingSockets[fromIp] = socket;
-                  incomingPairingRequest.value = {
-                    'fromIp': fromIp,
-                    'senderName': senderName,
-                  };
-                  print("✅ incomingPairingRequest set for UI: ${incomingPairingRequest.value}");
                 } else if (map['type'] == 'offer') {
                   print("📥 File offer received from $fromIp");
                   print("[QR] offer received raw");

@@ -10,12 +10,21 @@ class TransferStatePersistence {
   static const _keyProgress = 'transfer_progress';
   static const _keyTotalBytes = 'transfer_total_bytes';
   static const _keyStartedAt = 'transfer_started_at';
+  // Sender-only: for resume so we can show progress screen with same context
+  static const _keyDeviceName = 'transfer_device_name';
+  static const _keyDeviceIp = 'transfer_device_ip';
+  static const _keyDevicePort = 'transfer_device_port';
+  static const _keyFilePath = 'transfer_file_path';
 
   /// Save that transfer started
   static Future<void> saveTransferStarted({
     required bool isSender,
     required String fileName,
     required int totalBytes,
+    String? deviceName,
+    String? deviceIp,
+    int? devicePort,
+    String? filePath,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyInProgress, true);
@@ -24,6 +33,12 @@ class TransferStatePersistence {
     await prefs.setDouble(_keyProgress, 0.0);
     await prefs.setInt(_keyTotalBytes, totalBytes);
     await prefs.setString(_keyStartedAt, DateTime.now().toIso8601String());
+    if (isSender) {
+      if (deviceName != null) await prefs.setString(_keyDeviceName, deviceName);
+      if (deviceIp != null) await prefs.setString(_keyDeviceIp, deviceIp);
+      if (devicePort != null) await prefs.setInt(_keyDevicePort, devicePort);
+      if (filePath != null) await prefs.setString(_keyFilePath, filePath);
+    }
   }
 
   /// Update progress during transfer
@@ -41,6 +56,10 @@ class TransferStatePersistence {
     await prefs.remove(_keyProgress);
     await prefs.remove(_keyTotalBytes);
     await prefs.remove(_keyStartedAt);
+    await prefs.remove(_keyDeviceName);
+    await prefs.remove(_keyDeviceIp);
+    await prefs.remove(_keyDevicePort);
+    await prefs.remove(_keyFilePath);
   }
 
   /// Check if we had a transfer in progress (for splash / recovery)
@@ -49,7 +68,7 @@ class TransferStatePersistence {
     return prefs.getBool(_keyInProgress) ?? false;
   }
 
-  /// Get persisted state for recovery screen
+  /// Get persisted state for recovery screen and resume navigation
   static Future<PersistedTransferState?> getPersistedState() async {
     final prefs = await SharedPreferences.getInstance();
     final inProgress = prefs.getBool(_keyInProgress) ?? false;
@@ -64,6 +83,10 @@ class TransferStatePersistence {
             prefs.getString(_keyStartedAt) ?? '',
           ) ??
           DateTime.now(),
+      deviceName: prefs.getString(_keyDeviceName),
+      deviceIp: prefs.getString(_keyDeviceIp),
+      devicePort: prefs.getInt(_keyDevicePort),
+      filePath: prefs.getString(_keyFilePath),
     );
   }
 }
@@ -74,6 +97,10 @@ class PersistedTransferState {
   final double progress;
   final int totalBytes;
   final DateTime startedAt;
+  final String? deviceName;
+  final String? deviceIp;
+  final int? devicePort;
+  final String? filePath;
 
   PersistedTransferState({
     required this.isSender,
@@ -81,5 +108,9 @@ class PersistedTransferState {
     required this.progress,
     required this.totalBytes,
     required this.startedAt,
+    this.deviceName,
+    this.deviceIp,
+    this.devicePort,
+    this.filePath,
   });
 }

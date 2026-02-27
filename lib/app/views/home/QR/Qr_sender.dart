@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -359,9 +361,13 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
       if (!pairingAccepted) {
         _dialogShown = false;
         setState(() => _isProcessing = false);
+        final message =
+            Platform.isIOS
+                ? 'Ensure both devices are on the same Wi-Fi and that you allowed Local Network access when prompted.'
+                : 'The receiver did not accept pairing or the request timed out. Try again.';
         Get.snackbar(
-          'Pairing Declined',
-          'The receiver did not accept pairing or the request timed out. Try again.',
+          'Pairing Failed',
+          message,
           backgroundColor: Colors.orange.withOpacity(0.8),
           colorText: Colors.white,
         );

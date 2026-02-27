@@ -8,6 +8,7 @@ import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/components/select_device_name.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
+import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/utils/permissions.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
@@ -35,12 +36,7 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
     _navigated = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Get.to(
-        () => SelectDeviceScreen(
-          devices: const [],
-          isBluetooth: true,
-        ),
-      );
+      Get.to(() => SelectDeviceScreen(devices: const [], isBluetooth: true));
     });
   }
 
@@ -120,7 +116,7 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
               StepProgressBar(
                 currentStep: 3,
                 totalSteps: kTransferFlowTotalSteps,
-                activeColor: Colors.blue,
+                activeColor: Theme.of(context).colorScheme.primary,
                 inactiveColor: Colors.white.withOpacity(0.6),
                 height: 6,
                 segmentSpacing: 5,
@@ -131,7 +127,7 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
               Text(
                 'Send via Bluetooth',
                 style: GoogleFonts.roboto(
-                  color: Colors.blue,
+                  color: Colors.black,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -152,7 +148,10 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
               Expanded(
                 child: Obx(() {
                   if (bluetooth.error.value.isNotEmpty) {
-                    return _ErrorView(bluetooth.error.value);
+                    return _ErrorView(
+                      bluetooth.error.value,
+                      onOpenSettings: () => openAppSettings(),
+                    );
                   }
                   // Already connected → navigating to select device (shows connected device)
                   if (bluetooth.connectedDevice.value != null) {
@@ -160,7 +159,11 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.bluetooth_connected, size: 64, color: Colors.green.shade700),
+                          Icon(
+                            Icons.bluetooth_connected,
+                            size: 64,
+                            color: Colors.green.shade700,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Already connected',
@@ -209,9 +212,32 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
   }
 }
 
-Widget _ErrorView(String error) {
+Widget _ErrorView(String error, {VoidCallback? onOpenSettings}) {
+  final isPermissionError =
+      error.toLowerCase().contains('permission') ||
+      error.toLowerCase().contains('location');
   return Center(
-    child: Text(error, style: const TextStyle(color: Colors.red, fontSize: 16)),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            error,
+            style: const TextStyle(color: Colors.red, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          if (isPermissionError && onOpenSettings != null) ...[
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: onOpenSettings,
+              icon: const Icon(Icons.settings),
+              label: const Text('Open settings'),
+            ),
+          ],
+        ],
+      ),
+    ),
   );
 }
 
@@ -240,13 +266,27 @@ Widget _SearchingView(BluetoothController bluetooth) {
 
 Widget _NoDevicesView() {
   return Column(
+    mainAxisAlignment: MainAxisAlignment.center,
     children: [
       const SizedBox(height: 40),
       const Icon(Icons.bluetooth_disabled, size: 80, color: Colors.grey),
       const SizedBox(height: 16),
       Text(
         'No Bluetooth devices found',
-        style: GoogleFonts.roboto(color: Colors.black54),
+        style: GoogleFonts.roboto(
+          color: Colors.black54,
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Text(
+          'Make sure the other device has opened Receive via Bluetooth and is nearby.',
+          style: GoogleFonts.roboto(color: Colors.black54, fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
       ),
     ],
   );

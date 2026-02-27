@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
+import 'package:share_app_latest/services/transfer_state_persistence.dart';
 import 'app_routes.dart';
 
 class AppNavigator {
@@ -90,6 +91,34 @@ class AppNavigator {
   /// Navigate to transfer recovery screen (after app relaunch when a transfer was interrupted).
   static void toTransferRecovery(Object? persistedState) {
     Get.offNamed(AppRoutes.transferRecovery, arguments: persistedState);
+  }
+
+  /// Navigate to transfer progress when app is resumed and a transfer is still in progress.
+  /// Uses persisted state to build sender/receiver args; pass resume: true so screen does not re-start transfer.
+  static Future<void> toTransferProgressResume() async {
+    final state = await TransferStatePersistence.getPersistedState();
+    if (state == null) return;
+    final DeviceInfo device = state.isSender &&
+            state.deviceIp != null &&
+            state.deviceIp!.isNotEmpty &&
+            state.devicePort != null &&
+            state.devicePort! > 0
+        ? DeviceInfo(
+            name: state.deviceName ?? 'Sender',
+            ip: state.deviceIp!,
+            transferPort: state.devicePort!,
+          )
+        : DeviceInfo(name: 'Sender', ip: '0.0.0.0', transferPort: 9090);
+    Get.toNamed(
+      AppRoutes.transferProgress,
+      arguments: <String, dynamic>{
+        'device': device,
+        'filePath': state.filePath ?? '',
+        'fileName': state.fileName,
+        'resume': true,
+        'isSender': state.isSender,
+      },
+    );
   }
 
   static void toRemoveDuplicates() {

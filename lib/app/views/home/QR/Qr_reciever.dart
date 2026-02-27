@@ -430,15 +430,15 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 19),
+              const SizedBox(height: 10),
 
-              /// Back Rowss
+              /// Back Rowsss
 
               /// Progress Barss
               StepProgressBar(
                 currentStep: 3,
                 totalSteps: kTransferFlowTotalSteps,
-                activeColor: Colors.blue,
+                activeColor: Theme.of(context).colorScheme.primary,
                 inactiveColor: Colors.white.withOpacity(0.6),
                 height: 6,
                 segmentSpacing: 5,

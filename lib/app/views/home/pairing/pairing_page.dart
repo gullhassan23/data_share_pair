@@ -271,103 +271,142 @@ class _PairingScreenState extends State<PairingScreen>
       return;
     }
 
-    final ip = offer['fromIp'] as String;
-    final meta = FileMeta.fromJson(offer['meta'] as Map<String, dynamic>);
-
     _offerDialogShown = true;
 
+    // Dialog content is reactive: always shows current pairing.incomingOffer
+    // so when a new offer arrives it updates ("latest offer wins") and
+    // Accept/Reject use the current offer.
     Get.dialog(
       Center(
-        child: Card(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Optional Lottie animation
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFF5DADE2),
-                    child: Icon(Icons.phone_android, color: Colors.white),
-                  ),
-                  title: Text(meta.name),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Reject button
-                    ElevatedButton(
-                      onPressed: () {
-                        print('❌ User rejected file transfer from $ip');
-                        _offerDialogShown = false;
-                        pairing.respondToOffer(ip, false);
-                        Get.back();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                      ),
-                      child: const Text(
-                        'Reject',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
+        child: Obx(() {
+          final currentOffer = pairing.incomingOffer.value;
+          if (currentOffer == null) {
+            return const SizedBox.shrink();
+          }
+          final ip = currentOffer['fromIp'] as String? ?? '';
+          final meta = FileMeta.fromJson(
+            currentOffer['meta'] as Map<String, dynamic>,
+          );
+          final raw = currentOffer['senderName'];
+          final senderName = (raw is String ? raw.trim() : '').isEmpty
+              ? 'Sender'
+              : (raw as String).trim();
 
-                    // Accept button
-                    ElevatedButton(
-                      onPressed: () async {
-                        print('✅ User accepted file transfer from $ip');
-                        _offerDialogShown = false;
-                        pairing.respondToOffer(ip, true);
-                        Get.back();
-
-                        // Start transfer server for receiver
-                        final transferController =
-                            Get.find<TransferController>();
-                        await transferController.startServer();
-
-                        final raw = offer['senderName'];
-                        final s = raw is String ? raw.trim() : '';
-                        final senderName = s.isEmpty ? 'Sender' : s;
-                        final senderDevice = DeviceInfo(
-                          name: senderName,
-                          ip: ip,
-                          wsPort: 7070,
-                          transferPort: 9090,
-                        );
-
-                        transfer.progress.reset();
-                        await AppNavigator.toTransferProgress(
-                          device: senderDevice,
-                          filePath: '',
-                          fileName: meta.name,
-                        );
-
-                        Get.snackbar(
-                          'Accepted',
-                          'Accepted transfer from ${meta.name}',
-                          backgroundColor: Colors.green.withOpacity(0.8),
-                          colorText: Colors.white,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5DADE2),
-                      ),
-                      child: const Text(
-                        'Accept',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          return Card(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
-          ),
-        ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFF5DADE2),
+                      child: Icon(Icons.phone_android, color: Colors.white),
+                    ),
+                    title: Text(meta.name),
+                    subtitle: Text(
+                      'From: $senderName${ip.isNotEmpty ? ' ($ip)' : ''}',
+                      style: GoogleFonts.roboto(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          final o = pairing.incomingOffer.value;
+                          if (o != null) {
+                            final fromIp = o['fromIp'] as String? ?? '';
+                            print(
+                              '❌ User rejected file transfer from $fromIp',
+                            );
+                            pairing.respondToOffer(fromIp, false);
+                          }
+                          _offerDialogShown = false;
+                          Get.back();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                        child: const Text(
+                          'Reject',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final o = pairing.incomingOffer.value;
+                          if (o == null) {
+                            _offerDialogShown = false;
+                            Get.back();
+                            return;
+                          }
+                          final fromIp = o['fromIp'] as String? ?? '';
+                          final rawName = o['senderName'];
+                          final name = (rawName is String
+                                  ? rawName.trim()
+                                  : '')
+                              .isEmpty
+                              ? 'Sender'
+                              : (rawName as String).trim();
+                          final fileMeta =
+                              FileMeta.fromJson(o['meta'] as Map<String, dynamic>);
+
+                          print(
+                            '✅ User accepted file transfer from $fromIp (sender: $name)',
+                          );
+                          pairing.respondToOffer(fromIp, true);
+                          _offerDialogShown = false;
+                          Get.back();
+
+                          final transferController =
+                              Get.find<TransferController>();
+                          await transferController.startServer();
+
+                          final senderDevice = DeviceInfo(
+                            name: name,
+                            ip: fromIp,
+                            wsPort: 7070,
+                            transferPort: 9090,
+                          );
+
+                          transfer.progress.reset();
+                          await AppNavigator.toTransferProgress(
+                            device: senderDevice,
+                            filePath: '',
+                            fileName: fileMeta.name,
+                          );
+
+                          Get.snackbar(
+                            'Accepted',
+                            'Accepted transfer from $name',
+                            backgroundColor: Colors.green.withOpacity(0.8),
+                            colorText: Colors.white,
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF5DADE2),
+                        ),
+                        child: const Text(
+                          'Accept',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ),
       barrierDismissible: false,
     );
@@ -377,26 +416,7 @@ class _PairingScreenState extends State<PairingScreen>
   Widget build(BuildContext context) {
     // Global incoming offer detection - works regardless of current step
     // This allows receivers to get offers immediately after pairing
-    return Stack(
-      children: [
-        // Main content
-        _buildMainContent(),
-        // Overlay for incoming offer dialog
-        // Obx(() {
-        //   final offer = pairing.incomingOffer.value;
-        //   if (offer != null) {
-        //     // Show dialog when offer is received (regardless of pairing status)
-        //     // The receiver can receive offers even before pairing if their server is running
-        //     print('🎯 Incoming offer detected, showing dialog...');
-        //     WidgetsBinding.instance.addPostFrameCallback((_) {
-        //       print('📱 Triggering offer dialog display');
-        //       _showIncomingOfferDialog(offer);
-        //     });
-        //   }
-        //   return const SizedBox.shrink();
-        // }),
-      ],
-    );
+    return  _buildMainContent();
   }
 
   Widget _buildMainContent() {

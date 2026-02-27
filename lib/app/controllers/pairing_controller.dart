@@ -439,10 +439,8 @@ class PairingController extends GetxController {
     final uri = Uri.parse('ws://${device.ip}:$port');
     WebSocket? ws;
     try {
-      // Ensure sender device name is set so receiver can show "From: <name>"
-      if (deviceName.value.trim().isEmpty) {
-        deviceName.value = await _getDeviceName();
-      }
+      // Always refresh sender device name so receiver sees correct "From: <name>"
+      deviceName.value = await _getDeviceName();
       ws = await WebSocket.connect(
         uri.toString(),
       ).timeout(const Duration(seconds: 5)); // Increased timeout for connection

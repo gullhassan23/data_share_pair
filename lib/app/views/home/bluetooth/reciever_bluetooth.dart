@@ -9,6 +9,7 @@ import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/views/home/received_files_screen.dart';
 
+import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/permissions.dart';
 import 'package:share_app_latest/utils/show_uploadbar_dialogue.dart';
@@ -26,11 +27,25 @@ class BluetoothReceiverScreen extends StatefulWidget {
 class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
   late final BluetoothController bluetooth;
   Worker? _incomingOfferWorker;
+  Worker? _receiverReadyWorker;
 
   @override
   void initState() {
     super.initState();
     bluetooth = Get.put(BluetoothController(), tag: "receiver");
+
+    // Show snackbar once when BLE advertising has started
+    _receiverReadyWorker = ever(bluetooth.receiverReady, (ready) {
+      if (ready == true && mounted) {
+        Get.snackbar(
+          'Ready',
+          'Ready to receive – waiting for sender.',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+      }
+    });
 
     // When transfer completes, close progress dialog and navigate (same as QR receiver)
     final transfer = Get.find<TransferController>();
@@ -85,6 +100,7 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
   @override
   void dispose() {
     _incomingOfferWorker?.dispose();
+    _receiverReadyWorker?.dispose();
     bluetooth.stopReceiverMode();
     super.dispose();
   }
@@ -93,9 +109,18 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
     if (await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 500); // 500 ms
     }
-    final meta = offer['meta'];
-    final fileName = (meta is Map ? meta['name']?.toString() : null) ??
-        'Unknown file';
+    // Null-safe: avoid crash on malformed offer (missing meta or meta.name)
+    String fileName = 'Unknown file';
+    try {
+      final meta = offer['meta'];
+      final name = meta is Map ? meta['name']?.toString() : null;
+      fileName =
+          (name != null && name.trim().isNotEmpty)
+              ? name.trim()
+              : 'Unknown file';
+    } catch (_) {
+      fileName = 'Unknown file';
+    }
 
     Get.dialog(
       AlertDialog(
@@ -185,7 +210,7 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
               StepProgressBar(
                 currentStep: 3,
                 totalSteps: kTransferFlowTotalSteps,
-                activeColor: Colors.blue,
+                activeColor: Theme.of(context).colorScheme.primary,
                 inactiveColor: Colors.white.withOpacity(0.6),
                 height: 6,
                 segmentSpacing: 5,
@@ -196,7 +221,7 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
               Text(
                 'Receive via Bluetooth',
                 style: GoogleFonts.roboto(
-                  color: Colors.blue,
+                  color: Colors.black,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -206,7 +231,10 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Obx(() {
                     if (bluetooth.error.value.isNotEmpty) {
-                      return _ErrorView(bluetooth.error.value);
+                      return _ErrorView(
+                        bluetooth.error.value,
+                        onOpenSettings: () => openAppSettings(),
+                      );
                     }
                     final senderName = bluetooth.connectedSenderName.value;
                     return _ReceiverStatusView(connectedSenderName: senderName);
@@ -221,9 +249,32 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
   }
 }
 
-Widget _ErrorView(String error) {
+Widget _ErrorView(String error, {VoidCallback? onOpenSettings}) {
+  final isPermissionError =
+      error.toLowerCase().contains('permission') ||
+      error.toLowerCase().contains('location');
   return Center(
-    child: Text(error, style: const TextStyle(color: Colors.red, fontSize: 16)),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            error,
+            style: const TextStyle(color: Colors.red, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          if (isPermissionError && onOpenSettings != null) ...[
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: onOpenSettings,
+              icon: const Icon(Icons.settings),
+              label: const Text('Open settings'),
+            ),
+          ],
+        ],
+      ),
+    ),
   );
 }
 

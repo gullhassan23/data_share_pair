@@ -14,7 +14,7 @@ class DuplicatePreviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ctrl = Get.find<DuplicateController>();
+    final ctrl = Get.put(DuplicateController());
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -37,7 +37,11 @@ class DuplicatePreviewScreen extends StatelessWidget {
                       Get.delete<DuplicateController>(force: true);
                       Get.offAllNamed(AppRoutes.home);
                     },
-                    icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.black,
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -118,30 +122,34 @@ class DuplicatePreviewScreen extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: count > 0 && !ctrl.deleting.value
-                          ? () => _confirmDelete(context, ctrl)
-                          : null,
+                      onPressed:
+                          count > 0 && !ctrl.deleting.value
+                              ? () => _confirmDelete(context, ctrl)
+                              : null,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: ctrl.deleting.value
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(
-                              count > 0
-                                  ? 'Delete $count selected'
-                                  : 'Select duplicates to delete',
-                              style: GoogleFonts.roboto(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                      child:
+                          ctrl.deleting.value
+                              ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : Text(
+                                count > 0
+                                    ? 'Delete $count selected'
+                                    : 'Select duplicates to delete',
+                                style: GoogleFonts.roboto(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
                     ),
                   ),
                 );
@@ -153,28 +161,32 @@ class DuplicatePreviewScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, DuplicateController ctrl) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    DuplicateController ctrl,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete duplicates?'),
-        content: const Text(
-          'Selected duplicate files will be permanently deleted. This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Delete',
-              style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Delete duplicates?'),
+            content: const Text(
+              'Selected duplicate files will be permanently deleted. This cannot be undone.',
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(
+                  'Delete',
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
     );
     if (ok != true || !context.mounted) return;
     final success = await ctrl.confirmDelete();
@@ -233,11 +245,13 @@ class _DuplicateGroupCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
-            ...duplicates.map((item) => _DuplicateRow(
-                  item: item,
-                  selected: isSelected(item),
-                  onTap: () => onToggle(item),
-                )),
+            ...duplicates.map(
+              (item) => _DuplicateRow(
+                item: item,
+                selected: isSelected(item),
+                onTap: () => onToggle(item),
+              ),
+            ),
           ],
         ),
       ),
@@ -245,6 +259,43 @@ class _DuplicateGroupCard extends StatelessWidget {
   }
 }
 
+// class _DuplicateRow extends StatelessWidget {
+//   const _DuplicateRow({
+//     required this.item,
+//     required this.selected,
+//     required this.onTap,
+//   });
+
+//   final DuplicateItem item;
+//   final bool selected;
+//   final VoidCallback onTap;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return ListTile(
+//       dense: true,
+//       leading: SizedBox(
+//         width: 48,
+//         height: 48,
+//         child:
+//             item.assetId != null
+//                 ? _GalleryThumbnail(assetId: item.assetId!)
+//                 : _FileThumbnail(path: item.path),
+//       ),
+//       title: Text(
+//         item.name,
+//         style: GoogleFonts.roboto(fontSize: 13),
+//         maxLines: 1,
+//         overflow: TextOverflow.ellipsis,
+//       ),
+//       subtitle: Text(
+//         '${_formatSize(item.size)} · ${item.source.label}',
+//         style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey.shade600),
+//       ),
+//       trailing: Checkbox(value: selected, onChanged: (_) => onTap()),
+//       onTap: onTap,
+//     );
+//   }
 class _DuplicateRow extends StatelessWidget {
   const _DuplicateRow({
     required this.item,
@@ -263,23 +314,16 @@ class _DuplicateRow extends StatelessWidget {
       leading: SizedBox(
         width: 48,
         height: 48,
-        child: item.assetId != null
-            ? _GalleryThumbnail(assetId: item.assetId!)
-            : _FileThumbnail(path: item.path),
+        child:
+            item.assetId != null
+                ? _GalleryThumbnail(assetId: item.assetId!)
+                : _FileThumbnail(path: item.path),
       ),
-      title: Text(
-        item.name,
-        style: GoogleFonts.roboto(fontSize: 13),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: Checkbox(value: selected, onChanged: (_) => onTap()),
       subtitle: Text(
         '${_formatSize(item.size)} · ${item.source.label}',
         style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey.shade600),
-      ),
-      trailing: Checkbox(
-        value: selected,
-        onChanged: (_) => onTap(),
       ),
       onTap: onTap,
     );
@@ -346,7 +390,15 @@ class _FileThumbnail extends StatelessWidget {
       );
     }
     final ext = path!.split('.').last.toLowerCase();
-    final isVideo = ['mp4', 'avi', 'mov', 'mkv', 'webm', 'm4v', '3gp'].contains(ext);
+    final isVideo = [
+      'mp4',
+      'avi',
+      'mov',
+      'mkv',
+      'webm',
+      'm4v',
+      '3gp',
+    ].contains(ext);
     return Container(
       color: Colors.grey.shade300,
       child: Icon(

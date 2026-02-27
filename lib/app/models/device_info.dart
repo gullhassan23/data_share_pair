@@ -16,7 +16,7 @@ class DeviceInfo {
   });
 
   factory DeviceInfo.fromJson(Map<String, dynamic> json) => DeviceInfo(
-        name: json['name'] as String,
+        name: (json['name'] as String?) ?? 'Unknown',
         ip: (json['ip'] as String?) ?? '',
         wsPort: json['wsPort'] as int?,
         transferPort: (json['transferPort'] as num?)?.toInt() ?? 0,

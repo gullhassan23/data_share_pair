@@ -143,92 +143,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                             );
                           }
 
-                          // return ListView.builder(
-                          //   itemCount: files.length,
-                          //   itemBuilder: (context, index) {
-                          //     final file = files[index];
-                          //     final fileName = file['name'] as String;
-                          //     final filePath = file['path'] as String;
-                          //     final fileSize = file['size'] as int;
-                          //     final fileType = file['type'] as String;
-                          //     final timestamp = file['timestamp'] as DateTime;
-
-                          //     return Card(
-                          //       margin: const EdgeInsets.only(bottom: 12),
-                          //       child: ListTile(
-                          //         leading: _getFileIcon(fileType),
-                          //         title: Text(
-                          //           fileName,
-                          //           style: const TextStyle(
-                          //             fontWeight: FontWeight.w500,
-                          //           ),
-                          //         ),
-                          //         subtitle: Column(
-                          //           crossAxisAlignment:
-                          //               CrossAxisAlignment.start,
-                          //           children: [
-                          //             Text(
-                          //               _formatFileSize(fileSize),
-                          //               style: TextStyle(
-                          //                 color: Colors.grey.shade600,
-                          //               ),
-                          //             ),
-                          //             Text(
-                          //               _formatTimestamp(timestamp),
-                          //               style: TextStyle(
-                          //                 color: Colors.grey.shade500,
-                          //                 fontSize: 12,
-                          //               ),
-                          //             ),
-                          //           ],
-                          //         ),
-                          //         trailing: PopupMenuButton<String>(
-                          //           onSelected: (value) {
-                          //             if (value == 'save') {
-                          //               _saveFile(filePath, fileName);
-                          //             } else if (value == 'delete') {
-                          //               _deleteFile(index, filePath);
-                          //             }
-                          //           },
-                          //           itemBuilder:
-                          //               (context) => [
-                          //                 const PopupMenuItem(
-                          //                   value: 'save',
-                          //                   child: Row(
-                          //                     children: [
-                          //                       Icon(Icons.save),
-                          //                       SizedBox(width: 8),
-                          //                       Text('Save to Downloads'),
-                          //                     ],
-                          //                   ),
-                          //                 ),
-                          //                 const PopupMenuItem(
-                          //                   value: 'delete',
-                          //                   child: Row(
-                          //                     children: [
-                          //                       Icon(
-                          //                         Icons.delete,
-                          //                         color: Colors.red,
-                          //                       ),
-                          //                       SizedBox(width: 8),
-                          //                       Text('Delete'),
-                          //                     ],
-                          //                   ),
-                          //                 ),
-                          //               ],
-                          //         ),
-                          //         onTap: () {
-                          //           // Could open file preview in future
-                          //           Get.snackbar(
-                          //             'File Ready',
-                          //             'File is available at: ${p.basename(filePath)}',
-                          //             duration: const Duration(seconds: 2),
-                          //           );
-                          //         },
-                          //       ),
-                          //     );
-                          //   },
-                          // );
+                       
 
                           return GridView.builder(
                             itemCount: files.length,
@@ -270,8 +185,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                                         'Contacts',
                                         'No contacts could be added. Check Contacts permission in Settings.',
                                         mainButton: TextButton(
-                                          onPressed: () =>
-                                              openAppSettings(),
+                                          onPressed: () => openAppSettings(),
                                           child: const Text('Settings'),
                                         ),
                                         duration: const Duration(seconds: 4),
@@ -281,8 +195,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                                         'Contacts',
                                         'Could not add contacts. Grant Contacts permission in Settings.',
                                         mainButton: TextButton(
-                                          onPressed: () =>
-                                              openAppSettings(),
+                                          onPressed: () => openAppSettings(),
                                           child: const Text('Settings'),
                                         ),
                                         duration: const Duration(seconds: 5),
@@ -308,50 +221,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                                     ],
                                   ),
                                   child:
-                                  // fileType == 'image'
-                                  //     ? ClipRRect(
-                                  //       borderRadius: BorderRadius.circular(
-                                  //         10,
-                                  //       ),
-                                  //       child: Image.file(
-                                  //         File(filePath),
-                                  //         fit: BoxFit.cover,
-                                  //       ),
-                                  //     )
-                                  //     : Column(
-                                  //       mainAxisAlignment:
-                                  //           MainAxisAlignment.center,
-                                  //       children: [
-                                  //         Icon(
-                                  //           fileType == 'video'
-                                  //               ? Icons.video_file
-                                  //               : fileType == 'document'
-                                  //               ? Icons.description
-                                  //               : fileType == 'apk'
-                                  //               ? Icons.android
-                                  //               : Icons.insert_drive_file,
-                                  //           size: 36,
-                                  //           color: Colors.blueGrey,
-                                  //         ),
-                                  //         const SizedBox(height: 6),
-                                  //         Padding(
-                                  //           padding:
-                                  //               const EdgeInsets.symmetric(
-                                  //                 horizontal: 6,
-                                  //               ),
-                                  //           child: Text(
-                                  //             fileName,
-                                  //             maxLines: 2,
-                                  //             overflow:
-                                  //                 TextOverflow.ellipsis,
-                                  //             textAlign: TextAlign.center,
-                                  //             style: const TextStyle(
-                                  //               fontSize: 12,
-                                  //             ),
-                                  //           ),
-                                  //         ),
-                                  //       ],
-                                  //     ),
+
                                   _buildFilePreview(
                                     fileType,
                                     filePath,
@@ -426,10 +296,10 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
           fileType == 'document'
               ? Icons.description
               : fileType == 'apk'
-                  ? Icons.android
-                  : fileType == 'contacts'
-                      ? Icons.contacts
-                      : Icons.insert_drive_file,
+              ? Icons.android
+              : fileType == 'contacts'
+              ? Icons.contacts
+              : Icons.insert_drive_file,
           size: 36,
           color: Colors.blueGrey,
         ),
