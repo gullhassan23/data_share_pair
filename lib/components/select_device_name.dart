@@ -47,21 +47,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
         if (info == null) return;
 
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-
-          // If this screen is opened as receiver, don't navigate
-          if (!widget.isBluetooth) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Connected successfully. Please wait for sender...',
-                ),
-                duration: Duration(seconds: 2),
-              ),
-            );
-            return;
-          }
-
+          if (!mounted || _navigatedToTransfer) return;
           _navigatedToTransfer = true;
           AppNavigator.toTransferFile(device: info);
         });
@@ -346,6 +332,24 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                 setState(() {
                                   _bluetoothConnecting = false;
                                 });
+
+                                // Fallback: if connection succeeded and observer missed the event,
+                                // navigate directly to TransferFileScreen.
+                                if (bluetooth.isDeviceConnected(device) &&
+                                    !_navigatedToTransfer) {
+                                  final info = bluetooth.connectedDeviceInfo ??
+                                      DeviceInfo(
+                                        name: getDisplayName(device),
+                                        ip: '',
+                                        transferPort: 0,
+                                        isBluetooth: true,
+                                        bluetoothDeviceId: device.remoteId.str,
+                                      );
+                                  if (mounted) {
+                                    _navigatedToTransfer = true;
+                                    AppNavigator.toTransferFile(device: info);
+                                  }
+                                }
                               },
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 12),

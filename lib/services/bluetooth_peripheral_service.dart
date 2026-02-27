@@ -157,11 +157,20 @@ class BluetoothPeripheralService {
 
     final bytes = utf8.encode(message);
 
-    await BlePeripheral.updateCharacteristic(
-      characteristicId: CHARACTERISTIC_UUID,
-      value: Uint8List.fromList(bytes),
-      deviceId: _lastConnectedDeviceId!,
-    );
+    // On Android we target a specific deviceId; on iOS the plugin broadcasts
+    // to all subscribed centrals and may not accept a deviceId parameter.
+    if (Platform.isAndroid) {
+      await BlePeripheral.updateCharacteristic(
+        characteristicId: CHARACTERISTIC_UUID,
+        value: Uint8List.fromList(bytes),
+        deviceId: _lastConnectedDeviceId!,
+      );
+    } else {
+      await BlePeripheral.updateCharacteristic(
+        characteristicId: CHARACTERISTIC_UUID,
+        value: Uint8List.fromList(bytes),
+      );
+    }
 
     print("📤 Sent Response (Notification): $message");
   }

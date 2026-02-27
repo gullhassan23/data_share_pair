@@ -482,6 +482,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   ) async {
     final bluetooth = Get.find<BluetoothController>(tag: 'sender');
 
+    // Fresh state for this offer so both accept + reject changes are observed
+    bluetooth.offerAccepted.value = null;
+
     Get.dialog(
       PopScope(
         canPop: false,
@@ -524,6 +527,11 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     Timer? timeoutTimer;
     _bleOfferAcceptedWorker?.dispose();
     _bleOfferAcceptedWorker = once(bluetooth.offerAccepted, (accepted) {
+      // ignore: avoid_print
+      print(
+        '[BT][TransferFileScreen] offerAccepted changed to $accepted '
+        '(ip=${bluetooth.receiverIp}, port=${bluetooth.receiverPort})',
+      );
       timeoutTimer?.cancel();
       if (Get.isDialogOpen ?? false) Get.back();
       _bleOfferAcceptedWorker?.dispose();
@@ -556,7 +564,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       _senderTempPath = null;
     });
 
-    timeoutTimer = Timer(const Duration(seconds: 15), () {
+    timeoutTimer = Timer(const Duration(seconds: 30), () {
+      // ignore: avoid_print
+      print('[BT][TransferFileScreen] BLE offer timeout waiting for receiver response');
       if (_bleOfferAcceptedWorker != null) {
         _bleOfferAcceptedWorker?.dispose();
         _bleOfferAcceptedWorker = null;

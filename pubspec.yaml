@@ -36,7 +36,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   get: ^4.6.6
   connectivity_plus: ^7.0.0
-  sms_autofill: ^2.4.1
   permission_handler: ^11.3.1
   network_info_plus: ^5.0.3
   device_info_plus: ^10.1.0
