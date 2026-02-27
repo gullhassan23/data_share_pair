@@ -41,8 +41,12 @@ class BluetoothController extends GetxController {
   StreamSubscription<List<ScanResult>>? _scanSubscription;
   StreamSubscription? _connectionStreamSub;
   StreamSubscription? _dataStreamSub;
-  /// RSSI threshold: devices with signal weaker than this are filtered out. -90 allows receivers at edge of range.
-  final int distanceThreshold = -90;
+  StreamSubscription? _sendResponseErrorSub;
+  /// RSSI threshold: devices with signal weaker than this are filtered out. -100 helps devices at edge of range appear on all phones.
+  final int distanceThreshold = -100;
+
+  /// Best-known advertisement names from scan results (some phones don't set device.advName).
+  final Map<String, String> _scanAdvNames = {};
 
   // New Peripheral Service
   final _peripheralService = BluetoothPeripheralService();
@@ -52,24 +56,34 @@ class BluetoothController extends GetxController {
   static const String CHARACTERISTIC_UUID =
       "bf27730d-860a-4e09-889c-2d8b6a9e0fe8";
 
-  Future<void> sendMessage(String message) async {
-    try {
-      if (isReceiver) {
-        // Receiver sending response (Accept/Reject) via Notification
-        await _peripheralService.sendResponse(message);
-      } else {
-        // Sender sending offer via Write
-        if (_chatChar == null) {
-          Get.snackbar("Error", "Bluetooth channel not ready");
-          return;
-        }
+  /// Optional retry for transient BLE write/notification failures.
+  static const int _sendMessageMaxAttempts = 2;
+  static const Duration _sendMessageRetryDelay = Duration(milliseconds: 300);
 
-        final bytes = utf8.encode(message);
-        await _chatChar!.write(bytes, withoutResponse: false);
-        print("📤 Sent BLE message: $message");
+  Future<void> sendMessage(String message) async {
+    for (int attempt = 1; attempt <= _sendMessageMaxAttempts; attempt++) {
+      try {
+        if (isReceiver) {
+          // Receiver sending response (Accept/Reject) via Notification
+          await _peripheralService.sendResponse(message);
+        } else {
+          // Sender sending offer via Write
+          if (_chatChar == null) {
+            Get.snackbar("Error", "Bluetooth channel not ready");
+            return;
+          }
+
+          final bytes = utf8.encode(message);
+          await _chatChar!.write(bytes, withoutResponse: false);
+          print("📤 Sent BLE message: $message");
+        }
+        return;
+      } catch (e) {
+        print("❌ sendMessage failed (attempt $attempt/$_sendMessageMaxAttempts): $e");
+        if (attempt < _sendMessageMaxAttempts) {
+          await Future.delayed(_sendMessageRetryDelay);
+        }
       }
-    } catch (e) {
-      print("❌ sendMessage failed: $e");
     }
   }
 
@@ -350,9 +364,30 @@ class BluetoothController extends GetxController {
         connectedDevice.value = device;
         _listenToConnectionState(device);
 
+        // Optional: refresh display name after connection in case platform populates name/platformName later.
+        final idx = pairedDevices.indexWhere(
+          (e) => e.bluetoothDeviceId == remoteIdStr,
+        );
+        if (idx >= 0) {
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (!isDeviceConnected(device)) return;
+            final updatedName = _getBluetoothDeviceDisplayName(device);
+            if (updatedName != deviceName && updatedName != remoteIdStr) {
+              pairedDevices[idx] = DeviceInfo(
+                name: updatedName,
+                ip: '',
+                transferPort: 0,
+                isBluetooth: true,
+                bluetoothDeviceId: remoteIdStr,
+              );
+              pairedDevices.refresh();
+            }
+          });
+        }
+
         Get.snackbar(
           'Connected',
-          'Connected to ${device.platformName.isNotEmpty ? device.platformName : device.remoteId.str}',
+          'Connected to ${_getBluetoothDeviceDisplayName(device)}',
         );
         // Navigation to transfer is handled by SelectDeviceScreen's ever(connectedDevice).
       }
@@ -382,7 +417,16 @@ class BluetoothController extends GetxController {
 
       _connectionStreamSub?.cancel();
       _dataStreamSub?.cancel();
+      _sendResponseErrorSub?.cancel();
 
+      // When sendResponse fails (no device or updateCharacteristic error), show error and clear offer state.
+      _sendResponseErrorSub = _peripheralService.sendResponseError.listen((msg) {
+        error.value = msg;
+        incomingOffer.value = null;
+        connectedSenderName.value = null;
+      });
+
+      // When sender connects, show name from callback or fallback so UI never shows "Waiting" once connected.
       _connectionStreamSub = _peripheralService.connectionStream.listen((event) {
         final connected = event["connected"] == true;
         if (connected) {
@@ -434,6 +478,8 @@ class BluetoothController extends GetxController {
     _connectionStreamSub = null;
     _dataStreamSub?.cancel();
     _dataStreamSub = null;
+    _sendResponseErrorSub?.cancel();
+    _sendResponseErrorSub = null;
     _peripheralService.stop();
     receiverReady.value = false;
     isReceiver = false;
@@ -453,6 +499,7 @@ class BluetoothController extends GetxController {
     stopReceiverMode();
     devices.clear();
     pairedDevices.clear();
+    _scanAdvNames.clear();
     error.value = '';
     isScanning.value = true;
 
@@ -526,6 +573,10 @@ class BluetoothController extends GetxController {
           for (final r in results) {
             final d = r.device;
             if (r.rssi < distanceThreshold) continue;
+            final advName = r.advertisementData.advName.trim();
+            if (advName.isNotEmpty) {
+              _scanAdvNames[d.remoteId.str] = advName;
+            }
             final index = devices.indexWhere(
               (e) => e.remoteId.str == d.remoteId.str,
             );
@@ -535,6 +586,8 @@ class BluetoothController extends GetxController {
               devices[index] = d;
             }
           }
+          // Always refresh so UI updates for new devices and when names arrive in later scan packets.
+          devices.refresh();
         },
         onDone: () {
           isScanning.value = false;
@@ -581,22 +634,34 @@ class BluetoothController extends GetxController {
     }());
   }
 
+  /// Display name for a device: uses name from scan advertisement first (works on all phones), then device fields, then remoteId.
+  String getDeviceDisplayName(BluetoothDevice d) {
+    final fromScan = _scanAdvNames[d.remoteId.str];
+    if (fromScan != null && fromScan.isNotEmpty) return fromScan;
+    return _getBluetoothDeviceDisplayName(d);
+  }
+
   /// Only devices with valid, identifiable names. Filters out Unknown/dummy placeholders.
   List<BluetoothDevice> get displayableDevices =>
       devices.where(_hasValidDisplayName).toList();
 
   static String _getBluetoothDeviceDisplayName(BluetoothDevice d) {
+    final advName = d.advName.trim();
     final name = d.name.trim();
     final platformName = d.platformName.trim();
+    if (advName.isNotEmpty) return advName;
     if (name.isNotEmpty) return name;
     if (platformName.isNotEmpty) return platformName;
     return d.remoteId.str;
   }
 
   static bool _hasValidDisplayName(BluetoothDevice d) {
+    final advName = d.advName.trim();
     final name = d.name.trim();
     final platformName = d.platformName.trim();
-    final effective = name.isNotEmpty ? name : platformName;
+    final effective = advName.isNotEmpty
+        ? advName
+        : (name.isNotEmpty ? name : platformName);
     if (effective.isEmpty) return false;
     return !_isGenericPlaceholder(effective);
   }

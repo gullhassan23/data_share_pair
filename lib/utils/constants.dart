@@ -41,6 +41,7 @@ String formatFileSize(int bytes) {
 }
 
 String getDisplayName(BluetoothDevice d) {
+  if (d.advName.trim().isNotEmpty) return d.advName.trim();
   if (d.name.trim().isNotEmpty) return d.name.trim();
   if (d.platformName.trim().isNotEmpty) return d.platformName.trim();
   return d.remoteId.str;

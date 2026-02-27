@@ -573,8 +573,8 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
         if (Get.isDialogOpen ?? false) Get.back();
         Get.snackbar(
           'Timeout',
-          'Receiver did not respond in time.',
-          duration: const Duration(seconds: 3),
+          'Receiver did not respond. Make sure the receiver app is open on the other device and try again.',
+          duration: const Duration(seconds: 4),
         );
       }
     });

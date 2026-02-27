@@ -162,6 +162,9 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
               try {
                 await transfer.startServer();
               } catch (e) {
+                bluetooth.sendMessage(jsonEncode({"type": "reject"}));
+                bluetooth.incomingOffer.value = null;
+                bluetooth.connectedSenderName.value = null;
                 Get.snackbar("Error", "Failed to start receiver: $e");
                 return;
               }

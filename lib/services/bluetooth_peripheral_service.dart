@@ -20,6 +20,12 @@ class BluetoothPeripheralService {
   Stream<Map<String, dynamic>> get connectionStream =>
       _connectionStreamController.stream;
 
+  /// Emits when sendResponse cannot send (no connected device or updateCharacteristic failed).
+  /// Receiver UI can listen and show error / clear offer state.
+  final _sendResponseErrorController =
+      StreamController<String>.broadcast();
+  Stream<String> get sendResponseError => _sendResponseErrorController.stream;
+
   bool _isAdvertising = false;
   String? _lastConnectedDeviceId;
 
@@ -82,10 +88,18 @@ class BluetoothPeripheralService {
     _isAdvertising = true;
     print("📡 Receiver Mode: Advertising started as '$localName'...");
 
-    // Notify when a central (sender) connects so receiver UI can update immediately
+    // Notify when a central (sender) connects so receiver UI can update immediately.
+    // On Android, track deviceId so we have a fallback if write callback hasn't run yet.
     if (Platform.isAndroid) {
       BlePeripheral.setConnectionStateChangeCallback(
         (String deviceId, bool connected) {
+          if (connected) {
+            _lastConnectedDeviceId = deviceId;
+          } else {
+            if (_lastConnectedDeviceId == deviceId) {
+              _lastConnectedDeviceId = null;
+            }
+          }
           _connectionStreamController.add({
             'connected': connected,
             'deviceId': deviceId,
@@ -151,27 +165,44 @@ class BluetoothPeripheralService {
 
   Future<void> sendResponse(String message) async {
     if (_lastConnectedDeviceId == null) {
-      print("⚠️ No connected device to send response.");
+      print(
+        "⚠️ [BT Peripheral] No connected device to send response; "
+        "sender will not receive accept/reject.",
+      );
+      if (!_sendResponseErrorController.isClosed) {
+        _sendResponseErrorController.add(
+          'No connected device to send response to sender.',
+        );
+      }
       return;
     }
 
     final bytes = utf8.encode(message);
 
-    // On Android we target a specific deviceId; on iOS the plugin broadcasts
-    // to all subscribed centrals and may not accept a deviceId parameter.
-    if (Platform.isAndroid) {
-      await BlePeripheral.updateCharacteristic(
-        characteristicId: CHARACTERISTIC_UUID,
-        value: Uint8List.fromList(bytes),
-        deviceId: _lastConnectedDeviceId!,
-      );
-    } else {
-      await BlePeripheral.updateCharacteristic(
-        characteristicId: CHARACTERISTIC_UUID,
-        value: Uint8List.fromList(bytes),
-      );
+    try {
+      // On Android we target a specific deviceId; on iOS the plugin broadcasts
+      // to all subscribed centrals and may not accept a deviceId parameter.
+      if (Platform.isAndroid) {
+        await BlePeripheral.updateCharacteristic(
+          characteristicId: CHARACTERISTIC_UUID,
+          value: Uint8List.fromList(bytes),
+          deviceId: _lastConnectedDeviceId!,
+        );
+      } else {
+        await BlePeripheral.updateCharacteristic(
+          characteristicId: CHARACTERISTIC_UUID,
+          value: Uint8List.fromList(bytes),
+        );
+      }
+      print("📤 Sent Response (Notification): $message");
+    } catch (e) {
+      print("❌ [BT Peripheral] updateCharacteristic failed: $e");
+      if (!_sendResponseErrorController.isClosed) {
+        _sendResponseErrorController.add(
+          'Could not send response to sender: $e',
+        );
+      }
+      rethrow;
     }
-
-    print("📤 Sent Response (Notification): $message");
   }
 }

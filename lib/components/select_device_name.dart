@@ -339,7 +339,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                     !_navigatedToTransfer) {
                                   final info = bluetooth.connectedDeviceInfo ??
                                       DeviceInfo(
-                                        name: getDisplayName(device),
+                                        name: bluetooth.getDeviceDisplayName(device),
                                         ip: '',
                                         transferPort: 0,
                                         isBluetooth: true,
@@ -403,7 +403,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            getDisplayName(device),
+                                            bluetooth.getDeviceDisplayName(device),
                                             style: GoogleFonts.roboto(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w500,
@@ -730,7 +730,7 @@ class BluetoothDeviceTile extends StatelessWidget {
             color: connected ? Colors.green : null,
           ),
           title: Text(
-            getDisplayName(device),
+            bluetooth.getDeviceDisplayName(device),
             style: GoogleFonts.roboto(
               fontSize: 15,
               fontWeight: FontWeight.w500,
