@@ -64,6 +64,6 @@
 	<key>UIBackgroundModes</key>
 	<array>
     	<string>fetch</string>
-</array>
+	</array>
 </dict>
 </plist>

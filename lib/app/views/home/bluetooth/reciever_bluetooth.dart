@@ -62,9 +62,13 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final granted = await askPermissions();
       if (!granted) {
+        // ignore: avoid_print
+        print('[BT][ReceiverScreen] Permissions not granted – showing error to user');
         bluetooth.error.value = 'Bluetooth permission denied';
         return;
       }
+      // ignore: avoid_print
+      print('[BT][ReceiverScreen] Permissions granted – starting receiver mode');
 
       _incomingOfferWorker = ever(bluetooth.incomingOffer, (offer) {
         if (offer != null) {
@@ -76,6 +80,8 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
         await bluetooth.startReceiverMode();
       } catch (e) {
         if (mounted) {
+          // ignore: avoid_print
+          print('[BT][ReceiverScreen] startReceiverMode() failed: $e');
           bluetooth.error.value = 'Failed to start receiver: $e';
         }
       }
@@ -117,6 +123,11 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
               final info = NetworkInfo();
               String? wifiIp = await info.getWifiIP();
               if (wifiIp == null || wifiIp.isEmpty) {
+                // Proactively reject so sender doesn't just timeout
+                final bluetooth = this.bluetooth;
+                bluetooth.sendMessage(jsonEncode({"type": "reject"}));
+                bluetooth.incomingOffer.value = null;
+                bluetooth.connectedSenderName.value = null;
                 Get.snackbar(
                   "Cannot receive",
                   "Connect to Wi‑Fi so the sender can send the file.",

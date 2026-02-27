@@ -22,7 +22,8 @@ class BluetoothController extends GetxController {
   final error = ''.obs;
   final connectedDevice = Rxn<BluetoothDevice>();
   final incomingOffer = Rxn<Map<String, dynamic>>();
-  final offerAccepted = false.obs;
+  /// null = no response yet, true = accepted, false = rejected
+  final RxnBool offerAccepted = RxnBool();
 
   /// Receiver only: set when a sender has connected and we know its name (from offer or connection).
   final connectedSenderName = Rxn<String>();
@@ -78,7 +79,8 @@ class BluetoothController extends GetxController {
         Get.snackbar("Error", "File not found");
         return;
       }
-      offerAccepted.value = false;
+      // Reset last offer decision so sender can listen for a fresh result
+      offerAccepted.value = null;
       receiverIp = null;
       receiverPort = null;
 
@@ -237,10 +239,17 @@ class BluetoothController extends GetxController {
 
         bool found = false;
 
+        // Strictly require our custom service/characteristic so that we always
+        // talk to the app's BLE peripheral (and not some system characteristic
+        // like 0x2a05). This is critical for Android ↔ iOS interoperability.
         for (final s in services) {
-          // Check for our specific service if possible, or fall back to finding any suitable characteristic
+          // ignore: avoid_print
+          print('[BT][connect] Discovered service: ${s.uuid.str}');
           if (s.uuid.str.toLowerCase() == SERVICE_UUID.toLowerCase()) {
             for (final c in s.characteristics) {
+              // ignore: avoid_print
+              print('[BT][connect]   characteristic: ${c.uuid.str} '
+                  'props(write=${c.properties.write}, notify=${c.properties.notify})');
               if (c.uuid.str.toLowerCase() ==
                   CHARACTERISTIC_UUID.toLowerCase()) {
                 _chatChar = c;
@@ -250,19 +259,24 @@ class BluetoothController extends GetxController {
             }
           }
           if (found) break;
-
-          // Fallback logic: find any write+notify characteristic
-          for (final c in s.characteristics) {
-            if (c.properties.write && c.properties.notify) {
-              _chatChar = c;
-              found = true;
-              break;
-            }
-          }
-          if (found) break;
         }
 
-        if (found && _chatChar != null) {
+        if (!found || _chatChar == null) {
+          // We connected at the GATT level but did not find our app's
+          // service/characteristic. Treat this as incompatible / wrong device.
+          // ignore: avoid_print
+          print(
+            '[BT][connect] ERROR: App service/characteristic not found on '
+            '${device.remoteId.str} – refusing to use fallback characteristic.',
+          );
+          await _tearDownConnection(device);
+          connectedDevice.value = null;
+          error.value =
+              'Incompatible Bluetooth device. Make sure the receiver app is open on the other phone.';
+          return;
+        }
+
+        if (_chatChar != null) {
           await _chatChar!.setNotifyValue(true);
 
           notifySub = _chatChar!.lastValueStream.listen((data) {
@@ -277,6 +291,8 @@ class BluetoothController extends GetxController {
               if (decoded["type"] == "offer") {
                 incomingOffer.value = decoded;
               } else if (decoded["type"] == "accept") {
+                // ignore: avoid_print
+                print('[BT][Sender] Received ACCEPT over BLE: $decoded');
                 receiverIp = decoded["ip"]?.toString();
                 receiverPort =
                     decoded["port"] != null
@@ -287,6 +303,10 @@ class BluetoothController extends GetxController {
                 if (receiverIp != null &&
                     receiverIp!.isNotEmpty &&
                     receiverPort != null) {
+                  // ignore: avoid_print
+                  print(
+                    '[BT][Sender] Parsed receiver address ip=$receiverIp port=$receiverPort, marking offerAccepted=true',
+                  );
                   offerAccepted.value = true;
                 } else {
                   Get.snackbar(
@@ -431,6 +451,8 @@ class BluetoothController extends GetxController {
     isScanning.value = true;
 
     if (!await askPermissions()) {
+      // ignore: avoid_print
+      print('[BT] startScan: askPermissions() returned false – Bluetooth permission denied');
       error.value = 'Bluetooth permission denied';
       isScanning.value = false;
       return;
@@ -439,6 +461,8 @@ class BluetoothController extends GetxController {
     if (Platform.isAndroid) {
       final locationStatus = await Permission.location.status;
       if (!locationStatus.isGranted) {
+        // ignore: avoid_print
+        print('[BT] startScan: Android location permission not granted');
         error.value =
             'Allow location access so we can find nearby Bluetooth devices.';
         isScanning.value = false;
@@ -446,20 +470,40 @@ class BluetoothController extends GetxController {
       }
     }
 
-    final isOn = await FlutterBluePlus.isOn;
-    if (!isOn) {
-      try {
-        await FlutterBluePlus.turnOn();
-      } catch (e) {
-        error.value = 'Please turn on Bluetooth in settings';
-        isScanning.value = false;
-        return;
+    try {
+      final isOn = await FlutterBluePlus.isOn;
+      if (!isOn) {
+        if (Platform.isAndroid) {
+          try {
+            // ignore: avoid_print
+            print('[BT] startScan: isOn == false on Android, attempting turnOn()');
+            await FlutterBluePlus.turnOn();
+          } catch (e) {
+            // ignore: avoid_print
+            print('[BT] startScan: turnOn() failed: $e');
+            error.value = 'Please turn on Bluetooth in settings';
+            isScanning.value = false;
+            return;
+          }
+        } else {
+          // iOS/macOS: cannot programmatically turn on Bluetooth – rely on system UI.
+          // ignore: avoid_print
+          print('[BT] startScan: Bluetooth is OFF on iOS/macOS; ask user to enable it.');
+          error.value = 'Turn on Bluetooth in Control Center or Settings.';
+          isScanning.value = false;
+          return;
+        }
       }
+    } catch (e) {
+      // ignore: avoid_print
+      print('[BT] startScan: error while checking FlutterBluePlus.isOn: $e');
     }
 
     try {
       final supported = await FlutterBluePlus.isSupported;
       if (!supported) {
+        // ignore: avoid_print
+        print('[BT] startScan: FlutterBluePlus.isSupported == false');
         error.value = 'Bluetooth not supported on this device';
         isScanning.value = false;
         return;
@@ -505,6 +549,8 @@ class BluetoothController extends GetxController {
         return true;
       }());
     } catch (e) {
+      // ignore: avoid_print
+      print('[BT] startScan: unexpected error: $e');
       error.value = 'Bluetooth unavailable. Please try again.';
       isScanning.value = false;
       assert(() {
