@@ -155,7 +155,7 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
                 bluetooth.connectedSenderName.value = null;
                 Get.snackbar(
                   "Cannot receive",
-                  "Connect both devices to the same Wi‑Fi so the file can be sent.",
+                  "Connect to Wi‑Fi so the sender can send the file.",
                 );
                 return;
               }
@@ -238,18 +238,6 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
                   color: Colors.black,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Text(
-                  'Both devices must be on the same Wi‑Fi for the file to transfer.',
-                  style: GoogleFonts.roboto(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
                 ),
               ),
               Expanded(

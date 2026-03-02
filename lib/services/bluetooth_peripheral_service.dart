@@ -28,20 +28,10 @@ class BluetoothPeripheralService {
 
   bool _isAdvertising = false;
   String? _lastConnectedDeviceId;
+  bool _restartScheduled = false;
 
-  Future<void> start() async {
-    if (_isAdvertising) return;
-
-    // Initialize BLE Peripheral
-    try {
-      await BlePeripheral.initialize();
-    } catch (e) {
-      print(
-        "⚠️ BlePeripheral initialize error (might be already initialized): $e",
-      );
-    }
-
-    // Get device name
+  /// Returns current local name for advertising (device-dependent).
+  Future<String> _getLocalName() async {
     String localName = "ShareMe Receiver";
     try {
       final deviceInfo = DeviceInfoPlugin();
@@ -53,8 +43,13 @@ class BluetoothPeripheralService {
         localName = iosInfo.name;
       }
     } catch (_) {}
+    return localName;
+  }
 
-    // Define the characteristic
+  /// Adds the app BLE service and starts advertising. Used by start() and by
+  /// restart-after-disconnect (iOS/Android) so the receiver is connectable again.
+  Future<void> _addServiceAndStartAdvertising() async {
+    final localName = await _getLocalName();
     final characteristic = BleCharacteristic(
       uuid: CHARACTERISTIC_UUID,
       properties: [
@@ -68,25 +63,74 @@ class BluetoothPeripheralService {
       ],
       value: null,
     );
-
-    // Define the service
     final service = BleService(
       uuid: SERVICE_UUID,
       primary: true,
       characteristics: [characteristic],
     );
-
-    // Add service
     await BlePeripheral.addService(service);
-
-    // Start advertising
     await BlePeripheral.startAdvertising(
       services: [SERVICE_UUID],
       localName: localName,
     );
-
     _isAdvertising = true;
     print("📡 Receiver Mode: Advertising started as '$localName'...");
+  }
+
+  /// Called when central unsubscribes (disconnect). On iOS, re-advertising after
+  /// disconnect is required for the next connection to succeed reliably.
+  void _onCentralDisconnected() {
+    if (!_isAdvertising || _restartScheduled) return;
+    _restartScheduled = true;
+    _lastConnectedDeviceId = null;
+    Future.delayed(Platform.isIOS
+        ? const Duration(milliseconds: 500)
+        : const Duration(milliseconds: 300), () async {
+      if (!_isAdvertising) {
+        _restartScheduled = false;
+        return;
+      }
+      try {
+        await BlePeripheral.stopAdvertising();
+        _isAdvertising = false;
+        await BlePeripheral.clearServices();
+        if (Platform.isIOS) {
+          await Future.delayed(const Duration(milliseconds: 300));
+        }
+        await _addServiceAndStartAdvertising();
+        print("📡 Receiver Mode: Re-advertising after disconnect (ready for next sender).");
+      } catch (e) {
+        print("⚠️ [BT Peripheral] Re-advertise after disconnect failed: $e");
+      }
+      _restartScheduled = false;
+    });
+  }
+
+  Future<void> start() async {
+    // If already advertising (e.g. user re-opened receiver screen), restart so native
+    // state is fresh and iOS characteristic lookup works on retry.
+    if (_isAdvertising) {
+      try {
+        await BlePeripheral.stopAdvertising();
+        await BlePeripheral.clearServices();
+        if (Platform.isIOS) {
+          await Future.delayed(const Duration(milliseconds: 300));
+        }
+      } catch (_) {}
+      _isAdvertising = false;
+      _lastConnectedDeviceId = null;
+      _restartScheduled = false;
+    }
+
+    try {
+      await BlePeripheral.initialize();
+    } catch (e) {
+      print(
+        "⚠️ BlePeripheral initialize error (might be already initialized): $e",
+      );
+    }
+
+    await _addServiceAndStartAdvertising();
 
     // Notify when a central (sender) connects so receiver UI can update immediately.
     // On Android, track deviceId so we have a fallback if write callback hasn't run yet.
@@ -99,6 +143,7 @@ class BluetoothPeripheralService {
             if (_lastConnectedDeviceId == deviceId) {
               _lastConnectedDeviceId = null;
             }
+            _onCentralDisconnected();
           }
           _connectionStreamController.add({
             'connected': connected,
@@ -126,12 +171,11 @@ class BluetoothPeripheralService {
             'deviceId': deviceId,
             'name': null,
           });
+          _onCentralDisconnected();
         }
       },
     );
 
-    // Set typed write callback
-    // Signature: (String deviceId, String characteristicId, int offset, Uint8List? value)
     BlePeripheral.setWriteRequestCallback(
       ((
             String deviceId,
@@ -152,7 +196,6 @@ class BluetoothPeripheralService {
               }
             }
 
-            // Return null (no explicit result)
             return null;
           })
           as dynamic,
@@ -160,9 +203,16 @@ class BluetoothPeripheralService {
   }
 
   Future<void> stop() async {
+    _restartScheduled = true;
     if (_isAdvertising) {
-      await BlePeripheral.stopAdvertising();
+      try {
+        await BlePeripheral.stopAdvertising();
+        await BlePeripheral.clearServices();
+      } catch (e) {
+        print("⚠️ [BT Peripheral] stop error: $e");
+      }
       _isAdvertising = false;
+      _lastConnectedDeviceId = null;
       print("🛑 Receiver Mode: Advertising stopped.");
     }
   }
@@ -193,14 +243,31 @@ class BluetoothPeripheralService {
           value: Uint8List.fromList(bytes),
           deviceId: _lastConnectedDeviceId!,
         );
-      } else {
-        // iOS: broadcast to all subscribed centrals (deviceId optional/ignored on iOS).
-        await BlePeripheral.updateCharacteristic(
-          characteristicId: CHARACTERISTIC_UUID,
-          value: Uint8List.fromList(bytes),
-        );
+        print("📤 Sent Response (Notification): $message");
+        return;
       }
-      print("📤 Sent Response (Notification): $message");
+      // iOS: plugin looks up by exact string match; CBUUID.uuidString can be uppercase.
+      // Try both formats so we always find the characteristic.
+      final idsToTry = Platform.isIOS
+          ? [CHARACTERISTIC_UUID.toUpperCase(), CHARACTERISTIC_UUID]
+          : [CHARACTERISTIC_UUID];
+      Object? lastError;
+      for (var i = 0; i < idsToTry.length; i++) {
+        try {
+          await BlePeripheral.updateCharacteristic(
+            characteristicId: idsToTry[i],
+            value: Uint8List.fromList(bytes),
+          );
+          print("📤 Sent Response (Notification): $message");
+          return;
+        } catch (e) {
+          lastError = e;
+          final msg = e.toString();
+          final isNotFound = msg.contains('not found') || msg.contains('notFound');
+          if (!isNotFound || i == idsToTry.length - 1) break;
+        }
+      }
+      if (lastError != null) throw lastError;
     } catch (e) {
       print("❌ [BT Peripheral] updateCharacteristic failed: $e");
       if (!_sendResponseErrorController.isClosed) {

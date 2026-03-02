@@ -227,9 +227,11 @@ class BluetoothController extends GetxController {
         autoConnect: false,
       );
 
-      // 🕒 Wait for connection to stabilize (Critical for Android)
+      // 🕒 Wait for connection to stabilize (Android needs longer; iOS needs short delay for GATT)
       if (Platform.isAndroid) {
         await Future.delayed(const Duration(milliseconds: 1000));
+      } else if (Platform.isIOS) {
+        await Future.delayed(const Duration(milliseconds: 400));
       }
 
       final connected =
@@ -251,7 +253,10 @@ class BluetoothController extends GetxController {
           }
         }
 
-        // ✅ Discover services AFTER connection
+        // ✅ Discover services AFTER connection (iOS: extra delay so GATT is ready)
+        if (Platform.isIOS) {
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
         final services = await device.discoverServices();
 
         bool found = false;
@@ -638,7 +643,10 @@ class BluetoothController extends GetxController {
   String getDeviceDisplayName(BluetoothDevice d) {
     final fromScan = _scanAdvNames[d.remoteId.str];
     if (fromScan != null && fromScan.isNotEmpty) return fromScan;
-    return _getBluetoothDeviceDisplayName(d);
+    final name = _getBluetoothDeviceDisplayName(d);
+    // If we only have raw UUID (e.g. iOS sometimes doesn't expose name in scan), show friendly label.
+    if (name == d.remoteId.str || name.isEmpty) return 'Receiver';
+    return name;
   }
 
   /// Only devices with valid, identifiable names. Filters out Unknown/dummy placeholders.
