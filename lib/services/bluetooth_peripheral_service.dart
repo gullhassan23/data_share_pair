@@ -79,13 +79,15 @@ class BluetoothPeripheralService {
 
   /// Called when central unsubscribes (disconnect). On iOS, re-advertising after
   /// disconnect is required for the next connection to succeed reliably.
+  /// Uses platform-specific delay (slightly longer on iOS) before re-advertising.
   void _onCentralDisconnected() {
     if (!_isAdvertising || _restartScheduled) return;
     _restartScheduled = true;
     _lastConnectedDeviceId = null;
-    Future.delayed(Platform.isIOS
-        ? const Duration(milliseconds: 500)
-        : const Duration(milliseconds: 300), () async {
+    final delay = Platform.isIOS
+        ? const Duration(milliseconds: 600)
+        : const Duration(milliseconds: 300);
+    Future.delayed(delay, () async {
       if (!_isAdvertising) {
         _restartScheduled = false;
         return;
@@ -220,9 +222,8 @@ class BluetoothPeripheralService {
   Future<void> sendResponse(String message) async {
     final bytes = utf8.encode(message);
 
-    // On iOS, connection state callback is not used; deviceId is set when
-    // the central subscribes or when we receive a write. If still null,
-    // try broadcasting (updateCharacteristic without deviceId) so Android↔iOS works.
+    // On Android we need deviceId; on iOS we can try broadcast (updateCharacteristic without deviceId)
+    // when _lastConnectedDeviceId is null, so only bail out on Android when null.
     if (_lastConnectedDeviceId == null && !Platform.isIOS) {
       print(
         "⚠️ [BT Peripheral] No connected device to send response; "
@@ -246,8 +247,8 @@ class BluetoothPeripheralService {
         print("📤 Sent Response (Notification): $message");
         return;
       }
-      // iOS: plugin looks up by exact string match; CBUUID.uuidString can be uppercase.
-      // Try both formats so we always find the characteristic.
+      // iOS (or Android with deviceId): try both UUID formats so we always find the characteristic.
+      // On iOS when _lastConnectedDeviceId is null we still attempt broadcast (no deviceId) for cross-platform.
       final idsToTry = Platform.isIOS
           ? [CHARACTERISTIC_UUID.toUpperCase(), CHARACTERISTIC_UUID]
           : [CHARACTERISTIC_UUID];

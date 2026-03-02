@@ -112,9 +112,58 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       final hasError = progress.error.value.isNotEmpty;
 
       if (isSuccess && !hasError) {
+        // Bluetooth: offer "Send another file" so consecutive transfers work without reconnecting
+        final isBluetooth = device?.isBluetooth == true;
+        if (isBluetooth) {
+          _didAutoNavigate = true; // prevent re-entry until user chooses Done
+          print("✅ File successfully sent to receiver!");
+          Get.snackbar(
+            "Transfer Completed",
+            "Your file was sent successfully 🎉",
+            backgroundColor: Colors.green.withOpacity(0.8),
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 2),
+          );
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (!mounted) return;
+            Get.dialog(
+              barrierDismissible: false,
+              AlertDialog(
+                title: const Text('Transfer complete'),
+                content: const Text(
+                  'Send another file to the same device or go back to home.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Get.back(); // close dialog
+                      _didAutoNavigate = false; // allow next transfer to trigger completion again
+                      // Return to TransferFileScreen so user can pick another file
+                      if (Get.key.currentState?.canPop() ?? false) {
+                        Get.back();
+                      }
+                    },
+                    child: const Text('Send another file'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Get.back();
+                      if (Get.key.currentState?.canPop() ?? false) {
+                        Get.back();
+                      }
+                      AppNavigator.toHome();
+                    },
+                    child: const Text('Done'),
+                  ),
+                ],
+              ),
+            );
+          });
+          return;
+        }
+        // WiFi/QR flow: go to home after delay
         _didAutoNavigate = true;
-
-        // 🎉 Print + UI feedback
         print("✅ File successfully sent to receiver!");
         Get.snackbar(
           "Transfer Completed",
@@ -129,7 +178,6 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
           Get.find<QrController>().flowState.value =
               TransferFlowState.completed;
         }
-        // Navigate to Onboarding after successful transfer (sender flow complete)
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             AppNavigator.toHome();
@@ -481,6 +529,18 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     String deviceName,
   ) async {
     final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+
+    // Validate BLE connection so second transfer works without restart (plan: connection robustness)
+    if (!bluetooth.isConnectionValid) {
+      Get.snackbar(
+        'Connection lost',
+        'Please reconnect to the device and try again.',
+        backgroundColor: Colors.orange.shade700,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+      );
+      return;
+    }
 
     // Fresh state for this offer so both accept + reject changes are observed
     bluetooth.offerAccepted.value = null;

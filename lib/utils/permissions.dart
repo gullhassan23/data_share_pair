@@ -42,9 +42,11 @@ Future<bool> askPermissions() async {
       'denied=${status.isDenied} permanentlyDenied=${status.isPermanentlyDenied}',
     );
 
-    // On iOS, CoreBluetooth itself will handle showing the system dialog the
-    // first time BLE is used. We do not block the flow here even if the user
-    // denies, because flutter_blue_plus will surface connection/scan failures.
+    // Return false when denied so callers (sender/receiver screens) can show "Bluetooth denied"
+    // and surface errors instead of silent scan/receiver failure.
+    if (status.isDenied || status.isPermanentlyDenied) {
+      return false;
+    }
     return true;
   }
 

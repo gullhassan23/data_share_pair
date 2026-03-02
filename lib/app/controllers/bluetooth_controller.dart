@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:path/path.dart' as p;
@@ -45,6 +46,10 @@ class BluetoothController extends GetxController {
   /// RSSI threshold: devices with signal weaker than this are filtered out. -100 helps devices at edge of range appear on all phones.
   final int distanceThreshold = -100;
 
+  /// True when sender has an active BLE connection and characteristic ready for offer/notify (for second transfer without reconnect).
+  bool get isConnectionValid =>
+      !isReceiver && connectedDevice.value != null && _chatChar != null;
+
   /// Best-known advertisement names from scan results (some phones don't set device.advName).
   final Map<String, String> _scanAdvNames = {};
 
@@ -67,12 +72,13 @@ class BluetoothController extends GetxController {
           // Receiver sending response (Accept/Reject) via Notification
           await _peripheralService.sendResponse(message);
         } else {
-          // Sender sending offer via Write
-          if (_chatChar == null) {
-            Get.snackbar("Error", "Bluetooth channel not ready");
+          // Sender sending offer via Write — validate connection so second transfer works
+          if (connectedDevice.value == null || _chatChar == null) {
+            error.value = 'Connection lost; please reconnect to the device.';
+            offerAccepted.value = false;
+            Get.snackbar("Error", "Bluetooth channel not ready. Please reconnect.");
             return;
           }
-
           final bytes = utf8.encode(message);
           await _chatChar!.write(bytes, withoutResponse: false);
           print("📤 Sent BLE message: $message");
@@ -85,18 +91,31 @@ class BluetoothController extends GetxController {
         }
       }
     }
+    // All retries failed — surface error so sender UI can react (e.g. timeout or "Send another" retry)
+    if (!isReceiver) {
+      offerAccepted.value = false;
+      Get.snackbar("Error", "Could not send; check connection.");
+    }
   }
 
   /// Builds FileMeta from path, sets selectedFilePath, and sends BLE offer.
   /// Receiver will reply with accept (including ip/port) or reject.
+  /// Validates connection first so consecutive transfers work without restart.
   Future<void> sendOffer(String filePath) async {
     try {
+      // Validate BLE connection before sending (handles dropped connection after first transfer)
+      if (!isReceiver && (connectedDevice.value == null || _chatChar == null)) {
+        error.value = 'Connection lost; please reconnect to the device.';
+        offerAccepted.value = false;
+        Get.snackbar("Connection lost", "Please reconnect to the device and try again.");
+        return;
+      }
       final file = File(filePath);
       if (!await file.exists()) {
         Get.snackbar("Error", "File not found");
         return;
       }
-      // Reset last offer decision so sender can listen for a fresh result
+      // Reset last offer decision so sender can listen for a fresh result (supports second transfer)
       offerAccepted.value = null;
       receiverIp = null;
       receiverPort = null;
@@ -117,6 +136,7 @@ class BluetoothController extends GetxController {
       print("📤 BLE offer sent: $name (${size} bytes)");
     } catch (e) {
       print("❌ sendOffer failed: $e");
+      offerAccepted.value = false;
       Get.snackbar("Error", "Failed to send offer: $e");
     }
   }
@@ -174,6 +194,7 @@ class BluetoothController extends GetxController {
   }
 
   /// Cancel notify subscription, connection-state listener, and disconnect the device.
+  /// Keeps UI in sync: after this, connectedDevice must be set to null by caller so sendOffer path never uses a dead connection.
   Future<void> _tearDownConnection(BluetoothDevice device) async {
     await notifySub?.cancel();
     notifySub = null;
@@ -187,6 +208,7 @@ class BluetoothController extends GetxController {
     }
   }
 
+  /// Listens for disconnect so we always clear connectedDevice and tear down — no stale connection for second transfer.
   void _listenToConnectionState(BluetoothDevice device) {
     _connectionStateSub?.cancel();
     _connectionStateSub = device.connectionState.listen((state) {
@@ -194,6 +216,7 @@ class BluetoothController extends GetxController {
         if (isDeviceConnected(device)) {
           _tearDownConnection(device).then((_) {
             connectedDevice.value = null;
+            offerAccepted.value = false; // so any waiting sendOffer UI can react
             Get.snackbar('Disconnected', 'Device disconnected');
           });
         }
@@ -429,6 +452,13 @@ class BluetoothController extends GetxController {
         error.value = msg;
         incomingOffer.value = null;
         connectedSenderName.value = null;
+        Get.snackbar(
+          'Bluetooth Error',
+          msg,
+          backgroundColor: Colors.red.shade700,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
       });
 
       // When sender connects, show name from callback or fallback so UI never shows "Waiting" once connected.
