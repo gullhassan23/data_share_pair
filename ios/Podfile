@@ -57,7 +57,7 @@ post_install do |installer|
           'PERMISSION_REMINDERS=0',
           'PERMISSION_CALENDARS=0',
           'PERMISSION_CONTACTS=0',
-          'PERMISSION_BLUETOOTH=0',
+          'PERMISSION_BLUETOOTH=1',
           'PERMISSION_APP_TRACKING_TRANSPARENCY=0',
           'PERMISSION_CRITICAL_ALERTS=0',
         ]

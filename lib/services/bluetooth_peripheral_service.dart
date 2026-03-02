@@ -111,12 +111,16 @@ class BluetoothPeripheralService {
     BlePeripheral.setCharacteristicSubscriptionChangeCallback(
       (String deviceId, String characteristicId, bool isSubscribed, String? name) {
         if (isSubscribed) {
+          _lastConnectedDeviceId = deviceId;
           _connectionStreamController.add({
             'connected': true,
             'deviceId': deviceId,
             'name': name,
           });
         } else {
+          if (_lastConnectedDeviceId == deviceId) {
+            _lastConnectedDeviceId = null;
+          }
           _connectionStreamController.add({
             'connected': false,
             'deviceId': deviceId,
@@ -164,7 +168,12 @@ class BluetoothPeripheralService {
   }
 
   Future<void> sendResponse(String message) async {
-    if (_lastConnectedDeviceId == null) {
+    final bytes = utf8.encode(message);
+
+    // On iOS, connection state callback is not used; deviceId is set when
+    // the central subscribes or when we receive a write. If still null,
+    // try broadcasting (updateCharacteristic without deviceId) so Android↔iOS works.
+    if (_lastConnectedDeviceId == null && !Platform.isIOS) {
       print(
         "⚠️ [BT Peripheral] No connected device to send response; "
         "sender will not receive accept/reject.",
@@ -177,18 +186,15 @@ class BluetoothPeripheralService {
       return;
     }
 
-    final bytes = utf8.encode(message);
-
     try {
-      // On Android we target a specific deviceId; on iOS the plugin broadcasts
-      // to all subscribed centrals and may not accept a deviceId parameter.
-      if (Platform.isAndroid) {
+      if (Platform.isAndroid && _lastConnectedDeviceId != null) {
         await BlePeripheral.updateCharacteristic(
           characteristicId: CHARACTERISTIC_UUID,
           value: Uint8List.fromList(bytes),
           deviceId: _lastConnectedDeviceId!,
         );
       } else {
+        // iOS: broadcast to all subscribed centrals (deviceId optional/ignored on iOS).
         await BlePeripheral.updateCharacteristic(
           characteristicId: CHARACTERISTIC_UUID,
           value: Uint8List.fromList(bytes),

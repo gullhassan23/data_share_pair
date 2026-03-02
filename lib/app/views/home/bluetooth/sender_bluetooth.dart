@@ -140,7 +140,8 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Text(
-                  'Make sure the receiver has opened Receive via Bluetooth.',
+                  'Make sure the receiver has opened Receive via Bluetooth. '
+                  'Both devices must be on the same Wi‑Fi for the file to transfer.',
                   style: GoogleFonts.roboto(
                     fontSize: 13,
                     color: Colors.black54,
