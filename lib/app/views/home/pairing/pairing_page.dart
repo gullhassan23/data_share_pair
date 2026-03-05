@@ -123,9 +123,9 @@ class _PairingScreenState extends State<PairingScreen>
         print('🔄 WiFi sender: navigating to TransferFileScreen');
         AppNavigator.toTransferFile(device: device);
       } else {
-        print('🔄 WiFi receiver: starting transfer server');
+        print('🔄 WiFi receiver: starting transfer server on 9091');
         final transferController = Get.find<TransferController>();
-        await transferController.startServer();
+        await transferController.startServer(port: 9091);
         Get.snackbar(
           'Ready to Receive',
           'Device is ready to receive files. Wait for transfer offers.',
@@ -165,8 +165,9 @@ class _PairingScreenState extends State<PairingScreen>
     _discoveryTimer = null;
     _radarCtrl.dispose();
     nameCtrl.dispose();
-    // Free port 7070 and clear state so QR flow can use it when user switches
+    // Free Wi‑Fi pairing and transfer servers so QR flow can use its own ports when user switches
     pairing.stopServer();
+    transfer.stopServer();
     pairing.devices.clear();
     pairing.incomingOffer.value = null;
     super.dispose();
@@ -369,13 +370,14 @@ class _PairingScreenState extends State<PairingScreen>
 
                           final transferController =
                               Get.find<TransferController>();
-                          await transferController.startServer();
+                          // Wi‑Fi receiver: use dedicated transfer port 9091
+                          await transferController.startServer(port: 9091);
 
                           final senderDevice = DeviceInfo(
                             name: name,
                             ip: fromIp,
-                            wsPort: 7070,
-                            transferPort: 9090,
+                            wsPort: 7071,
+                            transferPort: 9091,
                           );
 
                           transfer.progress.reset();

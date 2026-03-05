@@ -84,7 +84,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 20),
 
               /// Main Content Card
               Expanded(
@@ -142,8 +142,6 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                               ),
                             );
                           }
-
-                       
 
                           return GridView.builder(
                             itemCount: files.length,
@@ -220,9 +218,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                                       ),
                                     ],
                                   ),
-                                  child:
-
-                                  _buildFilePreview(
+                                  child: _buildFilePreview(
                                     fileType,
                                     filePath,
                                     fileName,

@@ -28,7 +28,7 @@ class TransferController extends GetxController {
   SendPort? _cancelSendPort;
   final receivedFiles = <Map<String, dynamic>>[].obs;
   ServerSocket? _server;
-  final serverPort = 9090;
+  int serverPort = 9090;
   ReceivePort? _receivePort;
   StreamController<double>? _sendStream;
   StreamController<double>? _recvStream;
@@ -84,11 +84,28 @@ class TransferController extends GetxController {
     }
   }
 
-  Future<void> startServer() async {
+  Future<void> startServer({int? port}) async {
+    // If a server is already running:
     if (_server != null) {
-      print('✅ TCP server already running on port $serverPort');
-      return;
+      // If caller didn't request a different port, keep existing server
+      if (port == null || port == serverPort) {
+        print('✅ TCP server already running on port $serverPort');
+        return;
+      }
+      // Caller requested a different port: close existing server and re-bind
+      print(
+        'ℹ️ TCP server already running on $serverPort, rebinding to requested port $port...',
+      );
+      try {
+        await _server!.close();
+      } catch (_) {}
+      _server = null;
     }
+
+    if (port != null) {
+      serverPort = port;
+    }
+
     try {
       sessionState.value = TransferSessionState.waiting;
       print('🔄 Starting TCP server on port $serverPort...');
@@ -613,6 +630,8 @@ class TransferController extends GetxController {
     _server = null;
     sessionState.value = TransferSessionState.waiting;
     await _recvStream?.close();
+    // Reset to default so next server start without explicit port uses 9090 (QR/Bluetooth).
+    serverPort = 9090;
   }
 
   Future<void> _loadReceivedFiles() async {

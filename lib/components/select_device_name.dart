@@ -555,31 +555,46 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                                   Get.find<
                                                     TransferController
                                                   >();
+                                              // Wi‑Fi receiver uses dedicated transfer port 9091
                                               await transferController
-                                                  .startServer();
+                                                  .startServer(port: 9091);
                                               if (!mounted) return;
-                                              // ScaffoldMessenger.of(context)
-                                              //     .showSnackBar(
-                                              //   const SnackBar(
-                                              //     content: Text(
-                                              //       'Waiting for sender...',
-                                              //     ),
-                                              //     duration: Duration(seconds: 3),
-                                              //   ),
-                                              // );
-                                              Get.snackbar(
-                                                "Wait",
-                                                "Wait for sender to select the file",
-                                                backgroundColor: Colors
-                                                    .yellowAccent
-                                                    .withOpacity(0.8),
-                                                colorText: Colors.black,
-                                                snackPosition:
-                                                    SnackPosition.BOTTOM,
-                                                duration: const Duration(
-                                                  seconds: 2,
-                                                ),
+
+                                              final pairing =
+                                                  Get.find<PairingController>();
+                                              final bool handshakeSent =
+                                                  await pairing.acceptHandshake(
+                                                device.ip,
                                               );
+
+                                              if (handshakeSent) {
+                                                Get.snackbar(
+                                                  "Ready",
+                                                  "Receiver is ready. Ask the sender to tap your device again.",
+                                                  backgroundColor: Colors.green
+                                                      .withOpacity(0.85),
+                                                  colorText: Colors.white,
+                                                  snackPosition:
+                                                      SnackPosition.BOTTOM,
+                                                  duration: const Duration(
+                                                    seconds: 3,
+                                                  ),
+                                                );
+                                              } else {
+                                                Get.snackbar(
+                                                  "Waiting for sender",
+                                                  "Waiting for the sender to initiate connection. Make sure they select this device.",
+                                                  backgroundColor: Colors
+                                                      .yellowAccent
+                                                      .withOpacity(0.8),
+                                                  colorText: Colors.black,
+                                                  snackPosition:
+                                                      SnackPosition.BOTTOM,
+                                                  duration: const Duration(
+                                                    seconds: 3,
+                                                  ),
+                                                );
+                                              }
                                               return;
                                             }
                                             if (_navigatedToTransfer) return;

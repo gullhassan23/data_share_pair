@@ -13,8 +13,10 @@ class PairingController extends GetxController {
   final devices = <DeviceInfo>[].obs;
   final isServer = false.obs;
   final deviceName = ''.obs;
-  final wsPort = 7070;
-  final transferPort = 9090;
+  // Wi‑Fi / Wi‑Fi Direct pairing WebSocket port (distinct from QR's 7070)
+  final wsPort = 7071;
+  // Wi‑Fi / Wi‑Fi Direct TCP file transfer port (distinct from QR/BLE default 9090)
+  final transferPort = 9091;
   HttpServer? _wsHttpServer;
   ReceivePort? _scanReceivePort;
   final incomingOffer = Rxn<Map<String, dynamic>>();
@@ -66,15 +68,16 @@ class PairingController extends GetxController {
     return 'Unknown Device';
   }
 
-  /// Starts the WebSocket server for device discovery and pairing
+  /// Starts the WebSocket server for device discovery and pairing (Wi‑Fi / Wi‑Fi Direct flow)
   ///
-  /// **Purpose:** Creates a WebSocket server on port 7070 that allows other devices to discover
+  /// **Purpose:** Creates a WebSocket server on port 7071 that allows other devices to discover
   ///             this device and receive pairing offers. This is the RECEIVER-side pairing server.
   /// **Why:** Enables this device to be discoverable on the network and accept file transfer offers
   /// **When called:** Called when user wants to make their device discoverable (receiver mode)
   /// **Side:** RECEIVER side - makes this device available for pairing
-  /// **Port:** 7070 (WebSocket for pairing/discovery)
-  /// **Note:** This is DIFFERENT from TransferController.startServer() which uses TCP port 9090 for file transfer
+  /// **Port:** 7071 (WebSocket for pairing/discovery, Wi‑Fi/Wi‑Fi Direct flow)
+  /// **Note:** This is DIFFERENT from the default TransferController.startServer() which uses TCP
+  ///           port 9090 for QR/Bluetooth file transfer; Wi‑Fi flows advertise/use 9091 instead.
   // Future<void> startServer([String? customName]) async {
   //   // Use custom name if provided, otherwise get actual device name
   //   final actualDeviceName = customName ?? await _getDeviceName();
@@ -241,9 +244,10 @@ class PairingController extends GetxController {
                   final peer = DeviceInfo(
                     name: peerName,
                     ip: peerIp,
-                    wsPort: (map['wsPort'] as num?)?.toInt() ?? 7070,
+                    // Default to Wi‑Fi pairing/transfer ports if not provided
+                    wsPort: (map['wsPort'] as num?)?.toInt() ?? 7071,
                     transferPort:
-                        (map['transferPort'] as num?)?.toInt() ?? 9090,
+                        (map['transferPort'] as num?)?.toInt() ?? 9091,
                   );
                   final existingIndex =
                       devices.indexWhere((e) => e.ip == peer.ip);
@@ -257,12 +261,19 @@ class PairingController extends GetxController {
                     "✅ [discovery_peer] Added/updated sender: $peerName at $peerIp",
                   );
                 } else if (map['type'] == 'pairing_handshake') {
-                  print("📥 Pairing handshake from $remoteIp, confirming...");
-                  try {
-                    socket.add(jsonEncode({'type': 'receiver_confirmed'}));
-                  } catch (e) {
-                    print("❌ Error sending receiver_confirmed: $e");
+                  final fromIp = remoteIp ?? '';
+                  print(
+                    "📥 Pairing handshake received from $fromIp. "
+                    "Storing pending handshake; waiting for explicit receiver confirmation.",
+                  );
+                  if (fromIp.isEmpty) {
+                    print(
+                      "⚠️ pair_handshake without remoteIp; cannot track pending handshake.",
+                    );
+                    return;
                   }
+                  // Store socket so receiver UI can explicitly confirm later via acceptHandshake().
+                  _pendingSockets[fromIp] = socket;
                 }
               } catch (e) {
                 print("❌ Error parsing socket data: $e");
@@ -287,7 +298,7 @@ class PairingController extends GetxController {
 
   /// Stops the WebSocket pairing server
   ///
-  /// **Purpose:** Closes the WebSocket server (port 7070) that was used for device discovery
+  /// **Purpose:** Closes the WebSocket server (port 7071) that was used for device discovery
   /// **Why:** Allows the device to stop being discoverable and frees up network resources
   /// **When called:** Called when user wants to stop being discoverable or when app closes
   /// **Side:** RECEIVER side - stops the pairing server
@@ -301,7 +312,7 @@ class PairingController extends GetxController {
   /// Scans the local network to discover other devices running the pairing server
   ///
   /// **Purpose:** Scans all IPs in the local network subnet (e.g., 192.168.1.1-255) to find
-  ///             devices that have started their pairing server (WebSocket on port 7070)
+  ///             devices that have started their pairing server (WebSocket on port 7071)
   /// **Why:** Allows users to see a list of available devices they can send files to
   /// **When called:** Called when user taps "Scan" or "Discover Devices", or periodically on pairing page
   /// **Side:** SENDER side - actively searches for receiver devices
@@ -403,7 +414,8 @@ class PairingController extends GetxController {
   /// **Side:** SENDER side - connects to receiver devices to verify availability
   /// **Note:** This is a quick connection/close, not for sending file offers (use sendOffer() for that)
   Future<void> pairWith(DeviceInfo device) async {
-    final port = device.wsPort ?? 7070;
+    // Default to Wi‑Fi pairing port when wsPort is not specified
+    final port = device.wsPort ?? 7071;
     final uri = Uri.parse('ws://${device.ip}:$port');
     try {
       final ws = await WebSocket.connect(
@@ -424,7 +436,7 @@ class PairingController extends GetxController {
 
   /// Sends a file transfer offer to a receiver device
   ///
-  /// **Purpose:** Connects to a receiver's WebSocket server (port 7070) and sends a file transfer
+  /// **Purpose:** Connects to a receiver's WebSocket server (port 7071 for Wi‑Fi) and sends a file transfer
   ///             offer containing file metadata. Waits for receiver's accept/reject response.
   /// **Why:** Allows sender to request permission before starting the actual file transfer
   /// **When called:** Called when sender selects a file and chooses a receiver device
@@ -433,7 +445,8 @@ class PairingController extends GetxController {
   ///          3. Waits for accept/reject response → 4. Returns true if accepted
   /// **Note:** If accepted, the actual file transfer happens via TransferController.sendFile()
   Future<bool> sendOffer(DeviceInfo device, FileMeta meta) async {
-    final port = device.wsPort ?? 7070;
+    // Use explicit wsPort when provided (e.g., QR = 7070), otherwise default to Wi‑Fi port 7071
+    final port = device.wsPort ?? 7071;
     print('📤 Sending offer to ${device.ip}:$port');
     print('[QR] sendOffer called ip=${device.ip} wsPort=$port');
     final uri = Uri.parse('ws://${device.ip}:$port');
@@ -515,7 +528,8 @@ class PairingController extends GetxController {
   /// **When called:** From SelectDeviceScreen when sender taps a receiver device (Wi‑Fi path).
   /// **Side:** SENDER side - initiates handshake; RECEIVER side handles in server socket.listen.
   Future<bool> confirmReceiverReady(DeviceInfo receiver) async {
-    final port = receiver.wsPort ?? 7070;
+    // Use receiver.wsPort when provided; default to Wi‑Fi pairing port 7071
+    final port = receiver.wsPort ?? 7071;
     final uri = Uri.parse('ws://${receiver.ip}:$port');
     WebSocket? ws;
     StreamSubscription? sub;
@@ -582,6 +596,40 @@ class PairingController extends GetxController {
     }
   }
 
+  /// Sends receiver_confirmed for a stored pairing handshake.
+  ///
+  /// Receiver calls this after the user explicitly taps the sender device
+  /// in the Wi‑Fi SelectDeviceScreen (isReceiver == true). Only then do we
+  /// complete the handshake so the sender can navigate forward.
+  Future<bool> acceptHandshake(String fromIp) async {
+    print('[PAIRING] acceptHandshake called for $fromIp');
+    final ws = _pendingSockets.remove(fromIp);
+    if (ws == null) {
+      print(
+        '❌ [PAIRING] No pending handshake socket found for $fromIp. '
+        'Sender may not have initiated pairing yet or connection was closed.',
+      );
+      return false;
+    }
+    try {
+      final responseJson = jsonEncode({'type': 'receiver_confirmed'});
+      ws.add(responseJson);
+      print(
+        '📤 [PAIRING] Sent receiver_confirmed to $fromIp: $responseJson',
+      );
+      await Future.delayed(const Duration(milliseconds: 100));
+      await ws.close();
+      print('📤 [PAIRING] Handshake socket closed for $fromIp');
+      return true;
+    } catch (e) {
+      print('❌ [PAIRING] Error sending receiver_confirmed to $fromIp: $e');
+      try {
+        await ws.close();
+      } catch (_) {}
+      return false;
+    }
+  }
+
   /// Responds to an incoming file transfer offer from a sender
   ///
   /// **Purpose:** When a sender sends a file transfer offer, this function sends back an
@@ -623,18 +671,18 @@ class PairingController extends GetxController {
   /// Background isolate that scans the network for discoverable devices
   ///
   /// **Purpose:** Runs in a separate isolate to scan all IPs in the local subnet (1-254) without
-  ///             blocking the main UI thread. Connects to each IP's WebSocket port 7070 to find devices.
+  ///             blocking the main UI thread. Connects to each IP's WebSocket port 7071 to find devices.
   /// **Why:** Network scanning is slow (255 IPs × 300ms timeout), so it needs to run in background
   /// **When called:** Spawned by `discover()` function when user initiates device discovery
   /// **Side:** SENDER side - used during device discovery
-  /// **How:** Tries to connect to ws://[IP]:7070 for each IP in parallel batches. Only devices
+  /// **How:** Tries to connect to ws://[IP]:7071 for each IP in parallel batches. Only devices
   ///         that actively respond with valid device_info are reported. No artificial delay.
   static void _scanIsolate(Map<String, dynamic> params) async {
     final prefix = params['prefix'] as String;
     final sendPort = params['sendPort'] as SendPort;
     final myName = params['myName'] as String? ?? 'Unknown';
     final myIp = params['myIp'] as String? ?? '';
-    const wsPort = 7070;
+    const wsPort = 7071;
     const batchSize = 32; // Parallel connections per batch for fast symmetric discovery
     const timeoutMs = 400;
 
@@ -655,7 +703,7 @@ class PairingController extends GetxController {
           'name': myName,
           'ip': myIp,
           'wsPort': wsPort,
-          'transferPort': 9090,
+          'transferPort': 9091,
         }));
         await ws.close();
         return jsonMap;

@@ -388,9 +388,11 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   @override
   void dispose() {
     _pairingDialogShown = false;
-    // Free port 7070 and P2P so Wi‑Fi Direct flow can use them when user switches
+    // Free pairing WebSocket, transfer server, P2P, and hotspot so Wi‑Fi flows can reuse ports
     qrController.stopServer();
     qrController.stopP2P();
+    fileTransferController.stopServer();
+    hotspotController.stopHotspot();
     super.dispose();
   }
 
