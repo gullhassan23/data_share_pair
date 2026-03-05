@@ -551,15 +551,6 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                               selectedIndex = index;
                                             });
                                             if (widget.isReceiver) {
-                                              final transferController =
-                                                  Get.find<
-                                                    TransferController
-                                                  >();
-                                              // Wi‑Fi receiver uses dedicated transfer port 9091
-                                              await transferController
-                                                  .startServer(port: 9091);
-                                              if (!mounted) return;
-
                                               final pairing =
                                                   Get.find<PairingController>();
                                               final bool handshakeSent =
@@ -568,33 +559,35 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                               );
 
                                               if (handshakeSent) {
-                                                Get.snackbar(
-                                                  "Ready",
-                                                  "Receiver is ready. Ask the sender to tap your device again.",
-                                                  backgroundColor: Colors.green
-                                                      .withOpacity(0.85),
-                                                  colorText: Colors.white,
-                                                  snackPosition:
-                                                      SnackPosition.BOTTOM,
-                                                  duration: const Duration(
-                                                    seconds: 3,
-                                                  ),
-                                                );
-                                              } else {
-                                                Get.snackbar(
-                                                  "Waiting for sender",
-                                                  "Waiting for the sender to initiate connection. Make sure they select this device.",
-                                                  backgroundColor: Colors
-                                                      .yellowAccent
-                                                      .withOpacity(0.8),
-                                                  colorText: Colors.black,
-                                                  snackPosition:
-                                                      SnackPosition.BOTTOM,
-                                                  duration: const Duration(
-                                                    seconds: 3,
-                                                  ),
-                                                );
+                                                final transferController =
+                                                    Get.find<
+                                                      TransferController
+                                                    >();
+                                                // Wi‑Fi receiver uses dedicated transfer port 9091
+                                                await transferController
+                                                    .startServer(port: 9091);
+                                                if (!mounted) return;
                                               }
+
+                                              // Regardless of whether a sender handshake is
+                                              // already pending, once the receiver taps we
+                                              // consider it \"ready\". If the sender has not
+                                              // initiated confirmReceiverReady yet, the next
+                                              // pairing_handshake from this IP will be
+                                              // auto-accepted by the server using the
+                                              // stored readiness flag.
+                                              Get.snackbar(
+                                                "Ready",
+                                                "Receiver is ready. Waiting for sender.",
+                                                backgroundColor: Colors.green
+                                                    .withOpacity(0.85),
+                                                colorText: Colors.white,
+                                                snackPosition:
+                                                    SnackPosition.BOTTOM,
+                                                duration: const Duration(
+                                                  seconds: 3,
+                                                ),
+                                              );
                                               return;
                                             }
                                             if (_navigatedToTransfer) return;

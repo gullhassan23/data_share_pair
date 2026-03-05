@@ -37,7 +37,8 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   String _startupErrorMsg = '';
   bool _isInitializing = true;
   bool _pairingDialogShown = false;
-
+  bool _isPaired = false;
+  String _pairedDeviceName = '';
   @override
   void initState() {
     super.initState();
@@ -304,6 +305,11 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                 responded = true;
                 _pairingDialogShown = false;
                 qrController.respondToPairing(fromIp, true);
+
+                setState(() {
+                  _isPaired = true;
+                  _pairedDeviceName = senderName; // e.g., Nokia
+                });
                 Get.back();
               },
               child: const Text('Accept'),
@@ -725,87 +731,142 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                         const SizedBox(height: 40),
 
                         // QR Code Container
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              // QR Code
-                              QrImageView(
-                                data: qrData,
-                                version: QrVersions.auto,
-                                size: 200.0,
-                                backgroundColor: Colors.white,
-                              ),
+                        // Container(
+                        //   padding: const EdgeInsets.all(20),
+                        //   decoration: BoxDecoration(
+                        //     color: Colors.white,
+                        //     borderRadius: BorderRadius.circular(20),
+                        //     boxShadow: [
+                        //       BoxShadow(
+                        //         color: Colors.black.withOpacity(0.1),
+                        //         blurRadius: 20,
+                        //         offset: const Offset(0, 10),
+                        //       ),
+                        //     ],
+                        //   ),
+                        //   child: Column(
+                        //     children: [
+                        //       // QR Code
+                        //       QrImageView(
+                        //         data: qrData,
+                        //         version: QrVersions.auto,
+                        //         size: 200.0,
+                        //         backgroundColor: Colors.white,
+                        //       ),
 
-                              const SizedBox(height: 20),
+                        //       const SizedBox(height: 20),
 
-                              // Hotspot Details
-                              Text(
-                                'Connection Details',
-                                style: GoogleFonts.roboto(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                        //       // Hotspot Details
+                        //       Text(
+                        //         'Connection Details',
+                        //         style: GoogleFonts.roboto(
+                        //           fontSize: 18,
+                        //           fontWeight: FontWeight.bold,
+                        //           color: Colors.black87,
+                        //         ),
+                        //       ),
+
+                        //       const SizedBox(height: 16),
+
+                        //       // Network Name
+                        //       _buildDetailRow('Network', displayInfo.ssid),
+                        //       const SizedBox(height: 8),
+
+                        //       // Password
+                        //       _buildDetailRow(
+                        //         'Password',
+                        //         displayInfo.password.isEmpty
+                        //             ? 'Not required'
+                        //             : displayInfo.password,
+                        //       ),
+                        //       const SizedBox(height: 8),
+
+                        //       // IP Address
+                        //       _buildDetailRow('IP Address', displayInfo.ip),
+
+                        //       const SizedBox(height: 20),
+
+                        //       // Copy Button
+                        //       ElevatedButton.icon(
+                        //         onPressed: () {
+                        //           // TODO: Implement copy to clipboard
+                        //           Get.snackbar(
+                        //             'Copied',
+                        //             'Connection details copied to clipboard',
+                        //             backgroundColor: Colors.green.withOpacity(
+                        //               0.8,
+                        //             ),
+                        //             colorText: Colors.white,
+                        //           );
+                        //         },
+                        //         icon: const Icon(Icons.copy),
+                        //         label: const Text('Copy Details'),
+                        //         style: ElevatedButton.styleFrom(
+                        //           backgroundColor: const Color(0xFF5DADE2),
+                        //           foregroundColor: Colors.white,
+                        //           shape: RoundedRectangleBorder(
+                        //             borderRadius: BorderRadius.circular(12),
+                        //           ),
+                        //         ),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
+
+                        // QR Code Container
+                        if (!_isPaired)
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
                                 ),
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // Network Name
-                              _buildDetailRow('Network', displayInfo.ssid),
-                              const SizedBox(height: 8),
-
-                              // Password
-                              _buildDetailRow(
-                                'Password',
-                                displayInfo.password.isEmpty
-                                    ? 'Not required'
-                                    : displayInfo.password,
-                              ),
-                              const SizedBox(height: 8),
-
-                              // IP Address
-                              _buildDetailRow('IP Address', displayInfo.ip),
-
-                              const SizedBox(height: 20),
-
-                              // Copy Button
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  // TODO: Implement copy to clipboard
-                                  Get.snackbar(
-                                    'Copied',
-                                    'Connection details copied to clipboard',
-                                    backgroundColor: Colors.green.withOpacity(
-                                      0.8,
-                                    ),
-                                    colorText: Colors.white,
-                                  );
-                                },
-                                icon: const Icon(Icons.copy),
-                                label: const Text('Copy Details'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF5DADE2),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                QrImageView(
+                                  data: qrData,
+                                  version: QrVersions.auto,
+                                  size: 200.0,
+                                  backgroundColor: Colors.white,
+                                ),
+                                // ...rest of QR details
+                              ],
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Column(
+                              children: [
+                                const Icon(
+                                  Icons.check_circle,
+                                  size: 60,
+                                  color: Colors.green,
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Device successfully connected to $_pairedDeviceName',
+                                  style: GoogleFonts.roboto(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade900,
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
 
                         const SizedBox(height: 24),
 

@@ -35,205 +35,222 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
+    return WillPopScope(
+      onWillPop: () async {
+        // Navigate to Home and prevent the default pop
+        AppNavigator.toHome();
+        return false; // prevent default back behavior
+      },
+
+      child: Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 19),
+          child: SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 19),
 
-              /// Back Row
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      AppNavigator.toHome();
-                    },
-                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    "Received Files",
-                    style: GoogleFonts.roboto(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 10),
-
-              /// Progress Barss
-              StepProgressBar(
-                currentStep: 7,
-                totalSteps: kTransferFlowTotalSteps,
-                activeColor: Theme.of(context).colorScheme.primary,
-                inactiveColor: Colors.grey.shade300,
-                height: 6,
-                segmentSpacing: 5,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-              ),
-
-              const SizedBox(height: 20),
-
-              /// Main Content Card
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 25,
-                        offset: const Offset(0, 10),
+                /// Back Row
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        AppNavigator.toHome();
+                      },
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: Colors.black,
+                        size: 28,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      /// Header
-                      const SizedBox(height: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Received Files",
+                      style: GoogleFonts.roboto(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 10),
 
-                      /// Files List
-                      Expanded(
-                        child: Obx(() {
-                          final files = transfer.receivedFiles;
-                          if (files.isEmpty) {
-                            return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.inbox,
-                                    size: 64,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    "No received files yet",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 18,
-                                      color: Colors.black,
+                /// Progress Barss
+                StepProgressBar(
+                  currentStep: 7,
+                  totalSteps: kTransferFlowTotalSteps,
+                  activeColor: Theme.of(context).colorScheme.primary,
+                  inactiveColor: Colors.grey.shade300,
+                  height: 6,
+                  segmentSpacing: 5,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                ),
+
+                const SizedBox(height: 20),
+
+                /// Main Content Card
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 25,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        /// Header
+                        const SizedBox(height: 20),
+
+                        /// Files List
+                        Expanded(
+                          child: Obx(() {
+                            final files = transfer.receivedFiles;
+                            if (files.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.inbox,
+                                      size: 64,
+                                      color: Colors.grey.shade400,
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "Files you receive will appear here",
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      color: Colors.black,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-
-                          return GridView.builder(
-                            itemCount: files.length,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                  childAspectRatio: 1,
-                                ),
-                            itemBuilder: (context, index) {
-                              final file = files[index];
-                              final fileName = file['name'] as String;
-                              final filePath = file['path'] as String;
-                              final fileType = file['type'] as String;
-
-                              return GestureDetector(
-                                onTap: () async {
-                                  if (fileType == 'image') {
-                                    showDialog(
-                                      context: context,
-                                      builder:
-                                          (_) => Dialog(
-                                            child: InteractiveViewer(
-                                              child: Image.file(File(filePath)),
-                                            ),
-                                          ),
-                                    );
-                                  } else if (fileType == 'contacts') {
-                                    final added = await transfer
-                                        .importContactsFromVcfFile(filePath);
-                                    if (added != null && added > 0) {
-                                      Get.snackbar(
-                                        'Contacts',
-                                        'Added $added contact(s) to your contacts.',
-                                      );
-                                    } else if (added == 0) {
-                                      Get.snackbar(
-                                        'Contacts',
-                                        'No contacts could be added. Check Contacts permission in Settings.',
-                                        mainButton: TextButton(
-                                          onPressed: () => openAppSettings(),
-                                          child: const Text('Settings'),
-                                        ),
-                                        duration: const Duration(seconds: 4),
-                                      );
-                                    } else {
-                                      Get.snackbar(
-                                        'Contacts',
-                                        'Could not add contacts. Grant Contacts permission in Settings.',
-                                        mainButton: TextButton(
-                                          onPressed: () => openAppSettings(),
-                                          child: const Text('Settings'),
-                                        ),
-                                        duration: const Duration(seconds: 5),
-                                      );
-                                    }
-                                  } else {
-                                    try {
-                                      await OpenFilex.open(filePath);
-                                    } catch (e) {
-                                      Get.snackbar("Error", "Cannot open file");
-                                    }
-                                  }
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade100,
-                                    borderRadius: BorderRadius.circular(10),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 6,
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "No received files yet",
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 18,
+                                        color: Colors.black,
                                       ),
-                                    ],
-                                  ),
-                                  child: _buildFilePreview(
-                                    fileType,
-                                    filePath,
-                                    fileName,
-                                  ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Files you receive will appear here",
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
                               );
-                            },
-                          );
-                        }),
-                      ),
-                    ],
+                            }
+
+                            return GridView.builder(
+                              itemCount: files.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                    crossAxisSpacing: 10,
+                                    mainAxisSpacing: 10,
+                                    childAspectRatio: 1,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final file = files[index];
+                                final fileName = file['name'] as String;
+                                final filePath = file['path'] as String;
+                                final fileType = file['type'] as String;
+
+                                return GestureDetector(
+                                  onTap: () async {
+                                    if (fileType == 'image') {
+                                      showDialog(
+                                        context: context,
+                                        builder:
+                                            (_) => Dialog(
+                                              child: InteractiveViewer(
+                                                child: Image.file(
+                                                  File(filePath),
+                                                ),
+                                              ),
+                                            ),
+                                      );
+                                    } else if (fileType == 'contacts') {
+                                      final added = await transfer
+                                          .importContactsFromVcfFile(filePath);
+                                      if (added != null && added > 0) {
+                                        Get.snackbar(
+                                          'Contacts',
+                                          'Added $added contact(s) to your contacts.',
+                                        );
+                                      } else if (added == 0) {
+                                        Get.snackbar(
+                                          'Contacts',
+                                          'No contacts could be added. Check Contacts permission in Settings.',
+                                          mainButton: TextButton(
+                                            onPressed: () => openAppSettings(),
+                                            child: const Text('Settings'),
+                                          ),
+                                          duration: const Duration(seconds: 4),
+                                        );
+                                      } else {
+                                        Get.snackbar(
+                                          'Contacts',
+                                          'Could not add contacts. Grant Contacts permission in Settings.',
+                                          mainButton: TextButton(
+                                            onPressed: () => openAppSettings(),
+                                            child: const Text('Settings'),
+                                          ),
+                                          duration: const Duration(seconds: 5),
+                                        );
+                                      }
+                                    } else {
+                                      try {
+                                        await OpenFilex.open(filePath);
+                                      } catch (e) {
+                                        Get.snackbar(
+                                          "Error",
+                                          "Cannot open file",
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade100,
+                                      borderRadius: BorderRadius.circular(10),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 6,
+                                        ),
+                                      ],
+                                    ),
+                                    child: _buildFilePreview(
+                                      fileType,
+                                      filePath,
+                                      fileName,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

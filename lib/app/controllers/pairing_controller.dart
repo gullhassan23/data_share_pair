@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'package:get/get.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:network_info_plus/network_info_plus.dart';
+import 'transfer_controller.dart';
 import 'package:share_app_latest/services/receiver_readiness_service.dart';
 import '../models/device_info.dart';
 import '../models/file_meta.dart';
@@ -21,6 +22,7 @@ class PairingController extends GetxController {
   ReceivePort? _scanReceivePort;
   final incomingOffer = Rxn<Map<String, dynamic>>();
   final Map<String, WebSocket> _pendingSockets = {};
+  final Set<String> _autoAcceptHandshakeIps = <String>{};
   final isScanning = false.obs;
   final wifiSsid = Rx<String?>(null);
 
@@ -262,18 +264,62 @@ class PairingController extends GetxController {
                   );
                 } else if (map['type'] == 'pairing_handshake') {
                   final fromIp = remoteIp ?? '';
-                  print(
-                    "📥 Pairing handshake received from $fromIp. "
-                    "Storing pending handshake; waiting for explicit receiver confirmation.",
-                  );
                   if (fromIp.isEmpty) {
                     print(
                       "⚠️ pair_handshake without remoteIp; cannot track pending handshake.",
                     );
                     return;
                   }
-                  // Store socket so receiver UI can explicitly confirm later via acceptHandshake().
-                  _pendingSockets[fromIp] = socket;
+
+                  if (_autoAcceptHandshakeIps.remove(fromIp)) {
+                    print(
+                      "📥 Pairing handshake received from $fromIp with auto-accept flag. "
+                      "Auto-sending receiver_confirmed and starting transfer server.",
+                    );
+                    try {
+                      final responseJson =
+                          jsonEncode({'type': 'receiver_confirmed'});
+                      socket.add(responseJson);
+                      await Future.delayed(const Duration(milliseconds: 100));
+                      await socket.close();
+                      print(
+                        "📤 Auto-accepted pairing handshake and closed socket for $fromIp",
+                      );
+                    } catch (e) {
+                      print(
+                        "❌ Error auto-accepting pairing handshake for $fromIp: $e",
+                      );
+                    }
+                    try {
+                      final transferController =
+                          Get.isRegistered<TransferController>()
+                              ? Get.find<TransferController>()
+                              : null;
+                      if (transferController != null) {
+                        await transferController.startServer(
+                          port: transferPort,
+                        );
+                        print(
+                          "✅ Auto-started transfer server on $transferPort for $fromIp",
+                        );
+                      } else {
+                        print(
+                          "⚠️ TransferController not registered; cannot auto-start transfer server.",
+                        );
+                      }
+                    } catch (e) {
+                      print(
+                        "❌ Error starting transfer server during auto-accept for $fromIp: $e",
+                      );
+                    }
+                  } else {
+                    print(
+                      "📥 Pairing handshake received from $fromIp. "
+                      "Storing pending handshake; waiting for explicit receiver confirmation.",
+                    );
+                    // Store socket so receiver UI can explicitly confirm later via acceptHandshake().
+                    _pendingSockets[fromIp] = socket;
+                  }
                 }
               } catch (e) {
                 print("❌ Error parsing socket data: $e");
@@ -603,11 +649,25 @@ class PairingController extends GetxController {
   /// complete the handshake so the sender can navigate forward.
   Future<bool> acceptHandshake(String fromIp) async {
     print('[PAIRING] acceptHandshake called for $fromIp');
+    // Mark this sender IP as \"ready\" so that any future pairing_handshake
+    // from the same IP can be auto-accepted by the server if no socket is
+    // currently pending. This is critical when the receiver taps first.
+    _autoAcceptHandshakeIps.add(fromIp);
+    print(
+      '[PAIRING] Marked $fromIp as ready in _autoAcceptHandshakeIps. '
+      'Current ready IPs: ${_autoAcceptHandshakeIps.toList()}',
+    );
+
     final ws = _pendingSockets.remove(fromIp);
     if (ws == null) {
+      // Common case: receiver tapped before any sender-side confirmReceiverReady
+      // handshake has arrived. We keep the \"ready\" flag so that when the
+      // first pairing_handshake from this IP comes in, it will be
+      // auto-accepted by the startServer() listener.
       print(
-        '❌ [PAIRING] No pending handshake socket found for $fromIp. '
-        'Sender may not have initiated pairing yet or connection was closed.',
+        'ℹ️ [PAIRING] No pending handshake socket found for $fromIp when '
+        'acceptHandshake was called. Receiver is marked ready and will '
+        'auto-accept the next pairing_handshake from this IP.',
       );
       return false;
     }
