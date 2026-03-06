@@ -4,6 +4,10 @@ import 'dart:typed_data';
 import 'dart:io';
 import 'package:ble_peripheral/ble_peripheral.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import 'package:share_app_latest/app/models/file_meta.dart';
 
 class BluetoothPeripheralService {
   // Define UUIDs
@@ -26,9 +30,34 @@ class BluetoothPeripheralService {
       StreamController<String>.broadcast();
   Stream<String> get sendResponseError => _sendResponseErrorController.stream;
 
+  /// BLE file receive: progress 0.0..1.0 during chunked transfer.
+  final _bleReceiveProgressController = StreamController<double>.broadcast();
+  Stream<double> get bleReceiveProgress => _bleReceiveProgressController.stream;
+
+  /// BLE file receive: emits when transfer complete with savePath and meta.
+  final _bleReceiveCompleteController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get bleReceiveComplete =>
+      _bleReceiveCompleteController.stream;
+
+  /// BLE file receive: emits error message on failure.
+  final _bleReceiveErrorController = StreamController<String>.broadcast();
+  Stream<String> get bleReceiveError => _bleReceiveErrorController.stream;
+
   bool _isAdvertising = false;
   String? _lastConnectedDeviceId;
   bool _restartScheduled = false;
+
+  // BLE file receive state (receiver side)
+  bool _receivingFile = false;
+  bool _expectingFileMeta = false;
+  FileMeta? _receiveFileMeta;
+  IOSink? _receiveSink;
+  String? _receiveTmpPath;
+  String? _receiveSavePath;
+  int _receiveTotal = 0;
+  int _receiveReceived = 0;
+  final List<Uint8List> _pendingChunks = [];
 
   /// Returns current local name for advertising (device-dependent).
   Future<String> _getLocalName() async {
@@ -188,6 +217,49 @@ class BluetoothPeripheralService {
             print("📩 Received Write Request from $deviceId: $value");
 
             if (value != null && value.isNotEmpty) {
+              // BLE file receive: expecting file_meta then chunked data
+              if (_receivingFile) {
+                if (_expectingFileMeta) {
+                  try {
+                    final msg = utf8.decode(value);
+                    final data = jsonDecode(msg) as Map<String, dynamic>;
+                    if (data['type'] == 'file_meta' && data['meta'] != null) {
+                      _receiveFileMeta = FileMeta.fromJson(
+                          data['meta'] as Map<String, dynamic>);
+                      _receiveTotal = _receiveFileMeta!.size;
+                      _receiveReceived = 0;
+                      _expectingFileMeta = false;
+                      print(
+                        '📄 [BT Peripheral] File meta: ${_receiveFileMeta!.name} (${_receiveTotal} bytes)',
+                      );
+                      _startReceivingFileToDisk();
+                    }
+                  } catch (e) {
+                    print('❌ [BT Peripheral] Parse file_meta: $e');
+                    if (!_bleReceiveErrorController.isClosed) {
+                      _bleReceiveErrorController.add('Invalid metadata: $e');
+                    }
+                    resetReceivingFileState();
+                  }
+                  return null;
+                }
+                if (_receiveSink != null) {
+                  _receiveSink!.add(value);
+                  _receiveReceived += value.length;
+                  final progress = _receiveTotal > 0
+                      ? (_receiveReceived / _receiveTotal).clamp(0.0, 1.0)
+                      : 1.0;
+                  if (!_bleReceiveProgressController.isClosed) {
+                    _bleReceiveProgressController.add(progress);
+                  }
+                  if (_receiveReceived >= _receiveTotal) {
+                    _finishReceivingFile();
+                  }
+                } else {
+                  _pendingChunks.add(Uint8List.fromList(value));
+                }
+                return null;
+              }
               try {
                 final msg = utf8.decode(value);
                 final Map<String, dynamic> data = jsonDecode(msg);
@@ -202,6 +274,85 @@ class BluetoothPeripheralService {
           })
           as dynamic,
     );
+  }
+
+  /// Call when receiver accepts with bleTransfer: true. Next write = file_meta.
+  void startReceivingFile() {
+    resetReceivingFileState();
+    _receivingFile = true;
+    _expectingFileMeta = true;
+    print('📥 [BT Peripheral] Ready to receive file over BLE');
+  }
+
+  void resetReceivingFileState() {
+    _receivingFile = false;
+    _expectingFileMeta = false;
+    _receiveFileMeta = null;
+    _receiveTotal = 0;
+    _receiveReceived = 0;
+    _pendingChunks.clear();
+    try {
+      _receiveSink?.close();
+    } catch (_) {}
+    _receiveSink = null;
+    _receiveTmpPath = null;
+    _receiveSavePath = null;
+  }
+
+  Future<void> _startReceivingFileToDisk() async {
+    if (_receiveFileMeta == null) return;
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final fileName = _receiveFileMeta!.name.isNotEmpty
+          ? _receiveFileMeta!.name
+          : 'received_file';
+      _receiveSavePath = p.join(dir.path, p.basename(fileName));
+      _receiveTmpPath = '$_receiveSavePath.part';
+      final file = File(_receiveTmpPath!);
+      _receiveSink = file.openWrite();
+      print('💾 [BT Peripheral] Saving to: $_receiveSavePath');
+      for (final chunk in _pendingChunks) {
+        _receiveSink!.add(chunk);
+        _receiveReceived += chunk.length;
+      }
+      _pendingChunks.clear();
+      final progress = _receiveTotal > 0
+          ? (_receiveReceived / _receiveTotal).clamp(0.0, 1.0)
+          : 1.0;
+      if (!_bleReceiveProgressController.isClosed) {
+        _bleReceiveProgressController.add(progress);
+      }
+      if (_receiveReceived >= _receiveTotal) {
+        _finishReceivingFile();
+      }
+    } catch (e) {
+      print('❌ [BT Peripheral] Failed to open file: $e');
+      if (!_bleReceiveErrorController.isClosed) {
+        _bleReceiveErrorController.add('Failed to save file: $e');
+      }
+      resetReceivingFileState();
+    }
+  }
+
+  void _finishReceivingFile() {
+    try {
+      _receiveSink?.close();
+      _receiveSink = null;
+    } catch (_) {}
+    if (_receiveTmpPath != null && _receiveSavePath != null) {
+      final tmp = File(_receiveTmpPath!);
+      if (tmp.existsSync()) {
+        tmp.renameSync(_receiveSavePath!);
+      }
+      if (!_bleReceiveCompleteController.isClosed) {
+        _bleReceiveCompleteController.add({
+          'savePath': _receiveSavePath!,
+          'meta': _receiveFileMeta?.toJson(),
+        });
+      }
+      print('✅ [BT Peripheral] File received: $_receiveSavePath');
+    }
+    resetReceivingFileState();
   }
 
   Future<void> stop() async {

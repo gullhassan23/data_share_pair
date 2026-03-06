@@ -11,6 +11,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
+import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
 import 'package:share_app_latest/services/transfer_state_persistence.dart';
 import 'package:share_app_latest/services/transfer_temp_manager.dart';
@@ -805,6 +806,81 @@ class TransferController extends GetxController {
     });
 
     await completer.future;
+  }
+
+  /// Sends file over BLE (no TCP). Use when device.isBluetooth and BLE transfer was accepted.
+  Future<void> sendFileOverBle(
+    String path, {
+    String? senderTempPath,
+    String? originalFileName,
+    String? deviceName,
+  }) async {
+    print('📤 Starting BLE file transfer: $path');
+
+    if (senderTempPath != null) _tempManager.registerTemp(senderTempPath);
+
+    progress.reset();
+    isCancelled.value = false;
+    sessionState.value = TransferSessionState.transferring;
+    progress.sendProgress.value = 0.0;
+    progress.sentMB.value = 0.0;
+    progress.speedMBps.value = 0.0;
+
+    final fileSize = await File(path).length();
+    final totalMB = fileSize / (1024 * 1024);
+    progress.totalMB.value = totalMB;
+    final fileName = originalFileName ?? p.basename(path);
+
+    await TransferForegroundService.startTransferNotification(
+      isSender: true,
+      fileName: fileName,
+    );
+    await TransferStatePersistence.saveTransferStarted(
+      isSender: true,
+      fileName: fileName,
+      totalBytes: fileSize,
+      deviceName: deviceName,
+      deviceIp: '',
+      devicePort: 0,
+      filePath: path,
+    );
+
+    try {
+      final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+      await bluetooth.sendFileOverBle(
+        path,
+        originalFileName: originalFileName ?? fileName,
+        progressCallback: (p) {
+          progress.sendProgress.value = p;
+          progress.sentMB.value = totalMB * p;
+          progress.status.value = 'Uploading...';
+          TransferStatePersistence.updateProgress(p);
+          TransferForegroundService.updateProgress(
+            fileName: fileName,
+            progress: p,
+            sentMB: totalMB * p,
+            totalMB: totalMB,
+            speedMBps: progress.speedMBps.value,
+            isSender: true,
+          );
+        },
+      );
+      progress.status.value = 'sent';
+      progress.sendProgress.value = 1.0;
+      progress.sentMB.value = totalMB;
+      progress.speedMBps.value = 0;
+      sessionState.value = TransferSessionState.completed;
+      _tempManager.cleanupCurrentSession();
+      TransferForegroundService.stopTransferNotification();
+      TransferStatePersistence.clearTransferState();
+    } catch (e) {
+      progress.error.value = e.toString();
+      sessionState.value = TransferSessionState.error;
+      _tempManager.cleanupCurrentSession();
+      TransferForegroundService.stopTransferNotification();
+      TransferStatePersistence.clearTransferState();
+      rethrow;
+    }
   }
 
   Future<String?> selectFile({

@@ -26,6 +26,9 @@ class PairingController extends GetxController {
   final isScanning = false.obs;
   final wifiSsid = Rx<String?>(null);
 
+  /// Set when startServer() fails; UI can show a snackbar so user knows device is not discoverable.
+  final serverStartError = Rx<String?>(null);
+
   /// Fetches the currently connected WiFi name (SSID) and updates [wifiSsid].
   /// Does not block pairing flow; call without await from UI. Trims Android quotes.
   Future<void> refreshWifiSsid() async {
@@ -152,6 +155,7 @@ class PairingController extends GetxController {
   // }
 
   Future<void> startServer([String? customName]) async {
+    serverStartError.value = null;
     try {
       // Get device name
       final actualDeviceName = customName ?? await _getDeviceName();
@@ -166,23 +170,24 @@ class PairingController extends GetxController {
         wifiIp = await ReceiverReadinessService.discoverLocalIp();
       }
       if (wifiIp == null || wifiIp.isEmpty) {
-        print("❌ No suitable IP found. Falling back to any IPv4.");
+        print("❌ [SERVER] No suitable IP found. Falling back to any IPv4.");
         wifiIp = InternetAddress.anyIPv4.address;
       }
 
-      print("📡 Binding WebSocket Server to IP: $wifiIp");
-
-      final server = await HttpServer.bind(
-        wifiIp == InternetAddress.anyIPv4.address
-            ? InternetAddress.anyIPv4
-            : InternetAddress(wifiIp),
-        wsPort,
-        shared: true,
+      // Bind to all interfaces so we're reachable on any address (WiFi + cellular if present).
+      // We still advertise wifiIp in device_info so the scan subnet matches.
+      final bindAddress = InternetAddress.anyIPv4;
+      print(
+        "📡 [SERVER] Binding WebSocket server to ${bindAddress.address} (advertising ws://$wifiIp:$wsPort)",
       );
+
+      final server = await HttpServer.bind(bindAddress, wsPort, shared: true);
 
       _wsHttpServer = server;
 
-      print("✅ WebSocket Server running at ws://$wifiIp:$wsPort");
+      print(
+        "✅ [SERVER] WebSocket server running at ws://$wifiIp:$wsPort (listening on all interfaces)",
+      );
 
       server.listen((HttpRequest request) async {
         final remoteIp = request.connectionInfo?.remoteAddress.address;
@@ -220,7 +225,9 @@ class PairingController extends GetxController {
                   final fromIp = remoteIp ?? '';
                   final senderName =
                       (map['senderName'] as String?)?.trim() ?? 'Sender';
-                  print("📥 File offer received from $fromIp (sender: $senderName)");
+                  print(
+                    "📥 File offer received from $fromIp (sender: $senderName)",
+                  );
 
                   _pendingSockets[fromIp] = socket;
 
@@ -236,7 +243,8 @@ class PairingController extends GetxController {
                   print("✅ incomingOffer set for UI: ${incomingOffer.value}");
                 } else if (map['type'] == 'discovery_peer') {
                   final peerIp = map['ip'] as String?;
-                  final peerName = (map['name'] as String?)?.trim() ?? 'Unknown';
+                  final peerName =
+                      (map['name'] as String?)?.trim() ?? 'Unknown';
                   if (peerIp == null ||
                       peerIp.isEmpty ||
                       peerIp == wifiIp ||
@@ -251,8 +259,9 @@ class PairingController extends GetxController {
                     transferPort:
                         (map['transferPort'] as num?)?.toInt() ?? 9091,
                   );
-                  final existingIndex =
-                      devices.indexWhere((e) => e.ip == peer.ip);
+                  final existingIndex = devices.indexWhere(
+                    (e) => e.ip == peer.ip,
+                  );
                   if (existingIndex >= 0) {
                     devices[existingIndex] = peer;
                   } else {
@@ -277,8 +286,9 @@ class PairingController extends GetxController {
                       "Auto-sending receiver_confirmed and starting transfer server.",
                     );
                     try {
-                      final responseJson =
-                          jsonEncode({'type': 'receiver_confirmed'});
+                      final responseJson = jsonEncode({
+                        'type': 'receiver_confirmed',
+                      });
                       socket.add(responseJson);
                       await Future.delayed(const Duration(milliseconds: 100));
                       await socket.close();
@@ -337,8 +347,9 @@ class PairingController extends GetxController {
         }
       });
     } catch (e) {
-      print("❌ Failed to start server: $e");
+      print("❌ [SERVER] Failed to start server: $e");
       isServer.value = false;
+      serverStartError.value = e.toString();
     }
   }
 
@@ -353,6 +364,7 @@ class PairingController extends GetxController {
     await _wsHttpServer?.close(force: true);
     _wsHttpServer = null;
     isServer.value = false;
+    serverStartError.value = null;
   }
 
   /// Scans the local network to discover other devices running the pairing server
@@ -382,11 +394,15 @@ class PairingController extends GetxController {
     if (!mergeResults) {
       final previousCount = devices.length;
       devices.clear();
-      print('🔍 [DISCOVER] Cleared $previousCount cached/stale devices. Starting fresh scan.');
+      print(
+        '🔍 [DISCOVER] Cleared $previousCount cached/stale devices. Starting fresh scan.',
+      );
     }
 
     final prefix = '${base[0]}.${base[1]}.${base[2]}';
-    print("🔍 [DISCOVER] Scanning network: $prefix.1-254 (local IP: $localIp)");
+    print(
+      "🔍 [DISCOVER] Scanning subnet $prefix.0/24 (local IP: $localIp). Spawning scan isolate.",
+    );
 
     // Cancel any in-flight scan before starting new one
     _scanReceivePort?.close();
@@ -395,6 +411,13 @@ class PairingController extends GetxController {
 
     _scanReceivePort!.listen((dynamic msg) {
       if (msg is Map<String, dynamic>) {
+        // Only treat device_info messages as discoverable devices (server sends type: 'device_info').
+        final isDeviceInfo =
+            msg['type'] == 'device_info' ||
+            (msg['name'] != null &&
+                (msg['transferPort'] != null || msg['wsPort'] != null));
+        if (!isDeviceInfo) return;
+
         try {
           final d = DeviceInfo.fromJson(msg);
 
@@ -408,11 +431,15 @@ class PairingController extends GetxController {
             return;
           }
 
-          print('🔍 [DISCOVER] Actively found device: ${d.name} at ${d.ip}:${d.transferPort}');
+          print(
+            '🔍 [DISCOVER] Actively found device: ${d.name} at ${d.ip}:${d.transferPort}',
+          );
 
           // Don't add our own device to the list
           if (d.ip == localIp) {
-            print('🚫 [DISCOVER] Skipping own device: ${d.ip} (local IP: $localIp)');
+            print(
+              '🚫 [DISCOVER] Skipping own device: ${d.ip} (local IP: $localIp)',
+            );
             return;
           }
 
@@ -421,7 +448,9 @@ class PairingController extends GetxController {
           if (existingIndex >= 0) {
             // Replace with fresh data - same IP might be a different device after DHCP
             devices[existingIndex] = d;
-            print('🔄 [DISCOVER] Updated existing entry for IP ${d.ip} with fresh data: ${d.name}');
+            print(
+              '🔄 [DISCOVER] Updated existing entry for IP ${d.ip} with fresh data: ${d.name}',
+            );
           } else {
             devices.add(d);
             print(
@@ -434,15 +463,18 @@ class PairingController extends GetxController {
           print('❌ [DISCOVER] Error parsing device info: $e');
         }
       } else if (msg is String && msg == 'done') {
-        print('🔍 [DISCOVER] Scan completed. Found ${devices.length} actively responding devices.');
+        print(
+          '🔍 [DISCOVER] Scan completed. Found ${devices.length} actively responding devices.',
+        );
         isScanning.value = false;
       }
     });
 
     final sendPort = _scanReceivePort!.sendPort;
-    final myName = deviceName.value.trim().isNotEmpty
-        ? deviceName.value.trim()
-        : await _getDeviceName();
+    final myName =
+        deviceName.value.trim().isNotEmpty
+            ? deviceName.value.trim()
+            : await _getDeviceName();
     await Isolate.spawn(_scanIsolate, {
       'prefix': prefix,
       'sendPort': sendPort,
@@ -505,9 +537,10 @@ class PairingController extends GetxController {
       ).timeout(const Duration(seconds: 5)); // Increased timeout for connection
       print('✅ Connected to receiver WS. Sending offer data...');
 
-      final senderName = deviceName.value.trim().isNotEmpty
-          ? deviceName.value.trim()
-          : 'Sender';
+      final senderName =
+          deviceName.value.trim().isNotEmpty
+              ? deviceName.value.trim()
+              : 'Sender';
       final offerJson = jsonEncode({
         'type': 'offer',
         'meta': meta.toJson(),
@@ -580,11 +613,13 @@ class PairingController extends GetxController {
     WebSocket? ws;
     StreamSubscription? sub;
     try {
-      ws = await WebSocket.connect(uri.toString())
-          .timeout(const Duration(seconds: 5));
-      final senderName = deviceName.value.trim().isNotEmpty
-          ? deviceName.value.trim()
-          : await _getDeviceName();
+      ws = await WebSocket.connect(
+        uri.toString(),
+      ).timeout(const Duration(seconds: 5));
+      final senderName =
+          deviceName.value.trim().isNotEmpty
+              ? deviceName.value.trim()
+              : await _getDeviceName();
       final senderIp = await ReceiverReadinessService.discoverLocalIp() ?? '';
       final senderInfo = DeviceInfo(
         name: senderName,
@@ -674,9 +709,7 @@ class PairingController extends GetxController {
     try {
       final responseJson = jsonEncode({'type': 'receiver_confirmed'});
       ws.add(responseJson);
-      print(
-        '📤 [PAIRING] Sent receiver_confirmed to $fromIp: $responseJson',
-      );
+      print('📤 [PAIRING] Sent receiver_confirmed to $fromIp: $responseJson');
       await Future.delayed(const Duration(milliseconds: 100));
       await ws.close();
       print('📤 [PAIRING] Handshake socket closed for $fromIp');
@@ -743,28 +776,34 @@ class PairingController extends GetxController {
     final myName = params['myName'] as String? ?? 'Unknown';
     final myIp = params['myIp'] as String? ?? '';
     const wsPort = 7071;
-    const batchSize = 32; // Parallel connections per batch for fast symmetric discovery
-    const timeoutMs = 400;
+    const batchSize =
+        32; // Parallel connections per batch for fast symmetric discovery
+    const timeoutMs =
+        600; // Slightly higher than 400ms to reduce false negatives on slow networks
 
     Future<Map<String, dynamic>?> tryIp(int i) async {
       if (i >= 255) return null;
       final ip = '$prefix.$i';
       try {
         final uri = Uri.parse('ws://$ip:$wsPort');
-        final ws = await WebSocket.connect(uri.toString())
-            .timeout(const Duration(milliseconds: timeoutMs));
+        final ws = await WebSocket.connect(
+          uri.toString(),
+        ).timeout(const Duration(milliseconds: timeoutMs));
         final data = await ws.first;
         final jsonMap = jsonDecode(data as String) as Map<String, dynamic>;
         jsonMap['ip'] = ip;
+        print('🔍 [SCAN] Found peer at $ip');
         sendPort.send(jsonMap);
         // Tell receiver we are here so it can add us to its devices immediately
-        ws.add(jsonEncode({
-          'type': 'discovery_peer',
-          'name': myName,
-          'ip': myIp,
-          'wsPort': wsPort,
-          'transferPort': 9091,
-        }));
+        ws.add(
+          jsonEncode({
+            'type': 'discovery_peer',
+            'name': myName,
+            'ip': myIp,
+            'wsPort': wsPort,
+            'transferPort': 9091,
+          }),
+        );
         await ws.close();
         return jsonMap;
       } catch (_) {

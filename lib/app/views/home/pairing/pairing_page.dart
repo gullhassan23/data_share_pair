@@ -26,6 +26,8 @@ class _PairingScreenState extends State<PairingScreen>
   final pairing = Get.put(PairingController());
   final transfer = Get.put(TransferController());
   bool _navigated = false;
+  bool _scheduledReturnDiscovery =
+      false; // so we only restart discovery once per return
   final nameCtrl = TextEditingController(text: 'Device');
   late AnimationController _radarCtrl;
   Timer? _discoveryTimer;
@@ -76,7 +78,19 @@ class _PairingScreenState extends State<PairingScreen>
       qrController.devices.clear();
       qrController.incomingOffer.value = null;
       qrController.incomingPairingRequest.value = null;
+      // Ensure pairing server is stopped and port 7071 is free (e.g. after returning from a previous flow)
+      await pairing.stopServer();
+      await Future.delayed(const Duration(milliseconds: 300));
       await pairing.startServer();
+      if (pairing.serverStartError.value != null && mounted) {
+        Get.snackbar(
+          'Discovery server failed',
+          'Could not start discovery server. Ensure WiFi is on and try again.',
+          backgroundColor: Colors.orange.shade700,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+      }
       pairing.discover();
       // Periodic discovery so receiver gets sender reliably (mergeResults: true)
       _discoveryTimer?.cancel();
@@ -289,9 +303,10 @@ class _PairingScreenState extends State<PairingScreen>
             currentOffer['meta'] as Map<String, dynamic>,
           );
           final raw = currentOffer['senderName'];
-          final senderName = (raw is String ? raw.trim() : '').isEmpty
-              ? 'Sender'
-              : (raw as String).trim();
+          final senderName =
+              (raw is String ? raw.trim() : '').isEmpty
+                  ? 'Sender'
+                  : (raw as String).trim();
 
           return Card(
             color: Colors.white,
@@ -326,9 +341,7 @@ class _PairingScreenState extends State<PairingScreen>
                           final o = pairing.incomingOffer.value;
                           if (o != null) {
                             final fromIp = o['fromIp'] as String? ?? '';
-                            print(
-                              '❌ User rejected file transfer from $fromIp',
-                            );
+                            print('❌ User rejected file transfer from $fromIp');
                             pairing.respondToOffer(fromIp, false);
                           }
                           _offerDialogShown = false;
@@ -352,14 +365,13 @@ class _PairingScreenState extends State<PairingScreen>
                           }
                           final fromIp = o['fromIp'] as String? ?? '';
                           final rawName = o['senderName'];
-                          final name = (rawName is String
-                                  ? rawName.trim()
-                                  : '')
-                              .isEmpty
-                              ? 'Sender'
-                              : (rawName as String).trim();
-                          final fileMeta =
-                              FileMeta.fromJson(o['meta'] as Map<String, dynamic>);
+                          final name =
+                              (rawName is String ? rawName.trim() : '').isEmpty
+                                  ? 'Sender'
+                                  : (rawName as String).trim();
+                          final fileMeta = FileMeta.fromJson(
+                            o['meta'] as Map<String, dynamic>,
+                          );
 
                           print(
                             '✅ User accepted file transfer from $fromIp (sender: $name)',
@@ -416,9 +428,28 @@ class _PairingScreenState extends State<PairingScreen>
 
   @override
   Widget build(BuildContext context) {
+    // When user pops back from SelectDeviceScreen or transfer, restart discovery (timer was cancelled when we navigated away)
+    if (_navigated &&
+        ModalRoute.of(context)?.isCurrent == true &&
+        !_scheduledReturnDiscovery) {
+      _scheduledReturnDiscovery = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scheduledReturnDiscovery = false;
+        if (!_navigated) return;
+        _navigated = false;
+        _discoveryTimer?.cancel();
+        _discoveryTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+          if (!mounted || _navigated) return;
+          if (pairing.isScanning.value) return;
+          pairing.discover(mergeResults: true);
+        });
+        pairing.discover();
+      });
+    }
     // Global incoming offer detection - works regardless of current step
     // This allows receivers to get offers immediately after pairing
-    return  _buildMainContent();
+    return _buildMainContent();
   }
 
   Widget _buildMainContent() {
@@ -489,7 +520,8 @@ class _PairingScreenState extends State<PairingScreen>
                     color: Colors.grey.shade600,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
+
                 Obx(() {
                   final ssid = pairing.wifiSsid.value;
                   return Text(

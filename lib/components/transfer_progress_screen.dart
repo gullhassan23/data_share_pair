@@ -93,21 +93,24 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     }
 
     final safeDevice = device!;
-    // Validate device has required connection info (skip for placeholder 0.0.0.0 when receiver)
+    // Validate device connection info (skip IP/port for BLE-only transfer)
     final deviceIp = safeDevice.ip;
     final deviceTransferPort = safeDevice.transferPort;
-    if (deviceIp.isEmpty) {
-      print("❌ CRITICAL: Device IP is empty in TransferProgressScreen");
-      _showErrorAndExit('Device IP address is missing');
-      return;
-    }
-
-    if (deviceTransferPort <= 0) {
-      print(
-        "❌ CRITICAL: Device transfer port is invalid in TransferProgressScreen",
-      );
-      _showErrorAndExit('Device transfer port is invalid');
-      return;
+    final isBleTransfer =
+        safeDevice.isBluetooth && (deviceIp.isEmpty || deviceTransferPort <= 0);
+    if (!isBleTransfer) {
+      if (deviceIp.isEmpty) {
+        print("❌ CRITICAL: Device IP is empty in TransferProgressScreen");
+        _showErrorAndExit('Device IP address is missing');
+        return;
+      }
+      if (deviceTransferPort <= 0) {
+        print(
+          "❌ CRITICAL: Device transfer port is invalid in TransferProgressScreen",
+        );
+        _showErrorAndExit('Device transfer port is invalid');
+        return;
+      }
     }
 
     // Sender mode requires filePath - validate before starting transfer
@@ -177,6 +180,20 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
         );
       }
       print('✅ Device validated: ${safeDevice.name}');
+
+      // BLE-only transfer: no IP/port, send over Bluetooth
+      if (safeDevice.isBluetooth &&
+          (safeDevice.ip.isEmpty || safeDevice.transferPort <= 0)) {
+        print('✅ BLE transfer – sending file over Bluetooth');
+        await transfer.sendFileOverBle(
+          safeFilePath,
+          senderTempPath: senderTempPath,
+          originalFileName: fileName,
+          deviceName: safeDevice.name,
+        );
+        print("✅ BLE transfer initiated successfully");
+        return;
+      }
 
       // Extract device IP safely
       final deviceIp = safeDevice.ip;

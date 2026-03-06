@@ -1,10 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/views/home/received_files_screen.dart';
@@ -28,6 +28,9 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
   late final BluetoothController bluetooth;
   Worker? _incomingOfferWorker;
   Worker? _receiverReadyWorker;
+  StreamSubscription<double>? _bleProgressSub;
+  StreamSubscription<Map<String, dynamic>>? _bleCompleteSub;
+  StreamSubscription<String>? _bleErrorSub;
 
   @override
   void initState() {
@@ -105,6 +108,9 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
 
   @override
   void dispose() {
+    _bleProgressSub?.cancel();
+    _bleCompleteSub?.cancel();
+    _bleErrorSub?.cancel();
     _incomingOfferWorker?.dispose();
     _receiverReadyWorker?.dispose();
     bluetooth.stopReceiverMode();
@@ -145,43 +151,60 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
           ElevatedButton(
             onPressed: () async {
               final transfer = Get.find<TransferController>();
-              final info = NetworkInfo();
-              String? wifiIp = await info.getWifiIP();
-              if (wifiIp == null || wifiIp.isEmpty) {
-                // Proactively reject so sender doesn't just timeout
-                final bluetooth = this.bluetooth;
-                bluetooth.sendMessage(jsonEncode({"type": "reject"}));
-                bluetooth.incomingOffer.value = null;
-                bluetooth.connectedSenderName.value = null;
-                Get.snackbar(
-                  "Cannot receive",
-                  "Connect to Wi‑Fi so the sender can send the file.",
-                );
-                return;
-              }
-              try {
-                await transfer.startServer();
-              } catch (e) {
-                bluetooth.sendMessage(jsonEncode({"type": "reject"}));
-                bluetooth.incomingOffer.value = null;
-                bluetooth.connectedSenderName.value = null;
-                Get.snackbar("Error", "Failed to start receiver: $e");
-                return;
-              }
+              // BLE-only transfer: no WiFi or TCP server needed
               final acceptMsg = {
                 "type": "accept",
-                "ip": wifiIp,
-                "port": transfer.serverPort,
+                "bleTransfer": true,
               };
               await bluetooth.sendMessage(jsonEncode(acceptMsg));
               bluetooth.incomingOffer.value = null;
               Get.back();
 
-              // Show progress bar on receiver (same as QR flow)
+              bluetooth.startReceivingFile();
               transfer.sessionState.value = TransferSessionState.transferring;
               transfer.progress.status.value = 'Receiving...';
               transfer.progress.receiveProgress.value = 0.0;
+              transfer.progress.error.value = '';
               showTransferProgressDialog(isSender: false, device: null);
+
+              _bleProgressSub?.cancel();
+              _bleProgressSub = bluetooth.bleReceiveProgress.listen((p) {
+                if (mounted) {
+                  transfer.progress.receiveProgress.value = p;
+                }
+              });
+
+              _bleCompleteSub?.cancel();
+              _bleCompleteSub = bluetooth.bleReceiveComplete.listen((result) {
+                if (!mounted) return;
+                final savePath = result['savePath'] as String?;
+                final meta = result['meta'] as Map<String, dynamic>?;
+                if (savePath != null) {
+                  transfer.receivedFiles.add({
+                    'path': savePath,
+                    'name': meta?['name'] ?? 'received_file',
+                    'size': meta?['size'] ?? 0,
+                    'type': meta?['type'] ?? 'file',
+                  });
+                  transfer.progress.receiveProgress.value = 1.0;
+                  transfer.progress.status.value = 'received';
+                  transfer.sessionState.value = TransferSessionState.completed;
+                }
+                _bleProgressSub?.cancel();
+                _bleCompleteSub?.cancel();
+                _bleErrorSub?.cancel();
+              });
+
+              _bleErrorSub?.cancel();
+              _bleErrorSub = bluetooth.bleReceiveError.listen((msg) {
+                if (mounted) {
+                  transfer.progress.error.value = msg;
+                  transfer.sessionState.value = TransferSessionState.error;
+                  _bleProgressSub?.cancel();
+                  _bleCompleteSub?.cancel();
+                  _bleErrorSub?.cancel();
+                }
+              });
             },
             child: const Text("Accept"),
           ),

@@ -12,6 +12,8 @@ class ReceiverReadinessService {
   static const Duration _retryDelay = Duration(milliseconds: 400);
 
   /// Discover routable IPv4 with retries. Prefers Wi-Fi (wlan*) over cellular (rmnet).
+  /// The returned IP is used for both server advertisement and scan subnet; WiFi is
+  /// preferred so the scan matches the network where peers run the app (same WiFi).
   static Future<String?> discoverLocalIp({int maxRetries = _maxRetries}) async {
     for (var attempt = 0; attempt < maxRetries; attempt++) {
       final ip = await _tryDiscoverIp();

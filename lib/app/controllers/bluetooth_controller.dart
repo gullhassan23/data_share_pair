@@ -34,6 +34,8 @@ class BluetoothController extends GetxController {
   String? selectedFilePath;
   String? receiverIp;
   int? receiverPort;
+  /// When true, accept was with bleTransfer: true — use BLE for file data, not TCP.
+  bool useBleTransfer = false;
   final incomingConnection = Rxn<BluetoothDevice>();
   Timer? _pollTimer;
   BluetoothCharacteristic? _chatChar;
@@ -64,6 +66,14 @@ class BluetoothController extends GetxController {
   /// Optional retry for transient BLE write/notification failures.
   static const int _sendMessageMaxAttempts = 2;
   static const Duration _sendMessageRetryDelay = Duration(milliseconds: 300);
+
+  /// Receiver: start listening for file_meta then chunked file data over BLE (no WiFi).
+  void startReceivingFile() => _peripheralService.startReceivingFile();
+
+  Stream<double> get bleReceiveProgress => _peripheralService.bleReceiveProgress;
+  Stream<Map<String, dynamic>> get bleReceiveComplete =>
+      _peripheralService.bleReceiveComplete;
+  Stream<String> get bleReceiveError => _peripheralService.bleReceiveError;
 
   Future<void> sendMessage(String message) async {
     for (int attempt = 1; attempt <= _sendMessageMaxAttempts; attempt++) {
@@ -119,6 +129,7 @@ class BluetoothController extends GetxController {
       offerAccepted.value = null;
       receiverIp = null;
       receiverPort = null;
+      useBleTransfer = false;
 
       final name = p.basename(filePath);
       final size = await file.length();
@@ -147,6 +158,51 @@ class BluetoothController extends GetxController {
     if (ext == '.mp4' || ext == '.mov') return 'video';
     if (ext == '.jpg' || ext == '.jpeg' || ext == '.png') return 'image';
     return 'file';
+  }
+
+  /// Sends file over BLE in chunks (no TCP). Call after receiver accepted with bleTransfer: true.
+  /// [progressCallback] receives 0.0..1.0. Throws on failure.
+  static const int _bleChunkSize = 400;
+
+  Future<void> sendFileOverBle(
+    String path, {
+    required void Function(double) progressCallback,
+    String? originalFileName,
+  }) async {
+    if (connectedDevice.value == null || _chatChar == null) {
+      throw Exception('Bluetooth connection lost. Please reconnect.');
+    }
+    final file = File(path);
+    if (!await file.exists()) {
+      throw Exception('File not found');
+    }
+    final size = await file.length();
+    final name = originalFileName ?? p.basename(path);
+    final type = _fileTypeFromPath(path);
+    final meta = FileMeta(name: name, size: size, type: type);
+
+    final fileMetaMsg = jsonEncode({
+      'type': 'file_meta',
+      'meta': meta.toJson(),
+    });
+    final metaBytes = utf8.encode(fileMetaMsg);
+    await _chatChar!.write(metaBytes, withoutResponse: false);
+    print('📤 [BT] Sent file_meta: $name (${size} bytes)');
+
+    progressCallback(0.0);
+    final raf = await file.open();
+    int sent = 0;
+    while (sent < size) {
+      final toRead = (size - sent) > _bleChunkSize ? _bleChunkSize : (size - sent);
+      final data = await raf.read(toRead);
+      if (data.isEmpty) break;
+      await _chatChar!.write(data, withoutResponse: false);
+      sent += data.length;
+      progressCallback(sent / size);
+    }
+    await raf.close();
+    progressCallback(1.0);
+    print('✅ [BT] File sent over BLE: $sent bytes');
   }
 
   static Future<String> _getSenderDeviceName() async {
@@ -338,26 +394,35 @@ class BluetoothController extends GetxController {
               } else if (decoded["type"] == "accept") {
                 // ignore: avoid_print
                 print('[BT][Sender] Received ACCEPT over BLE: $decoded');
-                receiverIp = decoded["ip"]?.toString();
-                receiverPort =
-                    decoded["port"] != null
-                        ? (decoded["port"] is int
-                            ? decoded["port"] as int
-                            : int.tryParse(decoded["port"].toString()))
-                        : null;
-                if (receiverIp != null &&
-                    receiverIp!.isNotEmpty &&
-                    receiverPort != null) {
-                  // ignore: avoid_print
-                  print(
-                    '[BT][Sender] Parsed receiver address ip=$receiverIp port=$receiverPort, marking offerAccepted=true',
-                  );
+                if (decoded["bleTransfer"] == true) {
+                  useBleTransfer = true;
+                  receiverIp = null;
+                  receiverPort = null;
                   offerAccepted.value = true;
+                  print('[BT][Sender] BLE transfer mode – file will be sent over Bluetooth');
                 } else {
-                  Get.snackbar(
-                    "Error",
-                    "Receiver did not send address (connect to same Wi‑Fi)",
-                  );
+                  useBleTransfer = false;
+                  receiverIp = decoded["ip"]?.toString();
+                  receiverPort =
+                      decoded["port"] != null
+                          ? (decoded["port"] is int
+                              ? decoded["port"] as int
+                              : int.tryParse(decoded["port"].toString()))
+                          : null;
+                  if (receiverIp != null &&
+                      receiverIp!.isNotEmpty &&
+                      receiverPort != null) {
+                    // ignore: avoid_print
+                    print(
+                      '[BT][Sender] Parsed receiver address ip=$receiverIp port=$receiverPort, marking offerAccepted=true',
+                    );
+                    offerAccepted.value = true;
+                  } else {
+                    Get.snackbar(
+                      "Error",
+                      "Receiver did not send address (connect to same Wi‑Fi)",
+                    );
+                  }
                 }
               } else if (decoded["type"] == "reject") {
                 offerAccepted.value = false;

@@ -599,6 +599,25 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
 
       if (accepted != true) return;
 
+      if (bluetooth.useBleTransfer) {
+        // BLE-only transfer: no IP/port, file will be sent over Bluetooth
+        final receiverDevice = DeviceInfo(
+          name: deviceName,
+          ip: '',
+          transferPort: 0,
+          isBluetooth: true,
+        );
+        progress.reset();
+        AppNavigator.toTransferProgress(
+          device: receiverDevice,
+          filePath: path,
+          fileName: fileName,
+          senderTempPath: _senderTempPath,
+        );
+        _senderTempPath = null;
+        return;
+      }
+
       final ip = bluetooth.receiverIp;
       final port = bluetooth.receiverPort;
       if (ip == null || ip.isEmpty || port == null) {
