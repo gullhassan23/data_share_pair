@@ -9,6 +9,7 @@ import 'package:share_app_latest/app/models/device_info.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/components/app_dialog.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../controllers/transfer_controller.dart';
@@ -409,40 +410,38 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
   }
 
   void deleteFile(int index, String filePath) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Delete File'),
-        content: const Text('Are you sure you want to delete this file?'),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () async {
-              Get.back();
-              try {
-                final file = File(filePath);
-                if (await file.exists()) {
-                  await file.delete();
-                  transfer.receivedFiles.removeAt(index);
-                  Get.snackbar(
-                    'Deleted',
-                    'File deleted successfully',
-                    backgroundColor: Colors.green.withOpacity(0.8),
-                    colorText: Colors.white,
-                  );
-                }
-              } catch (e) {
-                Get.snackbar(
-                  'Error',
-                  'Failed to delete file: $e',
-                  backgroundColor: Colors.red.withOpacity(0.8),
-                  colorText: Colors.white,
-                );
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+    showAppDialog<void>(
+      title: 'Delete File',
+      message: 'Are you sure you want to delete this file?',
+      primaryLabel: 'Delete',
+      secondaryLabel: 'Cancel',
+      primaryButtonStyle: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
       ),
+      onSecondary: () {},
+      onPrimary: () async {
+        try {
+          final file = File(filePath);
+          if (await file.exists()) {
+            await file.delete();
+            transfer.receivedFiles.removeAt(index);
+            Get.snackbar(
+              'Deleted',
+              'File deleted successfully',
+              backgroundColor: Colors.green.withOpacity(0.8),
+              colorText: Colors.white,
+            );
+          }
+        } catch (e) {
+          Get.snackbar(
+            'Error',
+            'Failed to delete file: $e',
+            backgroundColor: Colors.red.withOpacity(0.8),
+            colorText: Colors.white,
+          );
+        }
+      },
     );
   }
 }

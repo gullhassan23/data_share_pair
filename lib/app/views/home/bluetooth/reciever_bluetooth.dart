@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
+import 'package:share_app_latest/components/app_dialog.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/views/home/received_files_screen.dart';
 
@@ -134,22 +135,18 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
       fileName = 'Unknown file';
     }
 
-    Get.dialog(
-      AlertDialog(
-        title: const Text("Incoming File"),
-        content: Text("Sender wants to send: $fileName"),
-        actions: [
-          TextButton(
-            onPressed: () {
-              bluetooth.sendMessage(jsonEncode({"type": "reject"}));
-              bluetooth.incomingOffer.value = null;
-              bluetooth.connectedSenderName.value = null;
-              Get.back();
-            },
-            child: const Text("Reject"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
+    showAppDialog<void>(
+      title: 'Incoming File',
+      message: 'Sender wants to send: $fileName',
+      primaryLabel: 'Accept',
+      secondaryLabel: 'Reject',
+      barrierDismissible: false,
+      onSecondary: () {
+        bluetooth.sendMessage(jsonEncode({"type": "reject"}));
+        bluetooth.incomingOffer.value = null;
+        bluetooth.connectedSenderName.value = null;
+      },
+      onPrimary: () async {
               final transfer = Get.find<TransferController>();
               // BLE-only transfer: no WiFi or TCP server needed
               final acceptMsg = {
@@ -205,12 +202,7 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
                   _bleErrorSub?.cancel();
                 }
               });
-            },
-            child: const Text("Accept"),
-          ),
-        ],
-      ),
-      barrierDismissible: false,
+      },
     );
   }
 

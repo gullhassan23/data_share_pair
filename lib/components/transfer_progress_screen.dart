@@ -11,6 +11,7 @@ import 'package:share_app_latest/utils/constants.dart';
 
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/components/app_dialog.dart';
 
 class TransferProgressScreen extends StatefulWidget {
   const TransferProgressScreen({super.key});
@@ -543,27 +544,20 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
   }
 
   void _confirmCancel() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text("Cancel Transfer?"),
-        content: const Text(
-          "Are you sure you want to cancel the file transfer?",
-        ),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text("No")),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              transfer.cancelTransfer();
-              Get.back(); // exit screen
-            },
-            child: const Text(
-              "Yes, Cancel",
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
+    showAppDialog<void>(
+      title: 'Cancel Transfer?',
+      message: 'Are you sure you want to cancel the file transfer?',
+      primaryLabel: 'Yes, Cancel',
+      secondaryLabel: 'No',
+      primaryButtonStyle: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
       ),
+      onSecondary: () {},
+      onPrimary: () {
+        transfer.cancelTransfer();
+        Get.back(); // exit screen
+      },
     );
   }
 

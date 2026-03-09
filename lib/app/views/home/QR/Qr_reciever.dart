@@ -13,6 +13,7 @@ import 'package:share_app_latest/app/models/hotspot_info.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/show_uploadbar_dialogue.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/components/app_dialog.dart';
 import 'package:vibration/vibration.dart';
 
 import '../../../controllers/hotspot_controller.dart';
@@ -287,37 +288,30 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
           }
           _pairingDialogShown = false;
         },
-        child: AlertDialog(
-          title: const Text('Pairing Request'),
-          content: Text('Device $senderName wants to pair with you.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                responded = true;
-                _pairingDialogShown = false;
-                qrController.respondToPairing(fromIp, false);
-                Get.back();
-              },
-              child: const Text('Reject', style: TextStyle(color: Colors.red)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                responded = true;
-                _pairingDialogShown = false;
-                qrController.respondToPairing(fromIp, true);
-
-                setState(() {
-                  _isPaired = true;
-                  _pairedDeviceName = senderName; // e.g., Nokia
-                });
-                Get.back();
-              },
-              child: const Text('Accept'),
-            ),
-          ],
-        ),
+        child: const SizedBox.shrink(),
       ),
       barrierDismissible: false,
+    );
+
+    await showAppDialog<void>(
+      title: 'Pairing Request',
+      message: 'Device $senderName wants to pair with you.',
+      primaryLabel: 'Accept',
+      secondaryLabel: 'Reject',
+      onSecondary: () {
+        responded = true;
+        _pairingDialogShown = false;
+        qrController.respondToPairing(fromIp, false);
+      },
+      onPrimary: () {
+        responded = true;
+        _pairingDialogShown = false;
+        qrController.respondToPairing(fromIp, true);
+        setState(() {
+          _isPaired = true;
+          _pairedDeviceName = senderName;
+        });
+      },
     );
   }
 
@@ -336,45 +330,25 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
         transferPort: qrController.transferPort,
       );
     });
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Incoming File'),
-        content: Text('A sender wants to send you: $fileName. Do you accept?'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              qrController.respondToOffer(fromIp, false);
-              Get.back();
-            },
-            child: const Text('Reject', style: TextStyle(color: Colors.red)),
-          ),
-          // ElevatedButton(
-          //   onPressed: () {
-          //     qrController.respondToOffer(fromIp, true);
-          //     Get.back();
-          //     // TransferProgressScreen navigation is handled by fileTransferController.sessionState listener
-          //   },
-          //   child: const Text('Accept'),
-          // ),
-          ElevatedButton(
-            onPressed: () {
-              qrController.respondToOffer(fromIp, true);
-              Get.back();
-
-              final transfer = Get.find<TransferController>();
-
-              transfer.sessionState.value = TransferSessionState.transferring;
-              transfer.progress.status.value = 'Receiving...';
-              transfer.progress.receiveProgress.value = 0.0;
-
-              // 👇 dialog open — receiver mode so progress shows immediately (not after first chunk)
-              showTransferProgressDialog(isSender: false, device: null);
-            },
-            child: const Text('Accept'),
-          ),
-        ],
-      ),
+    await showAppDialog<void>(
+      title: 'Incoming File',
+      message: 'A sender wants to send you: $fileName. Do you accept?',
+      primaryLabel: 'Accept',
+      secondaryLabel: 'Reject',
       barrierDismissible: false,
+      onSecondary: () {
+        qrController.respondToOffer(fromIp, false);
+      },
+      onPrimary: () {
+        qrController.respondToOffer(fromIp, true);
+
+        final transfer = Get.find<TransferController>();
+        transfer.sessionState.value = TransferSessionState.transferring;
+        transfer.progress.status.value = 'Receiving...';
+        transfer.progress.receiveProgress.value = 0.0;
+
+        showTransferProgressDialog(isSender: false, device: null);
+      },
     );
   }
 
@@ -978,30 +952,6 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          '$label:',
-          style: GoogleFonts.roboto(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.black54,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.roboto(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
+  // _buildDetailRow helper kept in history for possible future reuse
+  // with QR / hotspot connection details UI.
 }

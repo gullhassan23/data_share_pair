@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_app_latest/components/app_dialog.dart';
 
 class ErrorScreen extends StatelessWidget {
   final String error;
@@ -30,21 +31,15 @@ class CenterTextShow extends StatelessWidget {
   }
 }
 
-void showMessageDialog(BuildContext context, String message,
-    {String title = ''}) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(title),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      );
-    },
+void showMessageDialog(
+  BuildContext context,
+  String message, {
+  String title = '',
+}) {
+  showAppDialog<void>(
+    title: title.isNotEmpty ? title : 'Message',
+    message: message,
+    barrierDismissible: true,
   );
 }
+

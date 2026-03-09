@@ -8,6 +8,7 @@ import 'package:share_app_latest/app/models/duplicate_item.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/components/app_dialog.dart';
 
 class DuplicatePreviewScreen extends StatelessWidget {
   const DuplicatePreviewScreen({super.key});
@@ -165,30 +166,25 @@ class DuplicatePreviewScreen extends StatelessWidget {
     BuildContext context,
     DuplicateController ctrl,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: const Text('Delete duplicates?'),
-            content: const Text(
-              'Selected duplicate files will be permanently deleted. This cannot be undone.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(
-                  'Delete',
-                  style: TextStyle(color: Theme.of(ctx).colorScheme.error),
-                ),
-              ),
-            ],
-          ),
+    bool confirmed = false;
+    await showAppDialog<void>(
+      title: 'Delete duplicates?',
+      message:
+          'Selected duplicate files will be permanently deleted. This cannot be undone.',
+      primaryLabel: 'Delete',
+      secondaryLabel: 'Cancel',
+      primaryButtonStyle: ElevatedButton.styleFrom(
+        backgroundColor: Theme.of(context).colorScheme.error,
+        foregroundColor: Colors.white,
+      ),
+      onSecondary: () {
+        confirmed = false;
+      },
+      onPrimary: () {
+        confirmed = true;
+      },
     );
-    if (ok != true || !context.mounted) return;
+    if (!confirmed || !context.mounted) return;
     final success = await ctrl.confirmDelete();
     if (!context.mounted) return;
     if (success) {
