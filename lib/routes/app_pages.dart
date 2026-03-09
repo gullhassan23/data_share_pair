@@ -8,7 +8,7 @@ import 'package:share_app_latest/app/views/home/connection/connection_method_scr
 import 'package:share_app_latest/app/views/home/transfer_file/transfer_file_screen.dart';
 
 import 'package:share_app_latest/app/views/home/home_screen.dart';
-import 'package:share_app_latest/app/views/home/pairing/pairing_page.dart';
+import 'package:share_app_latest/app/views/home/wifi-direct/pairing_page.dart';
 import 'package:share_app_latest/app/views/home/received_files_screen.dart';
 import 'package:share_app_latest/app/views/home/remove_duplicates/duplicate_preview_screen.dart';
 import 'package:share_app_latest/app/views/home/remove_duplicates/duplicate_scan_screen.dart';

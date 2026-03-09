@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:share_app_latest/app/InApp/in_app_purchases.dart';
 import 'package:share_app_latest/app/controllers/QR_controller.dart';
 import 'package:share_app_latest/app/controllers/hotspot_controller.dart';
 import 'package:share_app_latest/routes/app_pages.dart';
@@ -16,6 +17,8 @@ import 'package:share_app_latest/routes/app_navigator.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await IAPService().init();
+  await IAPService().loadProducts();
   // Restrict to portrait only
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // Initialize foreground task plugin before runApp (required for transfer notifications)
@@ -88,7 +91,8 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
   Future<void> _onResumed() async {
     if (!Get.isRegistered<TransferController>()) return;
     final transfer = Get.find<TransferController>();
-    if (transfer.sessionState.value != TransferSessionState.transferring) return;
+    if (transfer.sessionState.value != TransferSessionState.transferring)
+      return;
     final currentRoute = Get.currentRoute;
     if (currentRoute == AppRoutes.transferProgress) return;
     await AppNavigator.toTransferProgressResume();
