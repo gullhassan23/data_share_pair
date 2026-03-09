@@ -21,7 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.share.transfer.file.all.data.app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = 1
         versionName = "1.0.0"
@@ -42,4 +42,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation 'com.android.billingclient:billing:6.0.1'
 }
