@@ -47,31 +47,22 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Discover nearby devices on the same Wi-Fi for direct file transfer. No data is sent to any server.</string>
-
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Discover nearby devices and transfer files via Bluetooth only. No data is sent to any server.</string>
-
 	<key>NSCameraUsageDescription</key>
 	<string>Scan QR codes to connect with nearby devices for file transfer. No data is uploaded to any server.</string>
-
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Select photos and videos to share directly with nearby devices. No data is sent to any server.</string>
-
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save received photos and videos to your device. No data is sent to any server.</string>
-
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>Select and share documents with nearby devices. No data is sent to any server.</string>
-
 	<key>NSContactsUsageDescription</key>
 	<string>Share selected contacts directly with nearby devices. No contact data is sent to any server.</string>
-
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Used to find nearby devices for file transfer. Location is not stored or uploaded.</string>
-
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>Select and share documents with nearby devices.</string>
-
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
     	<string>com.pravera.flutter_foreground_task.refresh</string>

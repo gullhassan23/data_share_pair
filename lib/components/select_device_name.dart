@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
-import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
@@ -553,41 +552,44 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                             if (widget.isReceiver) {
                                               final pairing =
                                                   Get.find<PairingController>();
-                                              final bool handshakeSent =
+                                              final bool success =
                                                   await pairing.acceptHandshake(
                                                 device.ip,
                                               );
 
-                                              if (handshakeSent) {
-                                                final transferController =
-                                                    Get.find<
-                                                      TransferController
-                                                    >();
-                                                // Wi‑Fi receiver uses dedicated transfer port 9091
-                                                await transferController
-                                                    .startServer(port: 9091);
-                                                if (!mounted) return;
-                                              }
+                                              if (!mounted) return;
 
-                                              // Regardless of whether a sender handshake is
-                                              // already pending, once the receiver taps we
-                                              // consider it \"ready\". If the sender has not
-                                              // initiated confirmReceiverReady yet, the next
-                                              // pairing_handshake from this IP will be
-                                              // auto-accepted by the server using the
-                                              // stored readiness flag.
-                                              Get.snackbar(
-                                                "Ready",
-                                                "Receiver is ready. Waiting for sender.",
-                                                backgroundColor: Colors.green
-                                                    .withOpacity(0.85),
-                                                colorText: Colors.white,
-                                                snackPosition:
-                                                    SnackPosition.BOTTOM,
-                                                duration: const Duration(
-                                                  seconds: 3,
-                                                ),
-                                              );
+                                              if (success) {
+                                                // Once the receiver taps we consider it "ready".
+                                                // The controller ensures the transfer server is
+                                                // running and future handshakes from this IP
+                                                // are auto-accepted.
+                                                Get.snackbar(
+                                                  "Ready",
+                                                  "Receiver is ready. Waiting for sender.",
+                                                  backgroundColor: Colors.green
+                                                      .withOpacity(0.85),
+                                                  colorText: Colors.white,
+                                                  snackPosition:
+                                                      SnackPosition.BOTTOM,
+                                                  duration: const Duration(
+                                                    seconds: 3,
+                                                  ),
+                                                );
+                                              } else {
+                                                Get.snackbar(
+                                                  "Handshake failed",
+                                                  "Could not confirm readiness. Ensure both devices are on this screen and try again.",
+                                                  backgroundColor: Colors.red
+                                                      .withOpacity(0.85),
+                                                  colorText: Colors.white,
+                                                  snackPosition:
+                                                      SnackPosition.BOTTOM,
+                                                  duration: const Duration(
+                                                    seconds: 3,
+                                                  ),
+                                                );
+                                              }
                                               return;
                                             }
                                             if (_navigatedToTransfer) return;

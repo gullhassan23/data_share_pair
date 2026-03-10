@@ -147,61 +147,64 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
         bluetooth.connectedSenderName.value = null;
       },
       onPrimary: () async {
-              final transfer = Get.find<TransferController>();
-              // BLE-only transfer: no WiFi or TCP server needed
-              final acceptMsg = {
-                "type": "accept",
-                "bleTransfer": true,
-              };
-              await bluetooth.sendMessage(jsonEncode(acceptMsg));
-              bluetooth.incomingOffer.value = null;
-              Get.back();
+        final transfer = Get.find<TransferController>();
 
-              bluetooth.startReceivingFile();
-              transfer.sessionState.value = TransferSessionState.transferring;
-              transfer.progress.status.value = 'Receiving...';
-              transfer.progress.receiveProgress.value = 0.0;
-              transfer.progress.error.value = '';
-              showTransferProgressDialog(isSender: false, device: null);
+        // Prepare BLE file receive and UI BEFORE sending accept so that
+        // file_meta and chunks are handled with progress from the very start.
+        bluetooth.startReceivingFile();
+        transfer.sessionState.value = TransferSessionState.transferring;
+        transfer.progress.status.value = 'Receiving...';
+        transfer.progress.receiveProgress.value = 0.0;
+        transfer.progress.error.value = '';
+        showTransferProgressDialog(isSender: false, device: null);
 
-              _bleProgressSub?.cancel();
-              _bleProgressSub = bluetooth.bleReceiveProgress.listen((p) {
-                if (mounted) {
-                  transfer.progress.receiveProgress.value = p;
-                }
-              });
+        _bleProgressSub?.cancel();
+        _bleProgressSub = bluetooth.bleReceiveProgress.listen((p) {
+          if (mounted) {
+            transfer.progress.receiveProgress.value = p;
+          }
+        });
 
-              _bleCompleteSub?.cancel();
-              _bleCompleteSub = bluetooth.bleReceiveComplete.listen((result) {
-                if (!mounted) return;
-                final savePath = result['savePath'] as String?;
-                final meta = result['meta'] as Map<String, dynamic>?;
-                if (savePath != null) {
-                  transfer.receivedFiles.add({
-                    'path': savePath,
-                    'name': meta?['name'] ?? 'received_file',
-                    'size': meta?['size'] ?? 0,
-                    'type': meta?['type'] ?? 'file',
-                  });
-                  transfer.progress.receiveProgress.value = 1.0;
-                  transfer.progress.status.value = 'received';
-                  transfer.sessionState.value = TransferSessionState.completed;
-                }
-                _bleProgressSub?.cancel();
-                _bleCompleteSub?.cancel();
-                _bleErrorSub?.cancel();
-              });
+        _bleCompleteSub?.cancel();
+        _bleCompleteSub = bluetooth.bleReceiveComplete.listen((result) {
+          if (!mounted) return;
+          final savePath = result['savePath'] as String?;
+          final meta = result['meta'] as Map<String, dynamic>?;
+          if (savePath != null) {
+            transfer.receivedFiles.add({
+              'path': savePath,
+              'name': meta?['name'] ?? 'received_file',
+              'size': meta?['size'] ?? 0,
+              'type': meta?['type'] ?? 'file',
+            });
+            transfer.progress.receiveProgress.value = 1.0;
+            transfer.progress.status.value = 'received';
+            transfer.sessionState.value = TransferSessionState.completed;
+          }
+          _bleProgressSub?.cancel();
+          _bleCompleteSub?.cancel();
+          _bleErrorSub?.cancel();
+        });
 
-              _bleErrorSub?.cancel();
-              _bleErrorSub = bluetooth.bleReceiveError.listen((msg) {
-                if (mounted) {
-                  transfer.progress.error.value = msg;
-                  transfer.sessionState.value = TransferSessionState.error;
-                  _bleProgressSub?.cancel();
-                  _bleCompleteSub?.cancel();
-                  _bleErrorSub?.cancel();
-                }
-              });
+        _bleErrorSub?.cancel();
+        _bleErrorSub = bluetooth.bleReceiveError.listen((msg) {
+          if (mounted) {
+            transfer.progress.error.value = msg;
+            transfer.sessionState.value = TransferSessionState.error;
+            _bleProgressSub?.cancel();
+            _bleCompleteSub?.cancel();
+            _bleErrorSub?.cancel();
+          }
+        });
+
+        // BLE-only transfer: no WiFi or TCP server needed
+        final acceptMsg = {
+          "type": "accept",
+          "bleTransfer": true,
+        };
+        await bluetooth.sendMessage(jsonEncode(acceptMsg));
+        bluetooth.incomingOffer.value = null;
+        Get.back();
       },
     );
   }

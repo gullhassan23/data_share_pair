@@ -39,7 +39,16 @@ class _PairingScreenState extends State<PairingScreen>
   void _maybeNavigateToSelectDevice() {
     if (!mounted) return;
     if (_navigated) return;
-    if (pairing.devices.isEmpty) return;
+
+    // Filter out this device itself from the discovered list so we never
+    // show the current phone as a selectable target.
+    final localIp = pairing.localIp();
+    final remoteDevices =
+        pairing.devices
+            .where((d) => d.ip.isNotEmpty && d.ip != localIp)
+            .toList();
+    if (remoteDevices.isEmpty) return;
+
     _navigated = true;
     // Stop periodic discovery so radar/scanning stops and we don't re-scan in background
     _discoveryTimer?.cancel();
@@ -47,10 +56,8 @@ class _PairingScreenState extends State<PairingScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       Get.to(
-        () => SelectDeviceScreen(
-          devices: pairing.devices.toList(),
-          isReceiver: _isReceiver,
-        ),
+        () =>
+            SelectDeviceScreen(devices: remoteDevices, isReceiver: _isReceiver),
       );
     });
   }
@@ -113,50 +120,6 @@ class _PairingScreenState extends State<PairingScreen>
         _showIncomingOfferDialog(offer);
       }
     });
-  }
-
-  void pairWithDevice(DeviceInfo device) async {
-    try {
-      print(
-        '🔄 Starting pairing process with device: ${device.name} at ${device.ip}',
-      );
-
-      if (device.ip.isEmpty) {
-        print('❌ Error: Device IP is empty');
-        Get.snackbar('Error', 'Device IP is not available');
-        return;
-      }
-
-      final args = Get.arguments as Map<String, dynamic>?;
-      final isReceiver = args?['isReceiver'] as bool? ?? false;
-
-      await pairing.startServer();
-      print('✅ WebSocket server started');
-
-      if (!isReceiver) {
-        print('🔄 WiFi sender: navigating to TransferFileScreen');
-        AppNavigator.toTransferFile(device: device);
-      } else {
-        print('🔄 WiFi receiver: starting transfer server on 9091');
-        final transferController = Get.find<TransferController>();
-        await transferController.startServer(port: 9091);
-        Get.snackbar(
-          'Ready to Receive',
-          'Device is ready to receive files. Wait for transfer offers.',
-          backgroundColor: Colors.blue.withOpacity(0.8),
-          colorText: Colors.white,
-          duration: const Duration(seconds: 3),
-        );
-      }
-    } catch (e) {
-      print('❌ Pairing failed: $e');
-      Get.snackbar(
-        'Pairing Failed',
-        'Failed to start pairing process: $e',
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-      );
-    }
   }
 
   Future<void> _askPermissions() async {

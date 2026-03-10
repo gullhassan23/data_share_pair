@@ -84,6 +84,7 @@ class BluetoothPeripheralService {
       properties: [
         CharacteristicProperties.read.index,
         CharacteristicProperties.write.index,
+        CharacteristicProperties.writeWithoutResponse.index,
         CharacteristicProperties.notify.index,
       ],
       permissions: [
@@ -373,21 +374,6 @@ class BluetoothPeripheralService {
   Future<void> sendResponse(String message) async {
     final bytes = utf8.encode(message);
 
-    // On Android we need deviceId; on iOS we can try broadcast (updateCharacteristic without deviceId)
-    // when _lastConnectedDeviceId is null, so only bail out on Android when null.
-    if (_lastConnectedDeviceId == null && !Platform.isIOS) {
-      print(
-        "⚠️ [BT Peripheral] No connected device to send response; "
-        "sender will not receive accept/reject.",
-      );
-      if (!_sendResponseErrorController.isClosed) {
-        _sendResponseErrorController.add(
-          'No connected device to send response to sender.',
-        );
-      }
-      return;
-    }
-
     try {
       if (Platform.isAndroid && _lastConnectedDeviceId != null) {
         await BlePeripheral.updateCharacteristic(
@@ -398,8 +384,8 @@ class BluetoothPeripheralService {
         print("📤 Sent Response (Notification): $message");
         return;
       }
-      // iOS (or Android with deviceId): try both UUID formats so we always find the characteristic.
-      // On iOS when _lastConnectedDeviceId is null we still attempt broadcast (no deviceId) for cross-platform.
+      // iOS and Android broadcast (no deviceId): try both UUID formats so we always find the characteristic.
+      // When _lastConnectedDeviceId is null we still attempt broadcast (no deviceId) for cross-platform reliability.
       final idsToTry = Platform.isIOS
           ? [CHARACTERISTIC_UUID.toUpperCase(), CHARACTERISTIC_UUID]
           : [CHARACTERISTIC_UUID];

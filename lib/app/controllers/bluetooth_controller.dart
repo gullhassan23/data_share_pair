@@ -39,6 +39,7 @@ class BluetoothController extends GetxController {
   final incomingConnection = Rxn<BluetoothDevice>();
   Timer? _pollTimer;
   BluetoothCharacteristic? _chatChar;
+  bool _supportsWriteWithoutResponse = false;
   StreamSubscription<List<int>>? notifySub;
   StreamSubscription<BluetoothConnectionState>? _connectionStateSub;
   StreamSubscription<List<ScanResult>>? _scanSubscription;
@@ -162,6 +163,9 @@ class BluetoothController extends GetxController {
 
   /// Sends file over BLE in chunks (no TCP). Call after receiver accepted with bleTransfer: true.
   /// [progressCallback] receives 0.0..1.0. Throws on failure.
+  ///
+  /// Uses `withoutResponse: true` for data chunks to avoid frequent
+  /// `GATT_ERROR (133)` failures on Android when writing many packets in a row.
   static const int _bleChunkSize = 400;
 
   Future<void> sendFileOverBle(
@@ -186,17 +190,57 @@ class BluetoothController extends GetxController {
       'meta': meta.toJson(),
     });
     final metaBytes = utf8.encode(fileMetaMsg);
-    await _chatChar!.write(metaBytes, withoutResponse: false);
+
+    // Small control packet: keep write-with-response for reliability, with
+    // limited retries to smooth over transient Android GATT 133 errors.
+    for (int attempt = 1; attempt <= _sendMessageMaxAttempts; attempt++) {
+      try {
+        await _chatChar!.write(metaBytes, withoutResponse: false);
+        break;
+      } on FlutterBluePlusException catch (e) {
+        if (e.code == 133 && attempt < _sendMessageMaxAttempts) {
+          await Future.delayed(_sendMessageRetryDelay);
+          continue;
+        }
+        rethrow;
+      }
+    }
     print('📤 [BT] Sent file_meta: $name (${size} bytes)');
 
     progressCallback(0.0);
     final raf = await file.open();
     int sent = 0;
     while (sent < size) {
-      final toRead = (size - sent) > _bleChunkSize ? _bleChunkSize : (size - sent);
+      final toRead =
+          (size - sent) > _bleChunkSize ? _bleChunkSize : (size - sent);
       final data = await raf.read(toRead);
       if (data.isEmpty) break;
-      await _chatChar!.write(data, withoutResponse: false);
+
+      // Data packets: prefer write-without-response on Android when supported
+      // by the characteristic to reduce GATT 133 errors. Fall back to
+      // write-with-response otherwise.
+      final useWithoutResponse =
+          Platform.isAndroid && _supportsWriteWithoutResponse;
+      int attempt = 0;
+      while (true) {
+        attempt++;
+        try {
+          await _chatChar!.write(data, withoutResponse: useWithoutResponse);
+          // Small pacing delay when using write-without-response helps avoid
+          // Android GATT 133 errors from an overfilled write queue.
+          if (useWithoutResponse) {
+            await Future.delayed(const Duration(milliseconds: 2));
+          }
+          break;
+        } on FlutterBluePlusException catch (e) {
+          if (e.code == 133 && attempt < _sendMessageMaxAttempts) {
+            await Future.delayed(_sendMessageRetryDelay);
+            continue;
+          }
+          rethrow;
+        }
+      }
+
       sent += data.length;
       progressCallback(sent / size);
     }
@@ -257,6 +301,7 @@ class BluetoothController extends GetxController {
     await _connectionStateSub?.cancel();
     _connectionStateSub = null;
     _chatChar = null;
+    _supportsWriteWithoutResponse = false;
     try {
       await device.disconnect();
     } catch (e) {
@@ -350,10 +395,14 @@ class BluetoothController extends GetxController {
             for (final c in s.characteristics) {
               // ignore: avoid_print
               print('[BT][connect]   characteristic: ${c.uuid.str} '
-                  'props(write=${c.properties.write}, notify=${c.properties.notify})');
+                  'props(write=${c.properties.write}, '
+                  'writeNoResp=${c.properties.writeWithoutResponse}, '
+                  'notify=${c.properties.notify})');
               if (c.uuid.str.toLowerCase() ==
                   CHARACTERISTIC_UUID.toLowerCase()) {
                 _chatChar = c;
+                _supportsWriteWithoutResponse =
+                    c.properties.writeWithoutResponse;
                 found = true;
                 break;
               }
