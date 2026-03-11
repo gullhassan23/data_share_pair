@@ -591,48 +591,68 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                                   textAlign: TextAlign.center,
                                 ),
                                 const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: () => Get.back(),
-                          icon: const Icon(Icons.cancel),
-                          label: const Text('Cancel'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red.withOpacity(
-                              0.8,
-                            ),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // If user cancelled the OS file picker after QR pairing,
-                        // show a button here to reopen file selection for the
-                        // same paired device.
-                        Obx(() {
-                          final canReopen =
-                              fileTransferController.canReopenPicker.value;
-                          final device = qrController.lastPairedReceiver.value;
-                          if (!canReopen || device == null) {
-                            return const SizedBox.shrink();
-                          }
-                          return ElevatedButton.icon(
-                            onPressed: () {
-                              AppNavigator.toTransferFile(device: device);
-                            },
-                            icon: const Icon(Icons.folder_open),
-                            label: const Text('Pick file again'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black87,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                            ),
-                          );
-                        }),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: () => Get.back(),
+                                      icon: const Icon(Icons.cancel),
+                                      label: const Text('Cancel'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red.withOpacity(
+                                          0.8,
+                                        ),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 24,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                // If user cancelled the OS file picker after QR pairing,
+                                // show a subtle pill-style button to reopen file
+                                // selection for the same paired device.
+                                Obx(() {
+                                  final canReopen =
+                                      fileTransferController.canReopenPicker.value;
+                                  final device =
+                                      qrController.lastPairedReceiver.value;
+                                  if (!canReopen || device == null) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return TextButton.icon(
+                                    onPressed: () {
+                                      AppNavigator.toTransferFile(device: device);
+                                    },
+                                    icon: const Icon(
+                                      Icons.refresh,
+                                      size: 18,
+                                      color: Colors.white,
+                                    ),
+                                    label: Text(
+                                      'Pick file again',
+                                      style: GoogleFonts.roboto(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 10,
+                                      ),
+                                      backgroundColor:
+                                          Colors.white.withOpacity(0.18),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                    ),
+                                  );
+                                }),
                               ],
                             ),
                           ),

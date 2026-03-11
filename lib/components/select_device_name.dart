@@ -448,15 +448,41 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                   final info = bluetooth.connectedDeviceInfo;
                   if (info == null) return const SizedBox();
                   return Padding(
-                    padding: const EdgeInsets.only(top: 12.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
+                    padding: const EdgeInsets.only(top: 16.0),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton.icon(
                         onPressed: () {
                           AppNavigator.toTransferFile(device: info);
                         },
-                        icon: const Icon(Icons.folder_open),
-                        label: const Text('Pick file again'),
+                        icon: const Icon(
+                          Icons.refresh,
+                          size: 18,
+                        ),
+                        label: Text(
+                          'Pick file again',
+                          style: GoogleFonts.roboto(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          side: BorderSide(
+                            color: Theme.of(Get.context!)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.6),
+                          ),
+                          foregroundColor:
+                              Theme.of(Get.context!).colorScheme.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
                       ),
                     ),
                   );
