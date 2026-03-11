@@ -51,6 +51,9 @@ class QrController extends GetxController {
 
   /// QR sender flow state: idle → paired → fileSelected → offerSent → transferring → completed.
   final flowState = TransferFlowState.idle.obs;
+  /// Last successfully paired receiver (QR sender side). Allows UI screens
+  /// like the scanner to reopen the file picker for the same device after cancel.
+  final lastPairedReceiver = Rxn<DeviceInfo>();
   @override
   void onInit() {
     super.onInit();

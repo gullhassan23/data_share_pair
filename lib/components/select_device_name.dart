@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
+import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
@@ -248,6 +249,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
 
   Widget _buildBluetoothContent() {
     final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+    final transfer = Get.find<TransferController>();
 
     return Scaffold(
       body: Container(
@@ -439,6 +441,26 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                     );
                   }),
                 ),
+                // When user cancelled the file picker after connecting,
+                // offer a one-tap way to reopen it from this screen.
+                Obx(() {
+                  if (!transfer.canReopenPicker.value) return const SizedBox();
+                  final info = bluetooth.connectedDeviceInfo;
+                  if (info == null) return const SizedBox();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 12.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          AppNavigator.toTransferFile(device: info);
+                        },
+                        icon: const Icon(Icons.folder_open),
+                        label: const Text('Pick file again'),
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
@@ -448,6 +470,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
   }
 
   Widget _buildWiFiContent() {
+    final transfer = Get.find<TransferController>();
     return Scaffold(
       body: Stack(
         children: [
@@ -683,6 +706,31 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                       ),
                     ),
                     const Spacer(),
+                    // Show "Pick again" button on Wi‑Fi device selection screen
+                    // after the user cancelled/closed the file picker.
+                    Obx(() {
+                      if (!transfer.canReopenPicker.value) {
+                        return const SizedBox.shrink();
+                      }
+                      if (selectedIndex == null ||
+                          selectedIndex! < 0 ||
+                          selectedIndex! >= widget.devices.length) {
+                        return const SizedBox.shrink();
+                      }
+                      final device = widget.devices[selectedIndex!];
+                      return SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _handshakeInProgress
+                              ? null
+                              : () {
+                                  AppNavigator.toTransferFile(device: device);
+                                },
+                          icon: const Icon(Icons.folder_open),
+                          label: const Text('Pick file again'),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),

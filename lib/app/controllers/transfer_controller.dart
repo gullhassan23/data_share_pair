@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -36,6 +37,11 @@ class TransferController extends GetxController {
   final _tempManager = TransferTempManager();
 
   Worker? _completionWorker;
+
+  bool _isSelectingFile = false;
+  /// Becomes true if the last file-picker interaction was cancelled/closed
+  /// so UI screens (e.g. SelectDevice) can show a "Pick again" button.
+  final canReopenPicker = false.obs;
 
   @override
   void onInit() {
@@ -887,11 +893,19 @@ class TransferController extends GetxController {
     FileType type = FileType.any,
     List<String>? allowedExtensions,
   }) async {
+    if (_isSelectingFile) {
+      // Another picker is already open; ignore this tap.
+      return null;
+    }
+    _isSelectingFile = true;
+    // Reset previous state before opening a new picker.
+    canReopenPicker.value = false;
     print(
       '📁 Opening file picker with type: $type, extensions: $allowedExtensions',
     );
 
     FilePickerResult? result;
+    String? selectedPath;
     try {
       if (type == FileType.custom && allowedExtensions != null) {
         result = await FilePicker.platform.pickFiles(
@@ -910,16 +924,27 @@ class TransferController extends GetxController {
         '📁 File picker result: ${result != null ? 'Success' : 'Cancelled'}',
       );
       if (result != null && result.files.isNotEmpty) {
-        final path = result.files.first.path;
-        print('📁 Selected file path: $path');
-        return path;
+        selectedPath = result.files.first.path;
+        print('📁 Selected file path: $selectedPath');
       }
+    } on PlatformException catch (e) {
+      // User cancelled or multiple_request – don't treat as hard error so next open works.
+      print('ℹ️ File picker PlatformException: ${e.code} ${e.message}');
     } catch (e) {
       print('❌ File picker error: $e');
       throw Exception('Failed to open file picker: $e');
+    } finally {
+      _isSelectingFile = false;
     }
 
-    return null;
+    // If no file was selected, remember that so UI can offer "pick again".
+    if (selectedPath == null) {
+      canReopenPicker.value = true;
+    } else {
+      canReopenPicker.value = false;
+    }
+
+    return selectedPath;
   }
 
   Future<void> initiateFileTransfer(DeviceInfo targetDevice) async {
