@@ -486,15 +486,25 @@ class BluetoothController extends GetxController {
           notifySub = _chatChar!.lastValueStream.listen((data) {
             if (data.isEmpty) return;
 
-            final msg = utf8.decode(data);
-            print("📩 Received BLE notification: $msg");
+            // Notifications can contain binary/non-UTF8 bytes on some stacks.
+            // Only handle our JSON control messages here.
+            String msg;
+            try {
+              msg = utf8.decode(data, allowMalformed: true).trim();
+            } catch (_) {
+              return;
+            }
+            if (msg.isEmpty || !msg.startsWith('{')) return;
 
             try {
-              final decoded = jsonDecode(msg);
+              final decodedAny = jsonDecode(msg);
+              if (decodedAny is! Map) return;
+              final decoded = decodedAny;
 
-              if (decoded["type"] == "offer") {
-                incomingOffer.value = decoded;
-              } else if (decoded["type"] == "accept") {
+              final type = decoded["type"]?.toString();
+              if (type == "offer") {
+                incomingOffer.value = decoded.cast<String, dynamic>();
+              } else if (type == "accept") {
                 // ignore: avoid_print
                 print('[BT][Sender] Received ACCEPT over BLE: $decoded');
                 if (decoded["bleTransfer"] == true) {
@@ -527,12 +537,12 @@ class BluetoothController extends GetxController {
                     );
                   }
                 }
-              } else if (decoded["type"] == "reject") {
+              } else if (type == "reject") {
                 offerAccepted.value = false;
                 Get.snackbar("Rejected", "Receiver rejected file");
               }
             } catch (e) {
-              print("Invalid BLE message: $msg");
+              // Ignore non-JSON / partial messages.
             }
           });
         }

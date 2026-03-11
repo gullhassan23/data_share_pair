@@ -35,6 +35,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   bool isSender = false;
   /// When sending contacts, path to the temp VCF file so progress screen can register it for cleanup.
   String? _senderTempPath;
+  bool _isPickingFile = false;
 
   final transfer = Get.put(TransferController());
   final pairing = Get.put(PairingController());
@@ -281,6 +282,8 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   ) async {
     Get.back(); // Close the file type selection dialog
 
+    if (_isPickingFile) return;
+    _isPickingFile = true;
     try {
       // Use TransferController to select file
       final selectedPath = await transfer.selectFile(
@@ -295,6 +298,8 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     } catch (e) {
       print('❌ File picker error: $e');
       Get.snackbar('File Picker Error', e.toString());
+    } finally {
+      _isPickingFile = false;
     }
   }
 
@@ -593,8 +598,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       barrierDismissible: false,
     );
 
-    await bluetooth.sendOffer(path);
-
+    // IMPORTANT: set listener BEFORE sending offer (prevents missing fast accept after app restart)
     Timer? timeoutTimer;
     _bleOfferAcceptedWorker?.dispose();
     _bleOfferAcceptedWorker = once(bluetooth.offerAccepted, (accepted) {
@@ -668,6 +672,16 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
         );
       }
     });
+
+    try {
+      await bluetooth.sendOffer(path);
+    } catch (e) {
+      timeoutTimer.cancel();
+      _bleOfferAcceptedWorker?.dispose();
+      _bleOfferAcceptedWorker = null;
+      if (Get.isDialogOpen ?? false) Get.back();
+      Get.snackbar('Send failed', e.toString());
+    }
   }
 
   Widget _buildFileTypeContainer({
