@@ -68,6 +68,60 @@ class BluetoothController extends GetxController {
   static const int _sendMessageMaxAttempts = 2;
   static const Duration _sendMessageRetryDelay = Duration(milliseconds: 300);
 
+  /// After app restart, the BLE stack may briefly report BT as off even when it's on.
+  static const Duration _bluetoothWarmUpDelay = Duration(milliseconds: 500);
+  static const Duration _waitForBluetoothOnTimeout = Duration(seconds: 8);
+
+  StreamSubscription<BluetoothAdapterState>? _adapterStateSub;
+  bool _autoRetryPending = false;
+
+  Future<bool> _ensureBluetoothOn() async {
+    await Future.delayed(_bluetoothWarmUpDelay);
+
+    try {
+      if (await FlutterBluePlus.isOn) return true;
+    } catch (_) {}
+
+    if (Platform.isAndroid) {
+      try {
+        await FlutterBluePlus.turnOn();
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (await FlutterBluePlus.isOn) return true;
+      } catch (_) {}
+    }
+
+    // Wait for adapter to report ON (covers post-restart readiness delays)
+    final completer = Completer<bool>();
+    StreamSubscription<BluetoothAdapterState>? sub;
+    sub = FlutterBluePlus.adapterState.listen((state) {
+      if (state == BluetoothAdapterState.on && !completer.isCompleted) {
+        completer.complete(true);
+        sub?.cancel();
+      }
+    });
+    Future.delayed(_waitForBluetoothOnTimeout, () {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+        sub?.cancel();
+      }
+    });
+    return completer.future;
+  }
+
+  void _scheduleAutoRetry(VoidCallback retry) {
+    if (_autoRetryPending) return;
+    _autoRetryPending = true;
+    _adapterStateSub?.cancel();
+    _adapterStateSub = FlutterBluePlus.adapterState.listen((state) {
+      if (state == BluetoothAdapterState.on) {
+        _adapterStateSub?.cancel();
+        _adapterStateSub = null;
+        _autoRetryPending = false;
+        Future.delayed(const Duration(milliseconds: 300), retry);
+      }
+    });
+  }
+
   /// Receiver: start listening for file_meta then chunked file data over BLE (no WiFi).
   void startReceivingFile() => _peripheralService.startReceivingFile();
 
@@ -550,8 +604,16 @@ class BluetoothController extends GetxController {
     isReceiver = true;
     devices.clear();
 
-    final isOn = await FlutterBluePlus.isOn;
-    if (!isOn) await FlutterBluePlus.turnOn();
+    final ok = await _ensureBluetoothOn();
+    if (!ok) {
+      error.value = Platform.isAndroid
+          ? 'Please turn on Bluetooth in settings'
+          : 'Turn on Bluetooth in Control Center or Settings.';
+      _scheduleAutoRetry(() {
+        if (isReceiver) startReceiverMode();
+      });
+      return;
+    }
 
     try {
       await _peripheralService.start();
@@ -641,6 +703,8 @@ class BluetoothController extends GetxController {
   void onClose() {
     stopScan();
     stopReceiverMode();
+    _adapterStateSub?.cancel();
+    _adapterStateSub = null;
     super.onClose();
   }
 
@@ -672,33 +736,16 @@ class BluetoothController extends GetxController {
       }
     }
 
-    try {
-      final isOn = await FlutterBluePlus.isOn;
-      if (!isOn) {
-        if (Platform.isAndroid) {
-          try {
-            // ignore: avoid_print
-            print('[BT] startScan: isOn == false on Android, attempting turnOn()');
-            await FlutterBluePlus.turnOn();
-          } catch (e) {
-            // ignore: avoid_print
-            print('[BT] startScan: turnOn() failed: $e');
-            error.value = 'Please turn on Bluetooth in settings';
-            isScanning.value = false;
-            return;
-          }
-        } else {
-          // iOS/macOS: cannot programmatically turn on Bluetooth – rely on system UI.
-          // ignore: avoid_print
-          print('[BT] startScan: Bluetooth is OFF on iOS/macOS; ask user to enable it.');
-          error.value = 'Turn on Bluetooth in Control Center or Settings.';
-          isScanning.value = false;
-          return;
-        }
-      }
-    } catch (e) {
-      // ignore: avoid_print
-      print('[BT] startScan: error while checking FlutterBluePlus.isOn: $e');
+    final ok = await _ensureBluetoothOn();
+    if (!ok) {
+      error.value = Platform.isAndroid
+          ? 'Please turn on Bluetooth in settings'
+          : 'Turn on Bluetooth in Control Center or Settings.';
+      isScanning.value = false;
+      _scheduleAutoRetry(() {
+        if (!isReceiver) startScan();
+      });
+      return;
     }
 
     try {
