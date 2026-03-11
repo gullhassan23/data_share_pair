@@ -5,6 +5,7 @@ class CustomUploadProgress extends StatelessWidget {
   final double sentMB;
   final double totalMB;
   final double speedMBps;
+  final bool showSpeed;
 
   const CustomUploadProgress({
     super.key,
@@ -12,6 +13,7 @@ class CustomUploadProgress extends StatelessWidget {
     required this.sentMB,
     required this.totalMB,
     required this.speedMBps,
+    this.showSpeed = true,
   });
 
   @override
@@ -90,13 +92,14 @@ class CustomUploadProgress extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "${sentMB.toStringAsFixed(2)}MB  OF  ${totalMB.toStringAsFixed(1)}MB",
+                "${sentMB.toStringAsFixed(2)}MB  OF  ${totalMB.toStringAsFixed(2)}MB",
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
-              Text(
-                "${speedMBps.toStringAsFixed(1)}MB/S",
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
+              if (showSpeed)
+                Text(
+                  "${speedMBps.toStringAsFixed(1)}MB/S",
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
             ],
           ),
         ],

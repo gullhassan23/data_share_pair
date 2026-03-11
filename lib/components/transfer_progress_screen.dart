@@ -471,6 +471,8 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
                 isSender
                     ? progress.speedMBps.value
                     : progress.receiveSpeedMBps.value,
+            // Hide speed on Bluetooth (BLE) transfers – only show for Wi‑Fi/same‑network.
+            showSpeed: !(device?.isBluetooth ?? false),
           ),
         ),
 

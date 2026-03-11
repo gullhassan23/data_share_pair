@@ -90,7 +90,7 @@ class CustomReceiveProgress extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "${receivedMB.toStringAsFixed(2)}MB  OF  ${totalMB.toStringAsFixed(1)}MB",
+                "${receivedMB.toStringAsFixed(2)}MB  OF  ${totalMB.toStringAsFixed(2)}MB",
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
               Text(

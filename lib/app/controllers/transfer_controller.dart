@@ -207,7 +207,7 @@ class TransferController extends GetxController {
                 // Initialize receiver progress tracking
                 receiveStartTime = DateTime.now();
                 lastReceiveProgressUpdate = receiveStartTime;
-                final totalMB = meta.size / (1024 * 1024);
+                final totalMB = meta.size / 1000000;
                 progress.receiveTotalMB.value = totalMB;
                 progress.status.value = 'Receiving...';
 
@@ -237,13 +237,13 @@ class TransferController extends GetxController {
                   _recvStream?.add(progressValue);
                   progress.receiveProgress.value = progressValue;
                   TransferStatePersistence.updateProgress(progressValue);
-                  final receivedMB = received / (1024 * 1024);
+                  final receivedMB = received / 1000000;
                   progress.receivedMB.value = receivedMB;
                   TransferForegroundService.updateProgress(
                     fileName: meta.name,
                     progress: progressValue,
                     sentMB: receivedMB,
-                    totalMB: meta.size / (1024 * 1024),
+                    totalMB: meta.size / 1000000,
                     speedMBps: progress.receiveSpeedMBps.value,
                     isSender: false,
                   );
@@ -252,7 +252,7 @@ class TransferController extends GetxController {
                   if (received >= meta.size) {
                     transferComplete = true;
                     progress.receiveProgress.value = 1.0;
-                    progress.receivedMB.value = meta.size / (1024 * 1024);
+                    progress.receivedMB.value = meta.size / 1000000;
                     progress.receiveSpeedMBps.value = 0.0;
                     print(
                       '📤 All bytes received in initial chunk, transfer complete',
@@ -286,7 +286,7 @@ class TransferController extends GetxController {
               TransferStatePersistence.updateProgress(progressValue);
 
               // Calculate and update MB received
-              final receivedMB = received / (1024 * 1024);
+              final receivedMB = received / 1000000;
               progress.receivedMB.value = receivedMB;
 
               // Calculate receive speed (update every 100ms for smooth UI)
@@ -309,7 +309,7 @@ class TransferController extends GetxController {
                 fileName: meta.name,
                 progress: progressValue,
                 sentMB: receivedMB,
-                totalMB: meta.size / (1024 * 1024),
+                totalMB: meta.size / 1000000,
                 speedMBps: progress.receiveSpeedMBps.value,
                 isSender: false,
               );
@@ -320,7 +320,7 @@ class TransferController extends GetxController {
                 transferComplete = true;
                 // Final progress update
                 progress.receiveProgress.value = 1.0;
-                progress.receivedMB.value = meta.size / (1024 * 1024);
+                progress.receivedMB.value = meta.size / 1000000;
                 progress.receiveSpeedMBps.value = 0.0;
                 break;
               }
@@ -703,7 +703,7 @@ class TransferController extends GetxController {
     progress.speedMBps.value = 0.0;
 
     final fileSize = await File(path).length(); // bytes
-    final totalMB = fileSize / (1024 * 1024);
+    final totalMB = fileSize / 1000000;
     progress.totalMB.value = totalMB;
     final fileName = originalFileName ?? p.basename(path);
 
@@ -734,9 +734,9 @@ class TransferController extends GetxController {
       // Update progress immediately
       progress.sendProgress.value = v;
 
-      /// Convert to MB
+      /// Convert to MB (decimal, for display)
       final sentBytes = fileSize * v;
-      final sentMB = sentBytes / (1024 * 1024);
+      final sentMB = sentBytes / 1000000;
       progress.sentMB.value = sentMB;
 
       /// Calculate speed (throttle updates to every 100ms for smoother UI)
@@ -827,7 +827,7 @@ class TransferController extends GetxController {
     progress.speedMBps.value = 0.0;
 
     final fileSize = await File(path).length();
-    final totalMB = fileSize / (1024 * 1024);
+    final totalMB = fileSize / 1000000;
     progress.totalMB.value = totalMB;
     final fileName = originalFileName ?? p.basename(path);
 
