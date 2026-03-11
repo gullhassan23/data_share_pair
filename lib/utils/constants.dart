@@ -32,6 +32,11 @@ enum TransferSessionState {
 }
 
 const int kTransferFlowTotalSteps = 7;
+
+/// Max file size allowed for BLE ("Bluetooth only") transfer.
+/// Larger files should use Wi‑Fi / same-network transfer for speed.
+const int kBleMaxBytes = 5 * 1024 * 1024; // 5 MB
+
 String formatFileSize(int bytes) {
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';

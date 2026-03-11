@@ -54,7 +54,8 @@ class QrController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    // Listen to native P2P events if available
+    // Android-only: Wi‑Fi Direct (P2P) native events. iOS has no implementation for this channel.
+    if (!Platform.isAndroid) return;
     try {
       _p2pSub = _p2pEvents.receiveBroadcastStream().listen((dynamic event) {
         try {
@@ -119,6 +120,9 @@ class QrController extends GetxController {
         } catch (e) {
           print('❌ Error handling P2P event: $e');
         }
+      }, onError: (e) {
+        // Avoid crashing on stream activation errors.
+        print('⚠️ P2P EventChannel stream error: $e');
       });
     } catch (e) {
       print('⚠️ P2P EventChannel not available: $e');

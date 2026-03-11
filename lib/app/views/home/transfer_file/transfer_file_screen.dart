@@ -529,6 +529,17 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     String deviceName,
   ) async {
     final bluetooth = Get.find<BluetoothController>(tag: 'sender');
+    final fileBytes = await File(path).length();
+    if (fileBytes > kBleMaxBytes) {
+      // Don't allow BLE transfer for large files (too slow).
+      if (Get.isDialogOpen ?? false) Get.back();
+      Get.snackbar(
+        'File too large',
+        'Bluetooth supports up to 5MB. Use Wi‑Fi / same network for faster transfer.',
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
 
     // Validate BLE connection so second transfer works without restart (plan: connection robustness)
     if (!bluetooth.isConnectionValid) {
