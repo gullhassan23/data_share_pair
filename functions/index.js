@@ -16,7 +16,11 @@ exports.verifyAppleSubscription = onRequest(
         return res.status(405).send("Method not allowed");
       }
 
-      const { receiptData, productId, userId, fcmToken } = req.body || {};
+      const { receiptData, productId, userId, fcmToken, isRestore } = req.body || {};
+
+      if (isRestore) {
+        console.log("verifyAppleSubscription: restore flow", { userId, productId });
+      }
 
       if (!receiptData || !productId || !userId) {
         return res.status(400).json({

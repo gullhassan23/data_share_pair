@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 
 Set<String> get kPremiumProductIds {
@@ -155,7 +157,6 @@ class SubscriptionIAPService {
       debugPrint('[SubscriptionIAP] restorePurchases: aborting (IAP not available)');
       return;
     }
-    isLoading.value = true;
     await _inAppPurchase.restorePurchases();
     debugPrint('[SubscriptionIAP] restorePurchases: restore call completed (results via purchase stream)');
   }
@@ -178,6 +179,10 @@ class SubscriptionIAPService {
           if (isValid) {
             _isPremium = true;
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: success — premium granted');
+            // Real-time UI update: refresh Firestore status so premium page updates immediately.
+            if (Get.isRegistered<PremiumController>()) {
+              await Get.find<PremiumController>().refreshSubscriptionStatus();
+            }
           } else {
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: verification failed — premium not granted');
           }
@@ -189,11 +194,15 @@ class SubscriptionIAPService {
           break;
         case PurchaseStatus.restored:
           debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=RESTORED, verifying with backend...');
-          final isValid = await _verifyPurchaseWithBackend(purchaseDetails);
+          final isValid = await _verifyPurchaseWithBackend(purchaseDetails, isRestore: true);
           debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore verification isValid=$isValid');
           if (isValid) {
             _isPremium = true;
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted');
+            // Real-time UI update: refresh Firestore status so premium page updates immediately (like buy flow).
+            if (Get.isRegistered<PremiumController>()) {
+              await Get.find<PremiumController>().refreshSubscriptionStatus();
+            }
           }
           if (purchaseDetails.pendingCompletePurchase) {
             await _inAppPurchase.completePurchase(purchaseDetails);
@@ -237,9 +246,10 @@ class SubscriptionIAPService {
   }
 
   Future<bool> _verifyPurchaseWithBackend(
-    PurchaseDetails purchaseDetails,
-  ) async {
-    debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: productId=${purchaseDetails.productID}');
+    PurchaseDetails purchaseDetails, {
+    bool isRestore = false,
+  }) async {
+    debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: productId=${purchaseDetails.productID}, isRestore=$isRestore');
     try {
       final receiptData =
           purchaseDetails.verificationData.serverVerificationData;
@@ -257,17 +267,20 @@ class SubscriptionIAPService {
 
       final uri = Uri.parse(functionUrl);
 
+      final body = <String, dynamic>{
+        'receiptData': receiptData,
+        'productId': purchaseDetails.productID,
+        'userId': userId,
+        if (fcmToken != null && fcmToken.isNotEmpty) 'fcmToken': fcmToken,
+        if (isRestore) 'isRestore': true,
+      };
+
       final response = await http.post(
         uri,
         headers: {
           HttpHeaders.contentTypeHeader: 'application/json',
         },
-        body: jsonEncode({
-          'receiptData': receiptData,
-          'productId': purchaseDetails.productID,
-          'userId': userId,
-          if (fcmToken != null && fcmToken.isNotEmpty) 'fcmToken': fcmToken,
-        }),
+        body: jsonEncode(body),
       );
 
       if (response.statusCode != 200) {

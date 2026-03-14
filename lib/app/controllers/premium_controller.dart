@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/utils/user_id.dart';
@@ -23,6 +24,7 @@ class PremiumController extends GetxController {
   final Rx<SubscriptionStatus?> subscriptionStatus =
       Rx<SubscriptionStatus?>(null);
   final RxBool isLoading = true.obs;
+  final RxBool isRestoring = false.obs;
 
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>? _firestoreSub;
 
@@ -69,8 +71,78 @@ class PremiumController extends GetxController {
     await iapService.buy(productId);
   }
 
+  /// Fetches subscription status from Firestore once (used after restore so UI updates).
+  Future<void> refreshSubscriptionStatus() async {
+    final uid = userId.value;
+    if (uid == null) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('UsersFileTransfer')
+          .doc(uid)
+          .get();
+      if (!doc.exists) {
+        subscriptionStatus.value = const SubscriptionStatus(isPremium: false);
+        return;
+      }
+      final data = doc.data()!;
+      subscriptionStatus.value = SubscriptionStatus(
+        isPremium: data['isPremium'] == true,
+        productId: data['productId'] as String?,
+        expiryDate: (data['expiryDate'] as Timestamp?)?.toDate(),
+      );
+    } catch (e) {
+      // Keep current status on error
+    }
+  }
+
   Future<void> restorePurchases() async {
-    await iapService.restorePurchases();
+    if (isRestoring.value) return;
+    isRestoring.value = true;
+    try {
+      await iapService.restorePurchases();
+      // Backend updates Firestore asynchronously after verifying restored receipt.
+      // Wait then refresh so the UI shows the updated premium status.
+      await Future<void>.delayed(const Duration(seconds: 2));
+      await refreshSubscriptionStatus();
+      // Retry once more in case backend was slow
+      if (!isPremium) {
+        await Future<void>.delayed(const Duration(seconds: 2));
+        await refreshSubscriptionStatus();
+      }
+      if (isPremium) {
+        Get.snackbar(
+          'Restore successful',
+          'Your premium subscription has been restored.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xff1a1a24),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+          margin: const EdgeInsets.all(16),
+        );
+      } else {
+        Get.snackbar(
+          'Restore completed',
+          'If you had a subscription, it has been restored. No active subscription found for this account.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xff1a1a24),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+          margin: const EdgeInsets.all(16),
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Restore failed',
+        'Please try again. If the problem continues, contact support.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xff1a1a24),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 4),
+        margin: const EdgeInsets.all(16),
+      );
+    } finally {
+      isRestoring.value = false;
+    }
   }
 
   @override

@@ -149,14 +149,14 @@ class TransferOptionIconCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.icon,
-
     required this.onTap,
+    this.showLock = false,
   });
 
   final String title;
   final IconData icon;
-
   final VoidCallback onTap;
+  final bool showLock;
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +170,6 @@ class TransferOptionIconCard extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [const Color(0xffF2F6FF), const Color(0xffEAF0FF)],
-
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -193,8 +192,26 @@ class TransferOptionIconCard extends StatelessWidget {
               ],
             ),
           ),
-
-          /// Coming Soon Ribbon
+          if (showLock)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade700,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.lock, size: 18, color: Colors.white),
+              ),
+            ),
         ],
       ),
     );

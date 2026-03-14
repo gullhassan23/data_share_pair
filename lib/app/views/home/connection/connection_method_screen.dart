@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
 import 'package:share_app_latest/app/views/home/bluetooth/reciever_bluetooth.dart';
 import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart';
-
+import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
-
 
 class ConnectionMethodScreen extends StatefulWidget {
   const ConnectionMethodScreen({super.key, required this.isReceiver});
@@ -28,6 +28,7 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final premium = Get.find<PremiumController>();
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -150,24 +151,28 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                             }
                           },
                         ),
-                        TransferOptionIconCard(
-                          title: "WiFi",
-                          icon: Icons.wifi,
-                          onTap: () {
-                            print(
-                              '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
-                            );
-                            // AppNavigator.toPairing(
-                            //   isReceiver: widget.isReceiver,
-                            // );
-                            Get.to(
-                              () => ChooseMethodScan(
-                                isReciver: widget.isReceiver,
-                              ),
-                            );
-                            // AppNavigator.tochooseMethodscan();
-                          },
-                        ),
+                        Obx(() {
+                          final isPremium = premium.isPremium;
+                          return TransferOptionIconCard(
+                            title: "WiFi",
+                            icon: Icons.wifi,
+                            showLock: !isPremium,
+                            onTap: () {
+                              if (!isPremium) {
+                                AppNavigator.toPremium();
+                                return;
+                              }
+                              print(
+                                '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
+                              );
+                              Get.to(
+                                () => ChooseMethodScan(
+                                  isReciver: widget.isReceiver,
+                                ),
+                              );
+                            },
+                          );
+                        }),
                       ],
                     ),
                   ],

@@ -50,7 +50,10 @@ class PremiumPage extends GetView<PremiumController> {
           child: SafeArea(
             child: Column(
               children: [
-                _buildHeader(context),
+                _buildHeader(
+                  context,
+                  showCloseInHeader: !iapService.isAvailable || isLoading || isPremium,
+                ),
                 if (!iapService.isAvailable) ...[
                   if (isLoading)
                     const Expanded(
@@ -110,6 +113,15 @@ class PremiumPage extends GetView<PremiumController> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: _sectionSpacing),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              IconButton(
+                                onPressed: () => AppNavigator.back(),
+                                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                              ),
+                            ],
+                          ),
                           _buildTitle(),
                           const SizedBox(height: _titleBottom),
                           _buildBenefits(),
@@ -122,7 +134,10 @@ class PremiumPage extends GetView<PremiumController> {
                             onBuy: controller.buy,
                           ),
                           const SizedBox(height: _sectionSpacing),
-                          _buildRestoreLink(controller.restorePurchases),
+                          _buildRestoreLink(
+                            onRestore: controller.restorePurchases,
+                            isRestoring: controller.isRestoring.value,
+                          ),
                           const SizedBox(height: _footerTop),
                           _buildFooter(context),
                           const SizedBox(height: _footerBottom),
@@ -138,29 +153,16 @@ class PremiumPage extends GetView<PremiumController> {
     });
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, {required bool showCloseInHeader}) {
+    if (!showCloseInHeader) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           IconButton(
             onPressed: () => AppNavigator.back(),
             icon: const Icon(Icons.close, color: Colors.white, size: 28),
-          ),
-          TextButton(
-            onPressed: () {
-              debugPrint('[PremiumPage] Restore');
-              controller.restorePurchases();
-            },
-            child: Text(
-              'RESTORE',
-              style: GoogleFonts.roboto(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.white70,
-              ),
-            ),
           ),
         ],
       ),
@@ -222,19 +224,50 @@ class PremiumPage extends GetView<PremiumController> {
     );
   }
 
-  Widget _buildRestoreLink(VoidCallback onRestore) {
+  Widget _buildRestoreLink({
+    required VoidCallback onRestore,
+    required bool isRestoring,
+  }) {
     return Center(
-      child: TextButton(
-        onPressed: onRestore,
-        child: Text(
-          'RESTORE PURCHASES',
-          style: GoogleFonts.roboto(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.white54,
-          ),
-        ),
-      ),
+      child: isRestoring
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: _cyan,
+                      backgroundColor: Colors.white24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Text(
+                    'Restoring purchases…',
+                    style: GoogleFonts.roboto(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : TextButton(
+              onPressed: onRestore,
+              child: Text(
+                'RESTORE PURCHASES',
+                style: GoogleFonts.roboto(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white54,
+                ),
+              ),
+            ),
     );
   }
 
