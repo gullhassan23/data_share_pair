@@ -2,19 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:share_app_latest/app/controllers/premium_controller.dart';
-import 'package:share_app_latest/app/views/home/connection/transfer_type_tile.dart';
+import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
 import 'package:share_app_latest/app/views/home/bluetooth/reciever_bluetooth.dart';
 import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart';
-import 'package:share_app_latest/routes/app_navigator.dart';
+
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
-enum TransferType {
-  bluetooth,
-  wifiScanner,
-  wifiSameNetwork,
-}
 
 class ConnectionMethodScreen extends StatefulWidget {
   const ConnectionMethodScreen({super.key, required this.isReceiver});
@@ -26,58 +20,10 @@ class ConnectionMethodScreen extends StatefulWidget {
 }
 
 class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
-  TransferType _selected = TransferType.bluetooth;
-
   @override
   void initState() {
     super.initState();
-    if (!Get.isRegistered<PremiumController>()) {
-      Get.put(PremiumController(), permanent: false);
-    }
-  }
-
-  bool get _isPremium =>
-      Get.isRegistered<PremiumController>()
-          ? Get.find<PremiumController>().isPremium
-          : false;
-
-  void _onTapTransferType(TransferType type) {
-    setState(() => _selected = type);
-  }
-
-  void _onContinue() {
-    final type = _selected;
-    final isProType = type == TransferType.wifiScanner ||
-        type == TransferType.wifiSameNetwork;
-    if (isProType && !_isPremium) {
-      Get.snackbar(
-        'Premium required',
-        'Wi‑Fi Direct and Same Network transfer are available in the Pro version.',
-        snackPosition: SnackPosition.BOTTOM,
-        mainButton: TextButton(
-          onPressed: () {
-            Get.closeCurrentSnackbar();
-            AppNavigator.toPremium();
-          },
-          child: const Text('Upgrade'),
-        ),
-      );
-      return;
-    }
-
-    switch (type) {
-      case TransferType.bluetooth:
-        if (widget.isReceiver) {
-          Get.to(() => const BluetoothReceiverScreen());
-        } else {
-          Get.to(() => const BluetoothSenderScreen());
-        }
-        break;
-      case TransferType.wifiScanner:
-      case TransferType.wifiSameNetwork:
-        AppNavigator.toPairing(isReceiver: widget.isReceiver);
-        break;
-    }
+    print('✅ ConnectionMethodScreen opened (isReceiver: ${widget.isReceiver})');
   }
 
   @override
@@ -95,13 +41,14 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
         ),
         child: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
                   IconButton(
-                    onPressed: () => Get.back(),
-                    icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
+                    onPressed: () {
+                      Get.back();
+                    },
+                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -124,88 +71,106 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                 segmentSpacing: 5,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
               ),
-              const SizedBox(height: 32),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              const SizedBox(height: 40),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 25,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.isReceiver ? "Receive via" : "Send via",
                       style: GoogleFonts.roboto(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
-                      "Choose how to transfer. Bluetooth is free; Wi‑Fi options (unlimited, fast, no server) are Pro.",
+                      "Choose QR code, Bluetooth, or WiFi Direct.",
+                      textAlign: TextAlign.center,
                       style: GoogleFonts.roboto(
                         fontSize: 14,
                         color: Colors.grey.shade700,
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      TransferTypeTile(
-                        title: "Bluetooth Transfer",
-                        subtitle: "Basic device-to-device transfer. Available in the free version.",
-                        icon: Icons.bluetooth_rounded,
-                        isSelected: _selected == TransferType.bluetooth,
-                        isPro: false,
-                        onTap: () => _onTapTransferType(TransferType.bluetooth),
+                    const SizedBox(height: 6),
+                    Text(
+                      "For WiFi: ensure both devices are on the same network. If receiving, open the WiFi screen first and wait.",
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.roboto(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
                       ),
-                      const SizedBox(height: 14),
-                      TransferTypeTile(
-                        title: "Wi‑Fi Direct (Scan & connect)",
-                        subtitle: "Scan and connect to the other device. Unlimited data, fast speed. Direct device-to-device—no server storage.",
-                        icon: Icons.wifi_find_rounded,
-                        isSelected: _selected == TransferType.wifiScanner,
-                        isPro: true,
-                        onTap: () => _onTapTransferType(TransferType.wifiScanner),
-                      ),
-                      const SizedBox(height: 14),
-                      TransferTypeTile(
-                        title: "Wi‑Fi Same Network",
-                        subtitle: "Connect when both are on the same Wi‑Fi, then transfer. Unlimited data, fast. Direct device-to-device—no server.",
-                        icon: Icons.wifi_rounded,
-                        isSelected: _selected == TransferType.wifiSameNetwork,
-                        isPro: true,
-                        onTap: () => _onTapTransferType(TransferType.wifiSameNetwork),
-                      ),
-                      const SizedBox(height: 28),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _onContinue,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: Text(
-                            'Continue',
-                            style: GoogleFonts.roboto(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                    ),
+                    const SizedBox(height: 18),
+                    Divider(color: Colors.grey.shade300),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        // TransferOptionIconCard(
+                        //   title: "QR",
+                        //   icon: Icons.qr_code_scanner,
+                        //   onTap: () {
+                        //     print(
+                        //       '✅ Connection method chosen: QR (isReceiver: ${widget.isReceiver})',
+                        //     );
+                        //     AppNavigator.toConnectionMethod(
+                        //       isReceiver: widget.isReceiver,
+                        //     );
+                        //     // if (widget.isReceiver) {
+                        //     //   AppNavigator.toQrReceiver();
+                        //     // } else {
+                        //     //   AppNavigator.toQrSender(<String>[]);
+                        //     // }
+                        //   },
+                        // ),
+                        TransferOptionIconCard(
+                          title: "Bluetooth",
+                          icon: Icons.bluetooth_rounded,
+                          onTap: () {
+                            print(
+                              '✅ Connection method chosen: Bluetooth (isReceiver: ${widget.isReceiver})',
+                            );
+                            if (widget.isReceiver) {
+                              Get.to(() => const BluetoothReceiverScreen());
+                            } else {
+                              Get.to(() => const BluetoothSenderScreen());
+                            }
+                          },
                         ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
+                        TransferOptionIconCard(
+                          title: "WiFi",
+                          icon: Icons.wifi,
+                          onTap: () {
+                            print(
+                              '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
+                            );
+                            // AppNavigator.toPairing(
+                            //   isReceiver: widget.isReceiver,
+                            // );
+                            Get.to(
+                              () => ChooseMethodScan(
+                                isReciver: widget.isReceiver,
+                              ),
+                            );
+                            // AppNavigator.tochooseMethodscan();
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
