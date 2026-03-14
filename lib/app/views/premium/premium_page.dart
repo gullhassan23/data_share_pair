@@ -35,9 +35,9 @@ class PremiumPage extends GetView<PremiumController> {
       final isLoading = iapService.isLoading.value;
 
       final monthlyId =
-          dotenv.env['IAP_PRODUCT_MONTHLY'] ?? 'com.yourapp.premium.monthly';
+          dotenv.env['IAP_PRODUCT_MONTHLY'] ?? 'com.share.transfer.file.all.data.app.premium.monthly';
       final yearlyId =
-          dotenv.env['IAP_PRODUCT_YEARLY'] ?? 'com.yourapp.premium.yearly';
+          dotenv.env['IAP_PRODUCT_YEARLY'] ?? 'com.share.transfer.file.all.data.app.premium.yearly';
       final monthlyPlan = iapService.planForId(monthlyId);
       final yearlyPlan = iapService.planForId(yearlyId);
 
@@ -335,7 +335,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
                 borderRadius: BorderRadius.circular(16),
                 child: Center(
                   child: Text(
-                    'Start Free Trial',
+                    'Subscribe',
                     style: GoogleFonts.roboto(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,

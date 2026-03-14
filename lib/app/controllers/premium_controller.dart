@@ -47,7 +47,7 @@ class PremiumController extends GetxController {
   void _listenToFirestore(String uid) {
     _firestoreSub?.cancel();
     _firestoreSub = FirebaseFirestore.instance
-        .collection('users')
+        .collection('UsersFileTransfer')
         .doc(uid)
         .snapshots()
         .listen((doc) {

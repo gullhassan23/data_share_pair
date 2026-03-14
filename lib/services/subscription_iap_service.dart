@@ -18,8 +18,8 @@ Set<String> get kPremiumProductIds {
 
   if (ids.isEmpty) {
     ids.addAll({
-      'com.yourapp.premium.monthly',
-      'com.yourapp.premium.yearly',
+      'com.share.transfer.file.all.data.app.premium.monthly',
+      'com.share.transfer.file.all.data.app.premium.yearly',
     });
   }
 
@@ -216,6 +216,26 @@ class SubscriptionIAPService {
     }
   }
 
+  /// Retries getToken() so APNS can become ready on iOS. Ensures notification + Firestore data both work.
+  static Future<String?> _getFcmTokenWithRetry({int maxAttempts = 3, Duration delay = const Duration(seconds: 2)}) async {
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null && token.isNotEmpty) {
+          debugPrint('[SubscriptionIAP] _getFcmTokenWithRetry: token obtained on attempt $attempt');
+          return token;
+        }
+      } catch (e) {
+        debugPrint('[SubscriptionIAP] _getFcmTokenWithRetry: attempt $attempt failed: $e');
+        if (attempt < maxAttempts) {
+          await Future<void>.delayed(delay);
+        }
+      }
+    }
+    debugPrint('[SubscriptionIAP] _getFcmTokenWithRetry: no token after $maxAttempts attempts');
+    return null;
+  }
+
   Future<bool> _verifyPurchaseWithBackend(
     PurchaseDetails purchaseDetails,
   ) async {
@@ -224,7 +244,8 @@ class SubscriptionIAPService {
       final receiptData =
           purchaseDetails.verificationData.serverVerificationData;
       final userId = await getOrCreateUserId();
-      final fcmToken = await FirebaseMessaging.instance.getToken();
+      // Retry getToken() so APNS can become ready (iOS). Ensures notification + data both work.
+      String? fcmToken = await _getFcmTokenWithRetry();
 
       final functionUrl = dotenv.env['CLOUD_FUNCTION_URL'];
       if (functionUrl == null || functionUrl.isEmpty) {

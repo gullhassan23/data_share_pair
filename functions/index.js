@@ -64,7 +64,7 @@ exports.verifyAppleSubscription = onRequest(
         const expiryDate = new Date(
           now.getTime() + days * 24 * 60 * 60 * 1000
         );
-        const userRef = db.collection("users").doc(userId);
+        const userRef = db.collection("UsersFileTransfer").doc(userId);
         const updateData = {
           isPremium: true,
           productId,
@@ -135,7 +135,7 @@ exports.verifyAppleSubscription = onRequest(
       const isPremium =
         expiryDate && expiryDate.getTime() > now.getTime() ? true : false;
 
-      const userRef = db.collection("users").doc(userId);
+      const userRef = db.collection("UsersFileTransfer").doc(userId);
       const updateData = {
         isPremium,
         productId,
@@ -178,7 +178,7 @@ exports.checkSubscriptions = onSchedule("every 24 hours", async () => {
   const now = new Date();
   const soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-  const usersRef = db.collection("users");
+  const usersRef = db.collection("UsersFileTransfer");
 
   const aboutToExpireSnap = await usersRef
     .where("isPremium", "==", true)
