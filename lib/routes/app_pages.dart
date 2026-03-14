@@ -64,6 +64,11 @@ class AppPages {
         final isReceiver = args?['isReceiver'] as bool? ?? false;
         return ConnectionMethodScreen(isReceiver: isReceiver);
       },
+      binding: BindingsBuilder(() {
+        if (!Get.isRegistered<PremiumController>()) {
+          Get.put(PremiumController(), permanent: false);
+        }
+      }),
       transition: Transition.fade,
     ),
     GetPage(
