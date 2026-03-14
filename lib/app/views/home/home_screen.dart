@@ -66,6 +66,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.black87,
                     ),
                   ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => AppNavigator.toPremium(),
+                    icon: const Icon(Icons.star, color: Colors.amber, size: 20),
+                    label: Text(
+                      'Premium',
+                      style: GoogleFonts.roboto(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 19),

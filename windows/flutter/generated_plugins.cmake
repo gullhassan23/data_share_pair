@@ -4,7 +4,9 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   ble_peripheral
+  cloud_firestore
   connectivity_plus
+  firebase_core
   gal
   permission_handler_windows
 )

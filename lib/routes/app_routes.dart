@@ -16,4 +16,5 @@ abstract class AppRoutes {
   static const choosemethodscan = '/choose-method-scan';
   static const removeDuplicates = '/remove-duplicates';
   static const duplicatePreview = '/duplicate-preview';
+  static const premium = '/premium';
 }

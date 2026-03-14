@@ -1,7 +1,8 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:share_app_latest/app/InApp/in_app_purchases.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:share_app_latest/app/controllers/QR_controller.dart';
 import 'package:share_app_latest/app/controllers/hotspot_controller.dart';
 import 'package:share_app_latest/routes/app_pages.dart';
@@ -11,14 +12,22 @@ import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
+import 'package:share_app_latest/services/fcm_token_service.dart';
+import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await IAPService().init();
-  await IAPService().loadProducts();
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (_) {}
+
+  await Firebase.initializeApp();
+  await initializeFcmAndUploadToken();
+  await SubscriptionIAPService().init();
+
   // Restrict to portrait only
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   // Initialize foreground task plugin before runApp (required for transfer notifications)

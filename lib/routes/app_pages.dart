@@ -16,6 +16,8 @@ import 'package:share_app_latest/app/views/onboarding/onboarding_screen.dart';
 import 'package:share_app_latest/app/views/transfer_recovery/transfer_recovery_screen.dart';
 import 'package:share_app_latest/components/transfer_progress_screen.dart';
 import 'package:share_app_latest/app/views/splash/splash_screen.dart';
+import 'package:share_app_latest/app/views/premium/premium_page.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -113,6 +115,14 @@ class AppPages {
     GetPage(
       name: AppRoutes.duplicatePreview,
       page: () => const DuplicatePreviewScreen(),
+      transition: Transition.fade,
+    ),
+    GetPage(
+      name: AppRoutes.premium,
+      page: () => const PremiumPage(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<PremiumController>(() => PremiumController());
+      }),
       transition: Transition.fade,
     ),
   ];

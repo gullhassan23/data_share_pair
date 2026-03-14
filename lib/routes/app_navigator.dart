@@ -125,6 +125,10 @@ class AppNavigator {
     Get.toNamed(AppRoutes.removeDuplicates);
   }
 
+  static void toPremium() {
+    Get.toNamed(AppRoutes.premium);
+  }
+
   static void back() {
     if (Get.key.currentState?.canPop() ?? false) {
       Get.back();
