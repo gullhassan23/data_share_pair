@@ -8,7 +8,7 @@ import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Premium subscription screen – dark theme, gradient accents, file-transfer focused content.
-/// Pro account includes: No Ads, unlimited transfers, priority support, regular updates.
+/// Pro: Wi‑Fi transfer (unlimited, fast, no server), no ads, priority support.
 class PremiumPage extends GetView<PremiumController> {
   const PremiumPage({super.key});
 
@@ -16,8 +16,16 @@ class PremiumPage extends GetView<PremiumController> {
   String? get tag => null;
 
   static const Color _bgDark = Color(0xff12121a);
+  static const Color _cardUnselected = Color(0xff1a1a24);
   static const Color _cyan = Color(0xff22d3ee);
   static const Color _purple = Color(0xffa855f7);
+
+  static const double _screenPaddingH = 24;
+  static const double _sectionSpacing = 20;
+  static const double _titleBottom = 28;
+  static const double _benefitsBottom = 28;
+  static const double _footerTop = 20;
+  static const double _footerBottom = 32;
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +93,7 @@ class PremiumPage extends GetView<PremiumController> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Ad-free file transfer & all premium features unlocked.',
+                            'Wi‑Fi transfer, no ads & all Pro features unlocked.',
                             style: GoogleFonts.roboto(
                                 fontSize: 14, color: Colors.white70),
                             textAlign: TextAlign.center,
@@ -97,15 +105,15 @@ class PremiumPage extends GetView<PremiumController> {
                 else
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(horizontal: _screenPaddingH),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 16),
+                          const SizedBox(height: _sectionSpacing),
                           _buildTitle(),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: _titleBottom),
                           _buildBenefits(),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: _benefitsBottom),
                           _PremiumPlansSection(
                             monthlyId: monthlyId,
                             yearlyId: yearlyId,
@@ -113,11 +121,11 @@ class PremiumPage extends GetView<PremiumController> {
                             yearlyPlan: yearlyPlan,
                             onBuy: controller.buy,
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: _sectionSpacing),
                           _buildRestoreLink(controller.restorePurchases),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: _footerTop),
                           _buildFooter(context),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: _footerBottom),
                         ],
                       ),
                     ),
@@ -132,7 +140,7 @@ class PremiumPage extends GetView<PremiumController> {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -168,11 +176,11 @@ class PremiumPage extends GetView<PremiumController> {
         end: Alignment.centerRight,
       ).createShader(bounds),
       child: Text(
-        'UNLOCK PREMIUM\nFILE TRANSFER',
+        'UNLOCK PRO\nFILE TRANSFER',
         style: GoogleFonts.roboto(
           fontSize: 26,
           fontWeight: FontWeight.bold,
-          height: 1.2,
+          height: 1.25,
           color: Colors.white,
         ),
       ),
@@ -181,21 +189,21 @@ class PremiumPage extends GetView<PremiumController> {
 
   Widget _buildBenefits() {
     const items = [
-      'UNLIMITED FILE TRANSFERS',
-      'NO ADS',
-      'REGULAR APP UPDATES',
-      'PRIORITY SUPPORT',
+      'Wi‑Fi Direct & Same Network – unlimited, fast transfer',
+      'No ads – ad-free experience',
+      'Data never stored on any server – device-to-device only',
+      'Regular updates & priority support',
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: items
           .map((e) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.only(bottom: 14),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.check_circle,
-                        color: _cyan, size: 22),
-                    const SizedBox(width: 12),
+                    const Icon(Icons.check_circle, color: _cyan, size: 22),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Text(
                         e,
@@ -203,6 +211,7 @@ class PremiumPage extends GetView<PremiumController> {
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
+                          height: 1.35,
                         ),
                       ),
                     ),
@@ -285,11 +294,10 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
     return Column(
       children: [
         _PlanCard(
-          title: 'PREMIUM YEARLY SUBSCRIPTION',
+          title: 'Premium Yearly Subscription',
           price: widget.yearlyPlan?.price ?? '—',
           priceSuffix: 'per year',
           isSelected: yearlySelected,
-          useGradient: true,
           onTap: () => setState(() => _selectedId = widget.yearlyId),
         ),
         const SizedBox(height: 14),
@@ -298,27 +306,33 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
           price: widget.monthlyPlan?.price ?? '—',
           priceSuffix: 'per month',
           isSelected: !yearlySelected,
-          useGradient: false,
           onTap: () => setState(() => _selectedId = widget.monthlyId),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 40),
         SizedBox(
           width: double.infinity,
-          height: 52,
+          height: 54,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               gradient: const LinearGradient(
                 colors: [PremiumPage._cyan, PremiumPage._purple],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: PremiumPage._cyan.withOpacity(0.25),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Material(
               color: Colors.transparent,
-              child: InkWell(
+                child: InkWell(
                 onTap: () => widget.onBuy(_selectedId),
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 child: Center(
                   child: Text(
                     'Start Free Trial',
@@ -343,7 +357,6 @@ class _PlanCard extends StatelessWidget {
   final String price;
   final String priceSuffix;
   final bool isSelected;
-  final bool useGradient;
   final VoidCallback onTap;
 
   const _PlanCard({
@@ -351,7 +364,6 @@ class _PlanCard extends StatelessWidget {
     required this.price,
     required this.priceSuffix,
     required this.isSelected,
-    required this.useGradient,
     required this.onTap,
   });
 
@@ -361,19 +373,40 @@ class _PlanCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: useGradient
+            borderRadius: BorderRadius.circular(16),
+            gradient: isSelected
                 ? const LinearGradient(
                     colors: [PremiumPage._cyan, PremiumPage._purple],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                   )
                 : null,
-            color: useGradient ? null : const Color(0xff1e1e28),
+            color: isSelected ? null : PremiumPage._cardUnselected,
+            border: Border.all(
+              color: isSelected
+                  ? PremiumPage._cyan.withOpacity(0.6)
+                  : Colors.white.withOpacity(0.08),
+              width: isSelected ? 1.5 : 1,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: PremiumPage._cyan.withOpacity(0.2),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                    BoxShadow(
+                      color: PremiumPage._purple.withOpacity(0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             children: [
@@ -385,30 +418,34 @@ class _PlanCard extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.roboto(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       '$price . $priceSuffix',
                       style: GoogleFonts.roboto(
                         fontSize: 13,
-                        color: Colors.white70,
+                        color: isSelected
+                            ? Colors.white.withOpacity(0.95)
+                            : Colors.white60,
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                width: 48,
+              const SizedBox(width: 12),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                width: 50,
                 height: 28,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: isSelected
-                      ? Colors.white.withOpacity(0.9)
-                      : Colors.white.withOpacity(0.2),
+                      ? Colors.white.withOpacity(0.95)
+                      : Colors.white.withOpacity(0.15),
                 ),
                 alignment: Alignment(
                   isSelected ? 1.0 : -1.0,
@@ -418,9 +455,16 @@ class _PlanCard extends StatelessWidget {
                   width: 24,
                   height: 24,
                   margin: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                 ),
               ),
