@@ -14,6 +14,7 @@ import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
 import 'package:share_app_latest/services/fcm_token_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
+import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -27,6 +28,10 @@ void main() async {
   await Firebase.initializeApp();
   await initializeFcmAndUploadToken();
   await SubscriptionIAPService().init();
+  await AdMobService.initialize();
+  AdMobService.instance.loadAppOpenAd();
+  AdMobService.instance.maybePreloadInterstitial();
+  AdMobService.instance.maybePreloadRewarded();
 
   // Restrict to portrait only
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -76,10 +81,18 @@ class _TransferLifecycleWrapper extends StatefulWidget {
 
 class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     with WidgetsBindingObserver {
+  bool _firstFrameDone = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_firstFrameDone && mounted) {
+        _firstFrameDone = true;
+        AdMobService.instance.showAppOpenIfAvailable();
+      }
+    });
   }
 
   @override
@@ -93,11 +106,13 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
-    _onResumed();
+    if (state == AppLifecycleState.resumed) {
+      _onResumed();
+    }
   }
 
   Future<void> _onResumed() async {
+    AdMobService.instance.showAppOpenIfAvailable(minInterval: const Duration(seconds: 45));
     if (!Get.isRegistered<TransferController>()) return;
     final transfer = Get.find<TransferController>();
     if (transfer.sessionState.value != TransferSessionState.transferring)

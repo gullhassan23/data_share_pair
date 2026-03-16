@@ -7,8 +7,8 @@ import 'package:share_app_latest/components/transfer_option_card.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/images_resource.dart';
-
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -176,6 +176,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              const AdBannerWidget(),
             ],
           ),
         ),

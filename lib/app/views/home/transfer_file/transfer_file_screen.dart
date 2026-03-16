@@ -22,6 +22,7 @@ import '../../../controllers/QR_controller.dart';
 import '../../../models/device_info.dart';
 import '../../../models/file_meta.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/services/admob_service.dart';
 
 class TransferFileScreen extends StatefulWidget {
   const TransferFileScreen({super.key});
@@ -148,7 +149,8 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                     child: const Text('Send another file'),
                   ),
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      await AdMobService.instance.showInterstitial();
                       Get.back();
                       if (Get.key.currentState?.canPop() ?? false) {
                         Get.back();
@@ -179,9 +181,10 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
           Get.find<QrController>().flowState.value =
               TransferFlowState.completed;
         }
-        Future.delayed(const Duration(seconds: 2), () {
+        Future.delayed(const Duration(seconds: 2), () async {
           if (mounted) {
-            AppNavigator.toHome();
+            await AdMobService.instance.showInterstitial();
+            if (mounted) AppNavigator.toHome();
           }
         });
       }

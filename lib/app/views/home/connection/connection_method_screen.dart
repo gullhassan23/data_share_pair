@@ -7,6 +7,7 @@ import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan
 import 'package:share_app_latest/app/views/home/bluetooth/reciever_bluetooth.dart';
 import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
@@ -46,7 +47,8 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
               Row(
                 children: [
                   IconButton(
-                    onPressed: () {
+                    onPressed: () async {
+                      await AdMobService.instance.showInterstitial();
                       Get.back();
                     },
                     icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
