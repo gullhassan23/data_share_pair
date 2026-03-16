@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
@@ -142,8 +143,8 @@ class PremiumPage extends GetView<PremiumController> {
                             onRestore: controller.restorePurchases,
                             isRestoring: controller.isRestoring.value,
                           ),
-                          const SizedBox(height: 12),
-                          _buildWatchAdLink(context),
+                          // const SizedBox(height: 12),
+                          // _buildWatchAdLink(context),
                           const SizedBox(height: _footerTop),
                           _buildFooter(context),
                           const SizedBox(height: _footerBottom),
@@ -313,20 +314,69 @@ class PremiumPage extends GetView<PremiumController> {
   }
 
   Widget _buildFooter(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final privacy = dotenv.env['PRIVACY_POLICY_URL'] ??
+        'https://maxgamesproduction.blogspot.com/2023/01/privacy-policy.html';
+    final terms = dotenv.env['TERMS_OF_USE_URL'] ??
+        'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+
+    Future<void> _open(String url) async {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(Icons.verified_user, size: 16, color: Colors.white38),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            'Secured with Apple. Privacy Policy and Terms of Use',
-            style: GoogleFonts.roboto(
-              fontSize: 11,
-              color: Colors.white38,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.verified_user, size: 16, color: Colors.white38),
+            const SizedBox(width: 6),
+            Text(
+              'Secured with Apple',
+              style: GoogleFonts.roboto(
+                fontSize: 11,
+                color: Colors.white38,
+              ),
             ),
-            textAlign: TextAlign.center,
-          ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            InkWell(
+              onTap: () => _open(privacy),
+              child: Text(
+                'Privacy Policy',
+                style: GoogleFonts.roboto(
+                  fontSize: 11,
+                  color: Colors.white70,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+            Text(
+              '  |  ',
+              style: GoogleFonts.roboto(
+                fontSize: 11,
+                color: Colors.white38,
+              ),
+            ),
+            InkWell(
+              onTap: () => _open(terms),
+              child: Text(
+                'Terms of Use',
+                style: GoogleFonts.roboto(
+                  fontSize: 11,
+                  color: Colors.white70,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

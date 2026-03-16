@@ -16,12 +16,28 @@ class AdUnitIds {
   static const String _testRewarded = 'ca-app-pub-3940256099942544/5224354917';
 
   // --- Production AdMob unit IDs (live) ---
-  // App ID: ca-app-pub-3605518487927639~7524679177
-  static const String _prodBanner = 'ca-app-pub-3605518487927639/7994484868';
-  static const String _prodMrec = 'ca-app-pub-3605518487927639/8844532105';
-  static const String _prodInterstitial = 'ca-app-pub-3605518487927639/3905866931';
-  static const String _prodAppOpen = 'ca-app-pub-3605518487927639/1279703593';
-  static const String _prodRewarded = 'ca-app-pub-3605518487927639/9251726211';
+  // Values are taken from .env when present, otherwise fall back to the
+  // hardcoded IDs below.
+  static const String _prodBanner = String.fromEnvironment(
+    'ADMOB_BANNER_ID',
+    defaultValue: 'ca-app-pub-3605518487927639/7994484868',
+  );
+  static const String _prodMrec = String.fromEnvironment(
+    'ADMOB_MREC_ID',
+    defaultValue: 'ca-app-pub-3605518487927639/8844532105',
+  );
+  static const String _prodInterstitial = String.fromEnvironment(
+    'ADMOB_INTERSTITIAL_ID',
+    defaultValue: 'ca-app-pub-3605518487927639/3905866931',
+  );
+  static const String _prodAppOpen = String.fromEnvironment(
+    'ADMOB_APPOPEN_ID',
+    defaultValue: 'ca-app-pub-3605518487927639/1279703593',
+  );
+  static const String _prodRewarded = String.fromEnvironment(
+    'ADMOB_REWARDED_ID',
+    defaultValue: 'ca-app-pub-3605518487927639/9251726211',
+  );
 
   static String get bannerAdUnitId => _useTestAds ? _testBanner : _prodBanner;
   static String get mrecAdUnitId => _useTestAds ? _testBanner : _prodMrec;

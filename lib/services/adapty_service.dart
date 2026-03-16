@@ -1,5 +1,6 @@
 import 'package:adapty_flutter/adapty_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 
 /// Adapty integration used for subscription analytics & validation.
@@ -16,9 +17,14 @@ class AdaptyService {
     if (_initialized) return;
 
     try {
+      final apiKey = dotenv.env['ADAPTY_PUBLIC_API_KEY'];
+      if (apiKey == null || apiKey.isEmpty) {
+        debugPrint('[Adapty] ADAPTY_PUBLIC_API_KEY missing in .env');
+        return;
+      }
       await Adapty().activate(
         configuration: AdaptyConfiguration(
-          apiKey: 'public_live_1Oo1w6PC.4zM4jXq2XK5wZVFEaoba',
+          apiKey: apiKey,
         )..withLogLevel(
             kReleaseMode ? AdaptyLogLevel.error : AdaptyLogLevel.verbose,
           ),
