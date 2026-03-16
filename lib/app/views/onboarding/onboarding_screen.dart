@@ -4,12 +4,18 @@ import 'package:share_app_latest/components/bg_curve_Ellipes.dart';
 import 'package:share_app_latest/components/on_boardingbutton.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/transfer_animation.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
+import 'package:share_app_latest/services/subscription_iap_service.dart';
+import 'package:share_app_latest/config/ad_unit_ids.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final bool showAds = AdUnitIds.kForceFreeUserForAdTesting
+        ? true
+        : !SubscriptionIAPService().isPremium;
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -141,12 +147,21 @@ class OnboardingScreen extends StatelessWidget {
                       Text(
                         "Easily transfer photos, videos, and files easily using WiFi Direct, Bluetooth, or QR Code.",
                         textAlign: TextAlign.center,
-                        // style: TextStyle(color: Colors.grey.shade600),
                         style: GoogleFonts.roboto(color: Color(0xff72777F)),
                       ),
                     ],
                   ),
                 ),
+
+                if (showAds)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 16, bottom: 24),
+                      child: AdLargeRectWidget(),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 24),
 
                 /// BUTTON
                 // Padding(
@@ -176,7 +191,6 @@ class OnboardingScreen extends StatelessWidget {
                 //     ),
                 //   ),
                 // ),
-                const SizedBox(height: 24),
               ],
             ),
           ),
