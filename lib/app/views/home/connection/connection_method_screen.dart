@@ -92,8 +92,10 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: [
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                       Text(
                         widget.isReceiver ? "Receive via" : "Send via",
                         style: GoogleFonts.roboto(
@@ -122,10 +124,10 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                       const SizedBox(height: 18),
                       Divider(color: Colors.grey.shade300),
                       const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          TransferOptionIconCard(
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            TransferOptionIconCard(
                             title: "Bluetooth",
                             icon: Icons.bluetooth_rounded,
                             onTap: () {
@@ -139,7 +141,7 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                               }
                             },
                           ),
-                          Obx(() {
+                            Obx(() {
                             final isPremium = premium.isPremium;
                             return TransferOptionIconCard(
                               title: "WiFi",
@@ -298,12 +300,13 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                     );
                                   },
                                 );
-                              },
-                            );
-                          }),
-                        ],
-                      ),
-                    ],
+                                },
+                              );
+                            }),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
