@@ -159,7 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      // const SizedBox(height: 16),
                       // _RemoveDuplicatesButton(),
                       // TransferOptionCard(
                       //   title: 'Remove Duplications',
@@ -178,19 +178,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       //     AppNavigator.toRemoveDuplicates();
                       //   },
                       // ),
+                     
                     ],
                   ),
                 ),
               ),
-              if (showAds)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: AdLargeRectWidget(),
-                  ),
-                )
-              else
-                const SizedBox(height: 24),
+
+               Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: AdLargeRectWidget(),
+                ),),
+              
             ],
           ),
         ),

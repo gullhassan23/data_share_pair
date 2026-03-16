@@ -8,6 +8,7 @@ import 'package:share_app_latest/app/views/home/bluetooth/reciever_bluetooth.dar
 import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/admob_service.dart';
+import 'package:share_app_latest/services/rewarded_access_store.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
@@ -144,18 +145,144 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                               title: "WiFi",
                               icon: Icons.wifi,
                               showLock: !isPremium,
-                              onTap: () {
-                                if (!isPremium) {
-                                  AppNavigator.toPremium();
+                              onTap: () async {
+                                if (isPremium) {
+                                  print(
+                                    '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
+                                  );
+                                  Get.to(
+                                    () => ChooseMethodScan(
+                                      isReciver: widget.isReceiver,
+                                    ),
+                                  );
                                   return;
                                 }
-                                print(
-                                  '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
-                                );
-                                Get.to(
-                                  () => ChooseMethodScan(
-                                    isReciver: widget.isReceiver,
+
+                                // Try to use a rewarded credit first.
+                                final usedCredit =
+                                    await RewardedAccessStore.consumeCreditIfAvailable();
+                                if (usedCredit) {
+                                  print(
+                                    '✅ WiFi Direct unlocked via rewarded credit (isReceiver: ${widget.isReceiver})',
+                                  );
+                                  Get.to(
+                                    () => ChooseMethodScan(
+                                      isReciver: widget.isReceiver,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // No credits: offer Premium or Watch Ad.
+                                if (!mounted) return;
+                                await showModalBottomSheet<void>(
+                                  context: context,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(20),
+                                    ),
                                   ),
+                                  builder: (ctx) {
+                                    return Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        20,
+                                        16,
+                                        20,
+                                        24,
+                                      ),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Unlock Wi‑Fi Direct',
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Watch a short ad to unlock one Wi‑Fi transfer, or go Premium for unlimited transfers with no limits.',
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 13,
+                                              color: Colors.grey.shade700,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: ElevatedButton(
+                                              onPressed: () async {
+                                                Navigator.of(ctx).pop();
+                                                final shown = await AdMobService
+                                                    .instance
+                                                    .showRewarded(
+                                                  onEarned: (_, __) async {
+                                                    await RewardedAccessStore
+                                                        .addCredit();
+                                                  },
+                                                );
+                                                if (!shown) return;
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Theme.of(context)
+                                                        .colorScheme
+                                                        .primary,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    12,
+                                                  ),
+                                                ),
+                                              ),
+                                              child: const Padding(
+                                                padding: EdgeInsets.symmetric(
+                                                  vertical: 4,
+                                                  horizontal: 4,
+                                                ),
+                                                child: Text(
+                                                  'Watch ad to unlock Wi‑Fi',
+                                                  textAlign: TextAlign.center,
+                                                  maxLines: 2,
+                                                  softWrap: true,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: OutlinedButton(
+                                              onPressed: () {
+                                                Navigator.of(ctx).pop();
+                                                AppNavigator.toPremium();
+                                              },
+                                              style: OutlinedButton.styleFrom(
+                                                shape:
+                                                    RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    12,
+                                                  ),
+                                                ),
+                                              ),
+                                              child: const Text(
+                                                'Go Premium (unlimited)',
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
                                 );
                               },
                             );

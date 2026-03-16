@@ -285,11 +285,13 @@ class PremiumPage extends GetView<PremiumController> {
       child: TextButton.icon(
         onPressed: () async {
           await AdMobService.instance.showRewarded(
-            onEarned: (_, __) {
+            onEarned: (_, __) async {
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Thanks for watching!'),
+                    content: Text(
+                      'Thanks for watching! Wi‑Fi transfer unlocked for 1 use.',
+                    ),
                     backgroundColor: _cyan,
                   ),
                 );
