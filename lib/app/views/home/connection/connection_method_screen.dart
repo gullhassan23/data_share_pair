@@ -216,12 +216,26 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                             child: ElevatedButton(
                                               onPressed: () async {
                                                 Navigator.of(ctx).pop();
-                                                final shown = await AdMobService
-                                                    .instance
-                                                    .showRewarded(
+                                                final shown =
+                                                    await AdMobService.instance
+                                                        .showRewarded(
                                                   onEarned: (_, __) async {
+                                                    // Add a credit and immediately
+                                                    // consume it to auto-navigate
+                                                    // to Wi‑Fi flow after ad.
                                                     await RewardedAccessStore
                                                         .addCredit();
+                                                    final used =
+                                                        await RewardedAccessStore
+                                                            .consumeCreditIfAvailable();
+                                                    if (used && mounted) {
+                                                      Get.to(
+                                                        () => ChooseMethodScan(
+                                                          isReciver:
+                                                              widget.isReceiver,
+                                                        ),
+                                                      );
+                                                    }
                                                   },
                                                 );
                                                 if (!shown) return;
