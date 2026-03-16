@@ -24,7 +24,7 @@ class _AdLargeRectWidgetState extends State<AdLargeRectWidget> {
         : SubscriptionIAPService().isPremium;
     if (!_isPremium) {
       _ad = BannerAd(
-        adUnitId: AdUnitIds.bannerAdUnitId,
+        adUnitId: AdUnitIds.mrecAdUnitId,
         size: AdSize.mediumRectangle,
         request: const AdRequest(),
         listener: BannerAdListener(

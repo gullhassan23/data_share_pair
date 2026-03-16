@@ -1188,6 +1188,26 @@ PODS:
     - abseil/meta/type_traits
     - abseil/xcprivacy
   - abseil/xcprivacy (1.20240722.0)
+  - Adapty (3.15.5):
+    - AdaptyLogger (= 3.15.5)
+    - AdaptyUIBuilder (= 3.15.5)
+  - adapty_flutter (3.15.4):
+    - Adapty (= 3.15.5)
+    - AdaptyPlugin (= 3.15.5)
+    - AdaptyUI (= 3.15.5)
+    - Flutter
+  - AdaptyLogger (3.15.5)
+  - AdaptyPlugin (3.15.5):
+    - Adapty (= 3.15.5)
+    - AdaptyLogger (= 3.15.5)
+    - AdaptyUI (= 3.15.5)
+    - AdaptyUIBuilder (= 3.15.5)
+  - AdaptyUI (3.15.5):
+    - Adapty (= 3.15.5)
+    - AdaptyLogger (= 3.15.5)
+    - AdaptyUIBuilder (= 3.15.5)
+  - AdaptyUIBuilder (3.15.5):
+    - AdaptyLogger (= 3.15.5)
   - ble_peripheral (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -1491,6 +1511,7 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - adapty_flutter (from `.symlinks/plugins/adapty_flutter/ios`)
   - ble_peripheral (from `.symlinks/plugins/ble_peripheral/darwin`)
   - cloud_firestore (from `.symlinks/plugins/cloud_firestore/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
@@ -1520,6 +1541,11 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - abseil
+    - Adapty
+    - AdaptyLogger
+    - AdaptyPlugin
+    - AdaptyUI
+    - AdaptyUIBuilder
     - BoringSSL-GRPC
     - DKImagePickerController
     - DKPhotoGallery
@@ -1547,6 +1573,8 @@ SPEC REPOS:
     - SwiftyGif
 
 EXTERNAL SOURCES:
+  adapty_flutter:
+    :path: ".symlinks/plugins/adapty_flutter/ios"
   ble_peripheral:
     :path: ".symlinks/plugins/ble_peripheral/darwin"
   cloud_firestore:
@@ -1600,6 +1628,12 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   abseil: a05cc83bf02079535e17169a73c5be5ba47f714b
+  Adapty: 42165456274ea1eb69e644e2da824e81227bb996
+  adapty_flutter: cb49712308f3bbbac3315b1ed8b87dfd9fdca2ee
+  AdaptyLogger: fbb6764f63c171c0d2209f197c9771617b09e388
+  AdaptyPlugin: 9071e4a8daa7d4fe1b1fd9b449aabc6a6690ddd6
+  AdaptyUI: 4a5df7479944c353d3378266e32d1f3d29786dac
+  AdaptyUIBuilder: 9d04ca7516dbcf616eb5bf391a0d5b9cc2062c26
   ble_peripheral: 1d6cb378caaef61cd39410652a4de1a68dfba4f2
   BoringSSL-GRPC: dded2a44897e45f28f08ae87a55ee4bcd19bc508
   cloud_firestore: d5c7f731e71034665afe74e3a1d0ff334f9b7799

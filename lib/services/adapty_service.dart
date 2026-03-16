@@ -23,12 +23,25 @@ class AdaptyService {
             kReleaseMode ? AdaptyLogLevel.error : AdaptyLogLevel.verbose,
           ),
       );
-      _initialized = true;
       debugPrint('[Adapty] SDK activated');
+    } on AdaptyError catch (e, st) {
+      // 3005 = "can only be activated once" – safe to ignore as success.
+      if (e.code == 3005) {
+        debugPrint(
+          '[Adapty] activate called more than once, treating as already initialized.\n$st',
+        );
+      } else {
+        debugPrint(
+          '[Adapty] activate AdaptyError code=${e.code} message=${e.message}\n$st',
+        );
+        return;
+      }
     } catch (e, st) {
-      debugPrint('[Adapty] activate error: $e\n$st');
+      debugPrint('[Adapty] activate unexpected error: $e\n$st');
       return;
     }
+
+    _initialized = true;
 
     // Identify user with the same device-based id used for backend.
     try {
