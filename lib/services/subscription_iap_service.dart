@@ -58,7 +58,18 @@ class SubscriptionIAPService {
   bool get isAvailable => _isAvailable;
 
   bool _isPremium = false;
-  bool get isPremium => _isPremium;
+
+  /// Cached premium flag from remote (Firestore / SharedPreferences).
+  /// This lets us respect Pro status even before a purchase event occurs
+  /// in the current session.
+  bool _cachedPremium = false;
+
+  bool get isPremium => _isPremium || _cachedPremium;
+
+  /// Called from PremiumController / startup to sync remote premium status.
+  void setCachedPremium(bool value) {
+    _cachedPremium = value;
+  }
 
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
 

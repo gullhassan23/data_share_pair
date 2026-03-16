@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
+import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 
 class SubscriptionStatus {
@@ -63,6 +64,13 @@ class PremiumController extends GetxController {
           expiryDate: (data['expiryDate'] as Timestamp?)?.toDate(),
         );
       }
+
+      // Persist and sync premium status for use by ad logic.
+      final current = subscriptionStatus.value;
+      final isPro = current?.isPremium == true;
+      SubscriptionIAPService().setCachedPremium(isPro);
+      // Fire-and-forget; ads can read this synchronously on next launch.
+      PremiumStatusStore.saveIsPremium(isPro);
       isLoading.value = false;
     });
   }

@@ -5,16 +5,18 @@ import 'package:get/get.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:share_app_latest/app/controllers/QR_controller.dart';
 import 'package:share_app_latest/app/controllers/hotspot_controller.dart';
-import 'package:share_app_latest/routes/app_pages.dart';
-import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
+import 'package:share_app_latest/routes/app_pages.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
 import 'package:share_app_latest/services/fcm_token_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/services/admob_service.dart';
+import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -27,6 +29,13 @@ void main() async {
 
   await Firebase.initializeApp();
   await initializeFcmAndUploadToken();
+
+  // Load cached premium status (if any) so ads respect Pro immediately.
+  final cachedPremium = await PremiumStatusStore.loadIsPremium();
+  if (cachedPremium != null) {
+    SubscriptionIAPService().setCachedPremium(cachedPremium);
+  }
+
   await SubscriptionIAPService().init();
   await AdMobService.initialize();
   AdMobService.instance.loadAppOpenAd();
@@ -45,6 +54,10 @@ void main() async {
   Get.put(BluetoothController(), permanent: true);
 
   Get.put(QrController(), permanent: true);
+
+  // Start listening to Firestore subscription status as soon as app launches,
+  // so premium cache stays in sync with backend on every open/renewal.
+  Get.put(PremiumController(), permanent: true);
 
   Get.put(HotspotController(), permanent: true);
   runApp(const MyApp());
