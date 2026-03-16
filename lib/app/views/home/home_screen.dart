@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
-
 import 'package:share_app_latest/components/transfer_option_card.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/services/subscription_iap_service.dart';
+import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/images_resource.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
-import 'package:share_app_latest/widgets/ad_banner_widget.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,6 +33,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool showAds = AdUnitIds.kForceFreeUserForAdTesting
+        ? true
+        : !SubscriptionIAPService().isPremium;
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -95,88 +99,98 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(height: 40),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      "Start Transfer",
-                      style: GoogleFonts.roboto(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 25,
+                        offset: const Offset(0, 10),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Choose an option to start transferring between devices.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        color: Colors.grey.shade700,
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Start Transfer",
+                        style: GoogleFonts.roboto(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 18),
-                    Divider(color: Colors.grey.shade300),
-
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        TransferOptionCard(
-                          title: "Send Files",
-                          image: ImageRes.sendFiles,
-                          onTap:
-                              () => AppNavigator.toConnectionMethod(
-                                isReceiver: false,
-                              ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Choose an option to start transferring between devices.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
                         ),
+                      ),
 
-                        TransferOptionCard(
-                          title: 'Receive Files',
-                          image: ImageRes.recieveFiles,
-                          onTap:
-                              () => AppNavigator.toConnectionMethod(
-                                isReceiver: true,
-                              ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // _RemoveDuplicatesButton(),
-                    // TransferOptionCard(
-                    //   title: 'Remove Duplications',
-                    //   image: ImageRes.delete,
-                    //   onTap: () async {
-                    //     final granted = await requestMediaPermissions();
-                    //     if (!granted) {
-                    //       Get.snackbar(
-                    //         'Permission needed',
-                    //         'Gallery access is required to find duplicate photos and videos.',
-                    //         backgroundColor: Colors.orange.withOpacity(0.8),
-                    //         colorText: Colors.white,
-                    //       );
-                    //       return;
-                    //     }
-                    //     AppNavigator.toRemoveDuplicates();
-                    //   },
-                    // ),
-                  ],
+                      const SizedBox(height: 18),
+                      Divider(color: Colors.grey.shade300),
+
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          TransferOptionCard(
+                            title: "Send Files",
+                            image: ImageRes.sendFiles,
+                            onTap:
+                                () => AppNavigator.toConnectionMethod(
+                                  isReceiver: false,
+                                ),
+                          ),
+
+                          TransferOptionCard(
+                            title: 'Receive Files',
+                            image: ImageRes.recieveFiles,
+                            onTap:
+                                () => AppNavigator.toConnectionMethod(
+                                  isReceiver: true,
+                                  ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // _RemoveDuplicatesButton(),
+                      // TransferOptionCard(
+                      //   title: 'Remove Duplications',
+                      //   image: ImageRes.delete,
+                      //   onTap: () async {
+                      //     final granted = await requestMediaPermissions();
+                      //     if (!granted) {
+                      //       Get.snackbar(
+                      //         'Permission needed',
+                      //         'Gallery access is required to find duplicate photos and videos.',
+                      //         backgroundColor: Colors.orange.withOpacity(0.8),
+                      //         colorText: Colors.white,
+                      //       );
+                      //       return;
+                      //     }
+                      //     AppNavigator.toRemoveDuplicates();
+                      //   },
+                      // ),
+                    ],
+                  ),
                 ),
               ),
-              const AdBannerWidget(),
+              if (showAds)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: AdLargeRectWidget(),
+                  ),
+                )
+              else
+                const SizedBox(height: 24),
             ],
           ),
         ),

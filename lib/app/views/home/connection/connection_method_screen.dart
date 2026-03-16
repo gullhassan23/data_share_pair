@@ -10,6 +10,7 @@ import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 class ConnectionMethodScreen extends StatefulWidget {
   const ConnectionMethodScreen({super.key, required this.isReceiver});
@@ -75,109 +76,100 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
               ),
               const SizedBox(height: 40),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      widget.isReceiver ? "Receive via" : "Send via",
-                      style: GoogleFonts.roboto(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 25,
+                        offset: const Offset(0, 10),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Choose QR code, Bluetooth, or WiFi Direct.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "For WiFi: ensure both devices are on the same network. If receiving, open the WiFi screen first and wait.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.roboto(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Divider(color: Colors.grey.shade300),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        // TransferOptionIconCard(
-                        //   title: "QR",
-                        //   icon: Icons.qr_code_scanner,
-                        //   onTap: () {
-                        //     print(
-                        //       '✅ Connection method chosen: QR (isReceiver: ${widget.isReceiver})',
-                        //     );
-                        //     AppNavigator.toConnectionMethod(
-                        //       isReceiver: widget.isReceiver,
-                        //     );
-                        //     // if (widget.isReceiver) {
-                        //     //   AppNavigator.toQrReceiver();
-                        //     // } else {
-                        //     //   AppNavigator.toQrSender(<String>[]);
-                        //     // }
-                        //   },
-                        // ),
-                        TransferOptionIconCard(
-                          title: "Bluetooth",
-                          icon: Icons.bluetooth_rounded,
-                          onTap: () {
-                            print(
-                              '✅ Connection method chosen: Bluetooth (isReceiver: ${widget.isReceiver})',
-                            );
-                            if (widget.isReceiver) {
-                              Get.to(() => const BluetoothReceiverScreen());
-                            } else {
-                              Get.to(() => const BluetoothSenderScreen());
-                            }
-                          },
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        widget.isReceiver ? "Receive via" : "Send via",
+                        style: GoogleFonts.roboto(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Obx(() {
-                          final isPremium = premium.isPremium;
-                          return TransferOptionIconCard(
-                            title: "WiFi",
-                            icon: Icons.wifi,
-                            showLock: !isPremium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Choose QR code, Bluetooth, or WiFi Direct.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "For WiFi: ensure both devices are on the same network. If receiving, open the WiFi screen first and wait.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.roboto(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Divider(color: Colors.grey.shade300),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          TransferOptionIconCard(
+                            title: "Bluetooth",
+                            icon: Icons.bluetooth_rounded,
                             onTap: () {
-                              if (!isPremium) {
-                                AppNavigator.toPremium();
-                                return;
-                              }
                               print(
-                                '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
+                                '✅ Connection method chosen: Bluetooth (isReceiver: ${widget.isReceiver})',
                               );
-                              Get.to(
-                                () => ChooseMethodScan(
-                                  isReciver: widget.isReceiver,
-                                ),
-                              );
+                              if (widget.isReceiver) {
+                                Get.to(() => const BluetoothReceiverScreen());
+                              } else {
+                                Get.to(() => const BluetoothSenderScreen());
+                              }
                             },
-                          );
-                        }),
-                      ],
-                    ),
-                  ],
+                          ),
+                          Obx(() {
+                            final isPremium = premium.isPremium;
+                            return TransferOptionIconCard(
+                              title: "WiFi",
+                              icon: Icons.wifi,
+                              showLock: !isPremium,
+                              onTap: () {
+                                if (!isPremium) {
+                                  AppNavigator.toPremium();
+                                  return;
+                                }
+                                print(
+                                  '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
+                                );
+                                Get.to(
+                                  () => ChooseMethodScan(
+                                    isReciver: widget.isReceiver,
+                                  ),
+                                );
+                              },
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: AdLargeRectWidget(),
                 ),
               ),
             ],
