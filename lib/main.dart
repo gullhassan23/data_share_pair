@@ -17,6 +17,7 @@ import 'package:share_app_latest/services/fcm_token_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
+import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -37,6 +38,7 @@ void main() async {
   }
 
   await SubscriptionIAPService().init();
+  await AdaptyService.instance.init();
   await AdMobService.initialize();
   AdMobService.instance.loadAppOpenAd();
   AdMobService.instance.maybePreloadInterstitial();

@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/utils/user_id.dart';
+import 'package:share_app_latest/services/adapty_service.dart';
 
 Set<String> get kPremiumProductIds {
   final monthly = dotenv.env['IAP_PRODUCT_MONTHLY'];
@@ -190,6 +191,8 @@ class SubscriptionIAPService {
           if (isValid) {
             _isPremium = true;
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: success — premium granted');
+            // Sync Adapty analytics/profile after successful purchase.
+            unawaited(AdaptyService.instance.syncAfterPurchaseOrRestore());
             // Real-time UI update: refresh Firestore status so premium page updates immediately.
             if (Get.isRegistered<PremiumController>()) {
               await Get.find<PremiumController>().refreshSubscriptionStatus();
@@ -210,6 +213,8 @@ class SubscriptionIAPService {
           if (isValid) {
             _isPremium = true;
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted');
+            // Sync Adapty analytics/profile after successful restore.
+            unawaited(AdaptyService.instance.syncAfterPurchaseOrRestore());
             // Real-time UI update: refresh Firestore status so premium page updates immediately (like buy flow).
             if (Get.isRegistered<PremiumController>()) {
               await Get.find<PremiumController>().refreshSubscriptionStatus();
