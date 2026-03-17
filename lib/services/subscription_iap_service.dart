@@ -58,18 +58,23 @@ class SubscriptionIAPService {
   bool _isAvailable = false;
   bool get isAvailable => _isAvailable;
 
-  bool _isPremium = false;
-
   /// Cached premium flag from remote (Firestore / SharedPreferences).
   /// This lets us respect Pro status even before a purchase event occurs
   /// in the current session.
   bool _cachedPremium = false;
 
-  bool get isPremium => _isPremium || _cachedPremium;
+  /// Reactive premium flag so non-GetX widgets can rebuild in real time.
+  final ValueNotifier<bool> premiumListenable = ValueNotifier<bool>(false);
+
+  /// Source of truth is the cached/remote premium flag.
+  /// This ensures if Firestore flips to false, ads/features re-enable immediately.
+  bool get isPremium => _cachedPremium;
 
   /// Called from PremiumController / startup to sync remote premium status.
   void setCachedPremium(bool value) {
+    if (_cachedPremium == value) return;
     _cachedPremium = value;
+    premiumListenable.value = value;
   }
 
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
@@ -189,7 +194,7 @@ class SubscriptionIAPService {
           final isValid = await _verifyPurchaseWithBackend(purchaseDetails);
           debugPrint('[SubscriptionIAP] _onPurchaseUpdated: verification result isValid=$isValid');
           if (isValid) {
-            _isPremium = true;
+            setCachedPremium(true);
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: success — premium granted');
             // Immediate UI update (do not wait for Firestore roundtrip).
             if (Get.isRegistered<PremiumController>()) {
@@ -220,7 +225,7 @@ class SubscriptionIAPService {
           final isValid = await _verifyPurchaseWithBackend(purchaseDetails, isRestore: true);
           debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore verification isValid=$isValid');
           if (isValid) {
-            _isPremium = true;
+            setCachedPremium(true);
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted');
             // Immediate UI update (do not wait for Firestore roundtrip).
             if (Get.isRegistered<PremiumController>()) {
@@ -338,5 +343,6 @@ class SubscriptionIAPService {
   void dispose() {
     _subscription?.cancel();
     isLoading.dispose();
+    premiumListenable.dispose();
   }
 }

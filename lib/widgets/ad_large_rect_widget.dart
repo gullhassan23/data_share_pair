@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
-import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Larger display ad (medium rectangle 300x250) for big empty areas, e.g. home screen.
 /// Hidden for premium users; uses the same banner ad unit ID.
@@ -30,11 +29,10 @@ class _AdLargeRectWidgetState extends State<AdLargeRectWidget> {
 
   bool _isPremiumNow() {
     if (AdUnitIds.kForceFreeUserForAdTesting) return false;
-    final fromIap = SubscriptionIAPService().isPremium;
     final fromController = Get.isRegistered<PremiumController>()
         ? Get.find<PremiumController>().isPremium
         : false;
-    return fromIap || fromController;
+    return fromController;
   }
 
   void _ensureAdLoaded() {

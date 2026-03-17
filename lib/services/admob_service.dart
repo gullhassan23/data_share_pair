@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Central AdMob lifecycle: App Open, Banner, Interstitial, Rewarded.
@@ -18,6 +20,9 @@ class AdMobService {
 
   bool _getIsPremium() {
     if (AdUnitIds.kForceFreeUserForAdTesting) return false;
+    if (Get.isRegistered<PremiumController>()) {
+      return Get.find<PremiumController>().isPremium;
+    }
     return SubscriptionIAPService().isPremium;
   }
 

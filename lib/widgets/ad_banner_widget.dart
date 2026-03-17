@@ -4,7 +4,6 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/services/admob_service.dart';
-import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Banner ad at bottom of main screens. Hidden for premium users (widget kept to avoid
 /// platform view recreate issues on iOS). Uses stable key for platform view.
@@ -31,11 +30,10 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
 
   bool _isPremiumNow() {
     if (AdUnitIds.kForceFreeUserForAdTesting) return false;
-    final fromIap = SubscriptionIAPService().isPremium;
     final fromController = Get.isRegistered<PremiumController>()
         ? Get.find<PremiumController>().isPremium
         : false;
-    return fromIap || fromController;
+    return fromController;
   }
 
   @override
