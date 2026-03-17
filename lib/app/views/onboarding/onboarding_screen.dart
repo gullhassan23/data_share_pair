@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/components/bg_curve_Ellipes.dart';
 import 'package:share_app_latest/components/on_boardingbutton.dart';
+import 'package:get/get.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/transfer_animation.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
@@ -13,9 +15,7 @@ class OnboardingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool showAds = AdUnitIds.kForceFreeUserForAdTesting
-        ? true
-        : !SubscriptionIAPService().isPremium;
+    final premium = Get.find<PremiumController>();
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -33,8 +33,12 @@ class OnboardingScreen extends StatelessWidget {
 
           /// CONTENT
           SafeArea(
-            child: Column(
-              children: [
+            child: Obx(() {
+              final showAds = AdUnitIds.kForceFreeUserForAdTesting
+                  ? true
+                  : !(premium.isPremium || SubscriptionIAPService().isPremium);
+              return Column(
+                children: [
                 /// TOP BAR
                 // Padding(
                 //   padding: const EdgeInsets.symmetric(
@@ -153,15 +157,15 @@ class OnboardingScreen extends StatelessWidget {
                   ),
                 ),
 
-                if (showAds)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16, bottom: 24),
-                      child: AdLargeRectWidget(),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 24),
+                  if (showAds)
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 16, bottom: 24),
+                        child: AdLargeRectWidget(),
+                      ),
+                    )
+                  else
+                    const SizedBox(height: 24),
 
                 /// BUTTON
                 // Padding(
@@ -191,8 +195,9 @@ class OnboardingScreen extends StatelessWidget {
                 //     ),
                 //   ),
                 // ),
-              ],
-            ),
+                ],
+              );
+            }),
           ),
         ],
       ),

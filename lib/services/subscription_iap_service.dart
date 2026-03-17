@@ -191,6 +191,15 @@ class SubscriptionIAPService {
           if (isValid) {
             _isPremium = true;
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: success — premium granted');
+            // Immediate UI update (do not wait for Firestore roundtrip).
+            if (Get.isRegistered<PremiumController>()) {
+              final c = Get.find<PremiumController>();
+              c.subscriptionStatus.value = SubscriptionStatus(
+                isPremium: true,
+                productId: purchaseDetails.productID,
+                expiryDate: c.subscriptionStatus.value?.expiryDate,
+              );
+            }
             // Sync Adapty analytics/profile after successful purchase.
             unawaited(AdaptyService.instance.syncAfterPurchaseOrRestore());
             // Real-time UI update: refresh Firestore status so premium page updates immediately.
@@ -213,6 +222,15 @@ class SubscriptionIAPService {
           if (isValid) {
             _isPremium = true;
             debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted');
+            // Immediate UI update (do not wait for Firestore roundtrip).
+            if (Get.isRegistered<PremiumController>()) {
+              final c = Get.find<PremiumController>();
+              c.subscriptionStatus.value = SubscriptionStatus(
+                isPremium: true,
+                productId: purchaseDetails.productID,
+                expiryDate: c.subscriptionStatus.value?.expiryDate,
+              );
+            }
             // Sync Adapty analytics/profile after successful restore.
             unawaited(AdaptyService.instance.syncAfterPurchaseOrRestore());
             // Real-time UI update: refresh Firestore status so premium page updates immediately (like buy flow).

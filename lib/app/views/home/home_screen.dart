@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/components/transfer_option_card.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
@@ -33,9 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showAds = AdUnitIds.kForceFreeUserForAdTesting
-        ? true
-        : !SubscriptionIAPService().isPremium;
+    final premium = Get.find<PremiumController>();
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -48,8 +47,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
+          child: Obx(() {
+            final showAds = AdUnitIds.kForceFreeUserForAdTesting
+                ? true
+                : !(premium.isPremium || SubscriptionIAPService().isPremium);
+            return Column(
+              children: [
               const SizedBox(height: 19),
 
               /// Back Row
@@ -184,14 +187,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: AdLargeRectWidget(),
-                ),),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: AdLargeRectWidget(),
+                  ),
+                )
               
-            ],
-          ),
+              ],
+            );
+          }),
         ),
       ),
     );

@@ -31,131 +31,148 @@ class PremiumPage extends GetView<PremiumController> {
 
   @override
   Widget build(BuildContext context) {
+    // Obx for GetX reactive state + ValueListenableBuilder for IAP loading state.
     return Obx(() {
       final iapService = controller.iapService;
-      final isPremium = controller.isPremium;
-      final isLoading = iapService.isLoading.value;
+      final isPremium = controller.isPremium || iapService.isPremium;
 
-      final monthlyId =
-          dotenv.env['IAP_PRODUCT_MONTHLY'] ?? 'com.share.transfer.file.all.data.app.premium.monthly';
-      final yearlyId =
-          dotenv.env['IAP_PRODUCT_YEARLY'] ?? 'com.share.transfer.file.all.data.app.premium.yearly';
+      final monthlyId = dotenv.env['IAP_PRODUCT_MONTHLY'] ??
+          'com.share.transfer.file.all.data.app.premium.monthly';
+      final yearlyId = dotenv.env['IAP_PRODUCT_YEARLY'] ??
+          'com.share.transfer.file.all.data.app.premium.yearly';
       final monthlyPlan = iapService.planForId(monthlyId);
       final yearlyPlan = iapService.planForId(yearlyId);
 
-      return Scaffold(
-        backgroundColor: _bgDark,
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(color: _bgDark),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(
-                  context,
-                  showCloseInHeader: !iapService.isAvailable || isLoading || isPremium,
-                ),
-                if (!iapService.isAvailable) ...[
-                  if (isLoading)
-                    const Expanded(
-                        child: Center(
-                            child: CircularProgressIndicator(color: _cyan)))
-                  else
-                    const Expanded(
-                      child: Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24.0),
-                          child: Text(
-                            'In-App Purchases are not available on this device.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                        ),
-                      ),
+      return ValueListenableBuilder<bool>(
+        valueListenable: iapService.isLoading,
+        builder: (context, isLoading, _) {
+          final disableActions = isLoading || controller.isRestoring.value;
+
+          return Scaffold(
+            backgroundColor: _bgDark,
+            body: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: const BoxDecoration(color: _bgDark),
+              child: SafeArea(
+                child: Column(
+                  children: [
+                    _buildHeader(
+                      context,
+                      showCloseInHeader:
+                          !iapService.isAvailable || isLoading || isPremium,
                     ),
-                ] else if (isLoading)
-                  const Expanded(
-                    child: Center(
-                        child: CircularProgressIndicator(color: _cyan)),
-                  )
-                else if (isPremium)
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.workspace_premium,
-                              color: _cyan, size: 72),
-                          const SizedBox(height: 16),
-                          Text(
-                            'You are Premium!',
-                            style: GoogleFonts.roboto(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                    if (!iapService.isAvailable) ...[
+                      if (isLoading)
+                        const Expanded(
+                          child: Center(
+                            child: CircularProgressIndicator(color: _cyan),
+                          ),
+                        )
+                      else
+                        const Expanded(
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: Text(
+                                'In-App Purchases are not available on this device.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.white70),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Wi‑Fi transfer, no ads & all Pro features unlocked.',
-                            style: GoogleFonts.roboto(
-                                fontSize: 14, color: Colors.white70),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: _screenPaddingH),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: _sectionSpacing),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                        ),
+                    ] else if (isLoading)
+                      const Expanded(
+                        child: Center(
+                          child: CircularProgressIndicator(color: _cyan),
+                        ),
+                      )
+                    else if (isPremium)
+                      Expanded(
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
-                                onPressed: () async {
-                                  await AdMobService.instance.showInterstitial();
-                                  AppNavigator.back();
-                                },
-                                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                              const Icon(Icons.workspace_premium,
+                                  color: _cyan, size: 72),
+                              const SizedBox(height: 16),
+                              Text(
+                                'You are Premium!',
+                                style: GoogleFonts.roboto(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Wi‑Fi transfer, no ads & all Pro features unlocked.',
+                                style: GoogleFonts.roboto(
+                                    fontSize: 14, color: Colors.white70),
+                                textAlign: TextAlign.center,
                               ),
                             ],
                           ),
-                          _buildTitle(),
-                          const SizedBox(height: _titleBottom),
-                          _buildBenefits(),
-                          const SizedBox(height: _benefitsBottom),
-                          _PremiumPlansSection(
-                            monthlyId: monthlyId,
-                            yearlyId: yearlyId,
-                            monthlyPlan: monthlyPlan,
-                            yearlyPlan: yearlyPlan,
-                            onBuy: controller.buy,
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: _screenPaddingH),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: _sectionSpacing),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    onPressed: disableActions
+                                        ? null
+                                        : () async {
+                                            await AdMobService.instance
+                                                .showInterstitial();
+                                            AppNavigator.back();
+                                          },
+                                    icon: const Icon(Icons.close,
+                                        color: Colors.white, size: 28),
+                                  ),
+                                ],
+                              ),
+                              _buildTitle(),
+                              const SizedBox(height: _titleBottom),
+                              _buildBenefits(),
+                              const SizedBox(height: _benefitsBottom),
+                              _PremiumPlansSection(
+                                monthlyId: monthlyId,
+                                yearlyId: yearlyId,
+                                monthlyPlan: monthlyPlan,
+                                yearlyPlan: yearlyPlan,
+                                isDisabled: disableActions,
+                                onBuy: controller.buy,
+                              ),
+                              const SizedBox(height: _sectionSpacing),
+                              _buildRestoreLink(
+                                onRestore: disableActions
+                                    ? () {}
+                                    : controller.restorePurchases,
+                                isRestoring: controller.isRestoring.value,
+                              ),
+                              const SizedBox(height: _footerTop),
+                              _buildFooter(context),
+                              const SizedBox(height: _footerBottom),
+                            ],
                           ),
-                          const SizedBox(height: _sectionSpacing),
-                          _buildRestoreLink(
-                            onRestore: controller.restorePurchases,
-                            isRestoring: controller.isRestoring.value,
-                          ),
-                          // const SizedBox(height: 12),
-                          // _buildWatchAdLink(context),
-                          const SizedBox(height: _footerTop),
-                          _buildFooter(context),
-                          const SizedBox(height: _footerBottom),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-              ],
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     });
   }
@@ -388,6 +405,7 @@ class _PremiumPlansSection extends StatefulWidget {
   final String yearlyId;
   final PremiumPlan? monthlyPlan;
   final PremiumPlan? yearlyPlan;
+  final bool isDisabled;
   final void Function(String) onBuy;
 
   const _PremiumPlansSection({
@@ -395,6 +413,7 @@ class _PremiumPlansSection extends StatefulWidget {
     required this.yearlyId,
     this.monthlyPlan,
     this.yearlyPlan,
+    required this.isDisabled,
     required this.onBuy,
   });
 
@@ -454,12 +473,12 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
             ),
             child: Material(
               color: Colors.transparent,
-                child: InkWell(
-                onTap: () => widget.onBuy(_selectedId),
+              child: InkWell(
+                onTap: widget.isDisabled ? null : () => widget.onBuy(_selectedId),
                 borderRadius: BorderRadius.circular(16),
                 child: Center(
                   child: Text(
-                    'Subscribe',
+                    widget.isDisabled ? 'Please wait…' : 'Subscribe',
                     style: GoogleFonts.roboto(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
