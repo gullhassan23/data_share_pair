@@ -3,6 +3,12 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 
+/// Background handler (must be a top-level function).
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  debugPrint('[FCM][BG] messageId=${message.messageId} data=${message.data}');
+}
+
 /// Retries getToken() so APNS can become ready on iOS (e.g. after permission).
 Future<String?> _getFcmTokenWithRetry({int maxAttempts = 5, Duration delay = const Duration(seconds: 2)}) async {
   for (var attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -37,6 +43,32 @@ Future<void> updateFcmTokenInFirestore() async {
 
 Future<void> initializeFcmAndUploadToken() async {
   try {
+    // Ensure FCM auto-init is enabled.
+    await FirebaseMessaging.instance.setAutoInitEnabled(true);
+
+    // iOS: allow notification display while app is in foreground.
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    // Register background handler early.
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    // Log all incoming messages (foreground).
+    FirebaseMessaging.onMessage.listen((message) {
+      debugPrint(
+        '[FCM][FG] messageId=${message.messageId} '
+        'title=${message.notification?.title} body=${message.notification?.body} data=${message.data}',
+      );
+    });
+
+    // App opened from notification tap.
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      debugPrint('[FCM][OPEN] messageId=${message.messageId} data=${message.data}');
+    });
+
     final settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
       badge: true,
@@ -47,6 +79,21 @@ Future<void> initializeFcmAndUploadToken() async {
       return;
     }
     await updateFcmTokenInFirestore();
+
+    // Keep Firestore token in sync if it rotates.
+    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+      try {
+        if (newToken.isEmpty) return;
+        final userId = await getOrCreateUserId();
+        await FirebaseFirestore.instance.collection('Users').doc(userId).set(
+          {'fcmToken': newToken},
+          SetOptions(merge: true),
+        );
+        debugPrint('[FCM] Token refreshed and saved for user $userId');
+      } catch (e) {
+        debugPrint('[FCM] Failed to persist refreshed token: $e');
+      }
+    });
   } catch (e) {
     debugPrint('[FCM] initializeFcmAndUploadToken error: $e');
   }
