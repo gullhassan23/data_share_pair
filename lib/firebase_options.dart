@@ -50,19 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyChy769gCHDJkqU0V38xZswEAb-eQmvNsc',
-    appId: '1:873172781379:android:480cfaafca346ef7a6c7f6',
-    messagingSenderId: '873172781379',
-    projectId: 'relvr-stress-relief-relax-ios',
-    storageBucket: 'relvr-stress-relief-relax-ios.firebasestorage.app',
+    apiKey: 'AIzaSyBiAmAdX65rI3SrQzYjGBwoHDU_yC0yo-w',
+    appId: '1:117933738509:android:bffed7ce936266aaa0e344',
+    messagingSenderId: '117933738509',
+    projectId: 'file-transfer-app-f57ab',
+    storageBucket: 'file-transfer-app-f57ab.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBAk5dv6JU5KYrvlLNUjCMcipUB6dtcfAI',
-    appId: '1:873172781379:ios:3ae507550311d1c3a6c7f6',
-    messagingSenderId: '873172781379',
-    projectId: 'relvr-stress-relief-relax-ios',
-    storageBucket: 'relvr-stress-relief-relax-ios.firebasestorage.app',
+    apiKey: 'AIzaSyDglMEEsxcNnwyk_wNoKZfaSUzS988oogk',
+    appId: '1:117933738509:ios:884860e4e7b950dba0e344',
+    messagingSenderId: '117933738509',
+    projectId: 'file-transfer-app-f57ab',
+    storageBucket: 'file-transfer-app-f57ab.firebasestorage.app',
     iosBundleId: 'com.share.transfer.file.all.data.app',
   );
 

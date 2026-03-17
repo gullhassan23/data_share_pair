@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "873172781379",
-    "project_id": "relvr-stress-relief-relax-ios",
-    "storage_bucket": "relvr-stress-relief-relax-ios.firebasestorage.app"
+    "project_number": "117933738509",
+    "project_id": "file-transfer-app-f57ab",
+    "storage_bucket": "file-transfer-app-f57ab.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:873172781379:android:126d76e1bcd4e225a6c7f6",
-        "android_client_info": {
-          "package_name": "com.relvr.stress.relief.asmr.app"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyChy769gCHDJkqU0V38xZswEAb-eQmvNsc"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:873172781379:android:480cfaafca346ef7a6c7f6",
+        "mobilesdk_app_id": "1:117933738509:android:bffed7ce936266aaa0e344",
         "android_client_info": {
           "package_name": "com.share.transfer.file.all.data.app"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyChy769gCHDJkqU0V38xZswEAb-eQmvNsc"
+          "current_key": "AIzaSyBiAmAdX65rI3SrQzYjGBwoHDU_yC0yo-w"
         }
       ],
       "services": {
