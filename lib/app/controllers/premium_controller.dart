@@ -50,7 +50,7 @@ class PremiumController extends GetxController {
   void _listenToFirestore(String uid) {
     _firestoreSub?.cancel();
     _firestoreSub = FirebaseFirestore.instance
-        .collection('UsersFileTransfer')
+        .collection('Users')
         .doc(uid)
         .snapshots()
         .listen((doc) {
@@ -85,7 +85,7 @@ class PremiumController extends GetxController {
     if (uid == null) return;
     try {
       final doc = await FirebaseFirestore.instance
-          .collection('UsersFileTransfer')
+          .collection('Users')
           .doc(uid)
           .get();
       if (!doc.exists) {

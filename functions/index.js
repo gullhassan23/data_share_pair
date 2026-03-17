@@ -5,6 +5,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 admin.initializeApp();
 const db = admin.firestore();
+const USERS_COLLECTION = "Users";
 
 const APPSTORE_SHARED_SECRET = defineSecret("APPSTORE_SHARED_SECRET");
 
@@ -40,6 +41,7 @@ exports.verifyAppleSubscription = onRequest(
         "exclude-old-transactions": true,
       };
 
+      let usedSandbox = false;
       let response = await fetch(APPLE_VERIFY_URL_PROD, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -49,6 +51,7 @@ exports.verifyAppleSubscription = onRequest(
       let data = await response.json();
 
       if (data.status === 21007) {
+        usedSandbox = true;
         response = await fetch(APPLE_VERIFY_URL_SANDBOX, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -68,7 +71,7 @@ exports.verifyAppleSubscription = onRequest(
         const expiryDate = new Date(
           now.getTime() + days * 24 * 60 * 60 * 1000
         );
-        const userRef = db.collection("UsersFileTransfer").doc(userId);
+        const userRef = db.collection(USERS_COLLECTION).doc(userId);
         const updateData = {
           isPremium: true,
           productId,
@@ -79,6 +82,27 @@ exports.verifyAppleSubscription = onRequest(
         if (fcmToken && typeof fcmToken === "string")
           updateData.fcmToken = fcmToken;
         await userRef.set(updateData, { merge: true });
+
+        // Store a history record for troubleshooting / analytics.
+        try {
+          const subRef = userRef.collection("subscriptions").doc(String(Date.now()));
+          await subRef.set(
+            {
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              productId,
+              isPremium: true,
+              expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
+              autoRenewStatus: "1",
+              status: data.status,
+              environment: usedSandbox ? "sandbox" : "production",
+              isRestore: !!isRestore,
+              source: "apple_verify_fallback",
+            },
+            { merge: true }
+          );
+        } catch (e) {
+          console.error("Subscription history write failed (fallback):", e);
+        }
         if (fcmToken && typeof fcmToken === "string") {
           try {
             await admin.messaging().send({
@@ -139,7 +163,7 @@ exports.verifyAppleSubscription = onRequest(
       const isPremium =
         expiryDate && expiryDate.getTime() > now.getTime() ? true : false;
 
-      const userRef = db.collection("UsersFileTransfer").doc(userId);
+      const userRef = db.collection(USERS_COLLECTION).doc(userId);
       const updateData = {
         isPremium,
         productId,
@@ -154,6 +178,41 @@ exports.verifyAppleSubscription = onRequest(
         updateData.fcmToken = fcmToken;
       }
       await userRef.set(updateData, { merge: true });
+
+      // Write subscription history under subcollection.
+      try {
+        const transactionId =
+          latestInfo && typeof latestInfo.transaction_id === "string"
+            ? latestInfo.transaction_id
+            : null;
+        const originalTransactionId =
+          latestInfo && typeof latestInfo.original_transaction_id === "string"
+            ? latestInfo.original_transaction_id
+            : null;
+        const docId = transactionId || `${Date.now()}`;
+        await userRef
+          .collection("subscriptions")
+          .doc(docId)
+          .set(
+            {
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+              productId,
+              isPremium,
+              expiryDate: expiryDate
+                ? admin.firestore.Timestamp.fromDate(expiryDate)
+                : null,
+              autoRenewStatus,
+              transactionId,
+              originalTransactionId,
+              status: data.status,
+              environment: usedSandbox ? "sandbox" : "production",
+              isRestore: !!isRestore,
+            },
+            { merge: true }
+          );
+      } catch (e) {
+        console.error("Subscription history write failed:", e);
+      }
 
       if (fcmToken && typeof fcmToken === "string" && isPremium) {
         try {
@@ -182,7 +241,7 @@ exports.checkSubscriptions = onSchedule("every 24 hours", async () => {
   const now = new Date();
   const soon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-  const usersRef = db.collection("UsersFileTransfer");
+  const usersRef = db.collection(USERS_COLLECTION);
 
   const aboutToExpireSnap = await usersRef
     .where("isPremium", "==", true)

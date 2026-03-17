@@ -1326,6 +1326,8 @@ PODS:
     - Flutter
   - flutter_foreground_task (0.0.1):
     - Flutter
+  - flutter_secure_storage (6.0.0):
+    - Flutter
   - gal (1.0.0):
     - Flutter
     - FlutterMacOS
@@ -1525,6 +1527,7 @@ DEPENDENCIES:
   - flutter_blue_plus_darwin (from `.symlinks/plugins/flutter_blue_plus_darwin/darwin`)
   - flutter_contacts (from `.symlinks/plugins/flutter_contacts/ios`)
   - flutter_foreground_task (from `.symlinks/plugins/flutter_foreground_task/ios`)
+  - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - gal (from `.symlinks/plugins/gal/darwin`)
   - google_mobile_ads (from `.symlinks/plugins/google_mobile_ads/ios`)
   - in_app_purchase_storekit (from `.symlinks/plugins/in_app_purchase_storekit/darwin`)
@@ -1600,6 +1603,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_contacts/ios"
   flutter_foreground_task:
     :path: ".symlinks/plugins/flutter_foreground_task/ios"
+  flutter_secure_storage:
+    :path: ".symlinks/plugins/flutter_secure_storage/ios"
   gal:
     :path: ".symlinks/plugins/gal/darwin"
   google_mobile_ads:
@@ -1663,6 +1668,7 @@ SPEC CHECKSUMS:
   flutter_blue_plus_darwin: 20a08bfeaa0f7804d524858d3d8744bcc1b6dbc3
   flutter_contacts: 5383945387e7ca37cf963d4be57c21f2fc15ca9f
   flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
+  flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
   gal: baecd024ebfd13c441269ca7404792a7152fde89
   Google-Mobile-Ads-SDK: 14f57f2dc33532a24db288897e26494640810407
   google_mobile_ads: 16ad301354fa6a7ea55770c6254bd4339bf8558b

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:share_app_latest/firebase_options.dart';
 import 'package:share_app_latest/app/controllers/QR_controller.dart';
 import 'package:share_app_latest/app/controllers/hotspot_controller.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
@@ -28,7 +29,9 @@ void main() async {
     await dotenv.load(fileName: '.env');
   } catch (_) {}
 
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await initializeFcmAndUploadToken();
 
   // Load cached premium status (if any) so ads respect Pro immediately.

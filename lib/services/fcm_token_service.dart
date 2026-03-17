@@ -25,7 +25,7 @@ Future<void> updateFcmTokenInFirestore() async {
       debugPrint('[FCM] No token available after retries (e.g. APNS not set or permission denied)');
       return;
     }
-    await FirebaseFirestore.instance.collection('UsersFileTransfer').doc(userId).set(
+    await FirebaseFirestore.instance.collection('Users').doc(userId).set(
       {'fcmToken': token},
       SetOptions(merge: true),
     );
