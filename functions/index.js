@@ -9,6 +9,28 @@ const USERS_COLLECTION = "Users";
 
 const APPSTORE_SHARED_SECRET = defineSecret("APPSTORE_SHARED_SECRET");
 
+async function sendFcmNotification({
+  fcmToken,
+  title,
+  body,
+  data,
+}) {
+  if (!fcmToken || typeof fcmToken !== "string") return;
+
+  try {
+    await admin.messaging().send({
+      token: fcmToken,
+      notification: {
+        title,
+        body,
+      },
+      data: data && typeof data === "object" ? data : undefined,
+    });
+  } catch (e) {
+    console.error("FCM send failed:", e);
+  }
+}
+
 exports.verifyAppleSubscription = onRequest(
   { secrets: [APPSTORE_SHARED_SECRET] },
   async (req, res) => {
@@ -72,6 +94,15 @@ exports.verifyAppleSubscription = onRequest(
           now.getTime() + days * 24 * 60 * 60 * 1000
         );
         const userRef = db.collection(USERS_COLLECTION).doc(userId);
+        const previousUserSnapshot = await userRef.get();
+        const previousUserData = previousUserSnapshot.exists
+          ? previousUserSnapshot.data() || {}
+          : {};
+        const previousIsPremium = previousUserData.isPremium === true;
+        const previousExpiryDateMs = previousUserData.expiryDate?.toDate
+          ? previousUserData.expiryDate.toDate().getTime()
+          : null;
+
         const updateData = {
           isPremium: true,
           productId,
@@ -104,17 +135,67 @@ exports.verifyAppleSubscription = onRequest(
           console.error("Subscription history write failed (fallback):", e);
         }
         if (fcmToken && typeof fcmToken === "string") {
-          try {
-            await admin.messaging().send({
-              token: fcmToken,
-              notification: {
-                title: "Welcome to Premium",
-                body:
-                  "Your premium subscription is active. Enjoy all features!",
+          const newExpiryDateMs = expiryDate.getTime();
+          const isNewSubscription = !previousIsPremium;
+          const isRenewal =
+            previousIsPremium &&
+            previousExpiryDateMs != null &&
+            newExpiryDateMs > previousExpiryDateMs + 12 * 60 * 60 * 1000;
+
+          const lastNotified = previousUserData.lastNotified || {};
+          const markAndSend = async ({
+            notificationKey,
+            title,
+            body,
+            event,
+            expiryDateMs,
+          }) => {
+            const alreadyNotifiedForExpiry =
+              expiryDateMs != null &&
+              lastNotified?.[notificationKey] === expiryDateMs;
+            if (alreadyNotifiedForExpiry) return;
+
+            await sendFcmNotification({
+              fcmToken,
+              title,
+              body,
+              data: {
+                subscriptionEvent: event,
+                productId: String(productId || ""),
+                expiryDateMs: expiryDateMs != null ? String(expiryDateMs) : "",
               },
             });
-          } catch (e) {
-            console.error("Welcome FCM send failed:", e);
+
+            const update = {};
+            update[`lastNotified.${notificationKey}`] =
+              expiryDateMs != null ? expiryDateMs : Date.now();
+            await userRef.set(update, { merge: true });
+          };
+
+          if (isRestore) {
+            await markAndSend({
+              notificationKey: "restore",
+              title: "Premium restored",
+              body: "Your premium access has been restored on this device.",
+              event: "restore",
+              expiryDateMs: newExpiryDateMs,
+            });
+          } else if (isNewSubscription) {
+            await markAndSend({
+              notificationKey: "firstSubscribe",
+              title: "Welcome to Premium",
+              body: "Your premium subscription is active. Enjoy all features!",
+              event: "first_subscribe",
+              expiryDateMs: newExpiryDateMs,
+            });
+          } else if (isRenewal) {
+            await markAndSend({
+              notificationKey: "renewal",
+              title: "Subscription renewed",
+              body: "Your premium subscription has been renewed successfully.",
+              event: "renewal",
+              expiryDateMs: newExpiryDateMs,
+            });
           }
         }
         return res.status(200).json({ isValid: true });
@@ -164,6 +245,19 @@ exports.verifyAppleSubscription = onRequest(
         expiryDate && expiryDate.getTime() > now.getTime() ? true : false;
 
       const userRef = db.collection(USERS_COLLECTION).doc(userId);
+      const previousUserSnapshot = await userRef.get();
+      const previousUserData = previousUserSnapshot.exists
+        ? previousUserSnapshot.data() || {}
+        : {};
+      const previousIsPremium = previousUserData.isPremium === true;
+      const previousAutoRenewStatus =
+        typeof previousUserData.autoRenewStatus === "string"
+          ? previousUserData.autoRenewStatus
+          : null;
+      const previousExpiryDateMs = previousUserData.expiryDate?.toDate
+        ? previousUserData.expiryDate.toDate().getTime()
+        : null;
+
       const updateData = {
         isPremium,
         productId,
@@ -214,18 +308,86 @@ exports.verifyAppleSubscription = onRequest(
         console.error("Subscription history write failed:", e);
       }
 
-      if (fcmToken && typeof fcmToken === "string" && isPremium) {
-        try {
-          await admin.messaging().send({
-            token: fcmToken,
-            notification: {
-              title: "Welcome to Premium",
-              body:
-                "Your premium subscription is active. Enjoy all features!",
+      if (fcmToken && typeof fcmToken === "string") {
+        const newExpiryDateMs = expiryDate ? expiryDate.getTime() : null;
+        const isNewSubscription = !previousIsPremium && isPremium;
+        const isCancelledNow =
+          autoRenewStatus === "0" && previousAutoRenewStatus !== "0";
+
+        const isRenewal =
+          previousIsPremium &&
+          isPremium &&
+          previousExpiryDateMs != null &&
+          newExpiryDateMs != null &&
+          newExpiryDateMs > previousExpiryDateMs + 12 * 60 * 60 * 1000;
+
+        const lastNotified = previousUserData.lastNotified || {};
+        const markAndSend = async ({
+          notificationKey,
+          title,
+          body,
+          event,
+          expiryDateMs,
+        }) => {
+          const alreadyNotifiedForExpiry =
+            expiryDateMs != null && lastNotified?.[notificationKey] === expiryDateMs;
+          if (alreadyNotifiedForExpiry) return;
+
+          await sendFcmNotification({
+            fcmToken,
+            title,
+            body,
+            data: {
+              subscriptionEvent: event,
+              productId: String(productId || ""),
+              expiryDateMs: expiryDateMs != null ? String(expiryDateMs) : "",
             },
           });
-        } catch (e) {
-          console.error("Welcome FCM send failed:", e);
+
+          const update = {};
+          if (expiryDateMs != null) {
+            update[`lastNotified.${notificationKey}`] = expiryDateMs;
+          } else {
+            update[`lastNotified.${notificationKey}`] = Date.now();
+          }
+          await userRef.set(update, { merge: true });
+        };
+
+        if (isRestore && isPremium) {
+          await markAndSend({
+            notificationKey: "restore",
+            title: "Premium restored",
+            body: "Your premium access has been restored on this device.",
+            event: "restore",
+            expiryDateMs: newExpiryDateMs,
+          });
+        } else if (isNewSubscription) {
+          await markAndSend({
+            notificationKey: "firstSubscribe",
+            title: "Welcome to Premium",
+            body: "Your premium subscription is active. Enjoy all features!",
+            event: "first_subscribe",
+            expiryDateMs: newExpiryDateMs,
+          });
+        } else if (isRenewal) {
+          await markAndSend({
+            notificationKey: "renewal",
+            title: "Subscription renewed",
+            body: "Your premium subscription has been renewed successfully.",
+            event: "renewal",
+            expiryDateMs: newExpiryDateMs,
+          });
+        }
+
+        if (isCancelledNow && isPremium) {
+          await markAndSend({
+            notificationKey: "cancel",
+            title: "Subscription cancelled",
+            body:
+              "Auto-renew has been turned off. You will keep premium until it expires.",
+            event: "cancel",
+            expiryDateMs: newExpiryDateMs,
+          });
         }
       }
 
