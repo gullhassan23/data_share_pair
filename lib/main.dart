@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -29,9 +30,7 @@ void main() async {
     await dotenv.load(fileName: '.env');
   } catch (_) {}
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeFcmAndUploadToken();
 
   // Load cached premium status (if any) so ads respect Pro immediately.
@@ -100,6 +99,14 @@ class _TransferLifecycleWrapper extends StatefulWidget {
 class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     with WidgetsBindingObserver {
   bool _firstFrameDone = false;
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+
+  Future<void> _logAppLifecycleEvent(String eventName, String state) async {
+    try {
+      final params = <String, Object>{'lifecycle_state': state};
+      await _analytics.logEvent(name: eventName, parameters: params);
+    } catch (_) {}
+  }
 
   @override
   void initState() {
@@ -108,6 +115,7 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_firstFrameDone && mounted) {
         _firstFrameDone = true;
+        _logAppLifecycleEvent('app_open', 'first_frame');
         AdMobService.instance.showAppOpenIfAvailable();
       }
     });
@@ -125,12 +133,23 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _logAppLifecycleEvent('app_open', 'resumed');
       _onResumed();
+      return;
+    }
+    if (state == AppLifecycleState.paused) {
+      _logAppLifecycleEvent('app_background', 'paused');
+      return;
+    }
+    if (state == AppLifecycleState.detached) {
+      _logAppLifecycleEvent('app_close', 'detached');
     }
   }
 
   Future<void> _onResumed() async {
-    AdMobService.instance.showAppOpenIfAvailable(minInterval: const Duration(seconds: 45));
+    AdMobService.instance.showAppOpenIfAvailable(
+      minInterval: const Duration(seconds: 45),
+    );
     if (!Get.isRegistered<TransferController>()) return;
     final transfer = Get.find<TransferController>();
     if (transfer.sessionState.value != TransferSessionState.transferring)
