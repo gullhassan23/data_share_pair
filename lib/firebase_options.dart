@@ -50,19 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBiAmAdX65rI3SrQzYjGBwoHDU_yC0yo-w',
-    appId: '1:117933738509:android:bffed7ce936266aaa0e344',
-    messagingSenderId: '117933738509',
-    projectId: 'file-transfer-app-f57ab',
-    storageBucket: 'file-transfer-app-f57ab.firebasestorage.app',
+    apiKey: 'AIzaSyDuXZ1QsfF1pFUKF5laUOhHosR2Fkx-1oo',
+    appId: '1:920008060842:android:a6f8ebb48e8e0fa5ec85d3',
+    messagingSenderId: '920008060842',
+    projectId: 'share-all-file-transfer-bc425',
+    storageBucket: 'share-all-file-transfer-bc425.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDglMEEsxcNnwyk_wNoKZfaSUzS988oogk',
-    appId: '1:117933738509:ios:884860e4e7b950dba0e344',
-    messagingSenderId: '117933738509',
-    projectId: 'file-transfer-app-f57ab',
-    storageBucket: 'file-transfer-app-f57ab.firebasestorage.app',
+    apiKey: 'AIzaSyB9aTcrm8m9VJyKJrSZ3q1kw5iGUH4ykGs',
+    appId: '1:920008060842:ios:5de74077b6a3ca26ec85d3',
+    messagingSenderId: '920008060842',
+    projectId: 'share-all-file-transfer-bc425',
+    storageBucket: 'share-all-file-transfer-bc425.firebasestorage.app',
     iosBundleId: 'com.share.transfer.file.all.data.app',
   );
 

@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "117933738509",
-    "project_id": "file-transfer-app-f57ab",
-    "storage_bucket": "file-transfer-app-f57ab.firebasestorage.app"
+    "project_number": "920008060842",
+    "project_id": "share-all-file-transfer-bc425",
+    "storage_bucket": "share-all-file-transfer-bc425.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:117933738509:android:bffed7ce936266aaa0e344",
+        "mobilesdk_app_id": "1:920008060842:android:a6f8ebb48e8e0fa5ec85d3",
         "android_client_info": {
           "package_name": "com.share.transfer.file.all.data.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBiAmAdX65rI3SrQzYjGBwoHDU_yC0yo-w"
+          "current_key": "AIzaSyDuXZ1QsfF1pFUKF5laUOhHosR2Fkx-1oo"
         }
       ],
       "services": {
