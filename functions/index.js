@@ -32,7 +32,10 @@ async function sendFcmNotification({
 }
 
 exports.verifyAppleSubscription = onRequest(
-  { secrets: [APPSTORE_SHARED_SECRET] },
+  {
+    secrets: [APPSTORE_SHARED_SECRET],
+    invoker: "public",
+  },
   async (req, res) => {
     try {
       if (req.method !== "POST") {
