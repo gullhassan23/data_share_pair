@@ -127,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    "LOADING",
+                    "LOADING...",
                     style: TextStyle(fontSize: 10, color: Colors.grey),
                   ),
                   Text(
@@ -140,10 +140,10 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 14),
 
             /// VERSION
-            const Text(
-              "VERSION 1.0",
-              style: TextStyle(fontSize: 10, color: Colors.grey),
-            ),
+            // const Text(
+            //   "VERSION 1.0",
+            //   style: TextStyle(fontSize: 10, color: Colors.grey),
+            // ),
 
             const SizedBox(height: 20),
           ],
