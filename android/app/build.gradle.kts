@@ -10,7 +10,7 @@ plugins {
 
 android {
     namespace = "com.share.transfer.file.all.data.app"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.share.transfer.file.all.data.app"
-        minSdk = flutter.minSdkVersion
+        minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = 1
         versionName = "1.0.0"
