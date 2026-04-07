@@ -34,128 +34,131 @@ class OnboardingScreen extends StatelessWidget {
           /// CONTENT
           SafeArea(
             child: Obx(() {
-              final showAds = AdUnitIds.kForceFreeUserForAdTesting
-                  ? true
-                  : !(premium.isPremium || SubscriptionIAPService().isPremium);
+              final showAds =
+                  AdUnitIds.kForceFreeUserForAdTesting
+                      ? true
+                      : !(premium.isPremium ||
+                          SubscriptionIAPService().isPremium);
               return Column(
                 children: [
-                /// TOP BAR
-                // Padding(
-                //   padding: const EdgeInsets.symmetric(
-                //     horizontal: 16,
-                //     vertical: 12,
-                //   ),
-                //   child: Row(
-                //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                //     children: const [
-                //       Icon(Icons.arrow_back, color: Colors.white),
-                //       Text(
-                //         "SKIP",
-                //         style: TextStyle(
-                //           color: Colors.white,
-                //           fontWeight: FontWeight.w600,
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
-                const SizedBox(height: 70),
+                  /// TOP BAR
+                  // Padding(
+                  //   padding: const EdgeInsets.symmetric(
+                  //     horizontal: 16,
+                  //     vertical: 12,
+                  //   ),
+                  //   child: Row(
+                  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  //     children: const [
+                  //       Icon(Icons.arrow_back, color: Colors.white),
+                  //       Text(
+                  //         "SKIP",
+                  //         style: TextStyle(
+                  //           color: Colors.white,
+                  //           fontWeight: FontWeight.w600,
+                  //         ),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  const SizedBox(height: 70),
 
-                /// TITLE
-                const Text(
-                  "Share photos &\nvideos instantly",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-                const SizedBox(height: 50),
-
-                /// WHITE CARD / CONTAINER
-                Padding(
-                  padding: const EdgeInsets.only(left: 20, right: 20),
-                  child: Container(
-                    // height: 250,
-                    // width: 350,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
+                  /// TITLE
+                  const Text(
+                    "Share photos &\nvideos instantly",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
+
+                  const SizedBox(height: 50),
+
+                  /// WHITE CARD / CONTAINER
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20, right: 20),
+                    child: Container(
+                      // height: 250,
+                      // width: 350,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          TransferAnimation(height: 160, isTransferring: true),
+
+                          // ElevatedButton(
+                          //   style: ElevatedButton.styleFrom(
+                          //     backgroundColor: const Color(0xff00E5FF),
+                          //     shape: RoundedRectangleBorder(
+                          //       borderRadius: BorderRadius.circular(12),
+                          //     ),
+                          //   ),
+                          //   onPressed: () {
+                          //     AppNavigator.toHome();
+                          //   },
+                          //   child: Row(
+                          //     mainAxisAlignment: MainAxisAlignment.center,
+                          //     mainAxisSize: MainAxisSize.min,
+                          //     children: [
+                          //       Flexible(
+                          //         child: Text(
+                          //           "Start Transferring",
+                          //           overflow: TextOverflow.ellipsis,
+                          //           style: GoogleFonts.roboto(
+                          //             color: Colors.white,
+                          //             fontSize: 17,
+                          //             fontWeight: FontWeight.w700,
+                          //           ),
+                          //         ),
+                          //       ),
+                          //       const SizedBox(width: 8),
+                          //       const Icon(
+                          //         Icons.arrow_forward,
+                          //         size: 18,
+                          //         color: Colors.white,
+                          //       ),
+                          //     ],
+                          //   ),
+                          // ),
+                          On_BoardingButton(
+                            ontap: () => AppNavigator.toHome(),
+                            height: 40,
+                            width: double.infinity,
+                            text: "Start Transferring",
+                            // color: Color(0xff00E5FF),
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  /// DESCRIPTION
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Column(
                       children: [
-                        TransferAnimation(height: 160, isTransferring: true),
-
-                        // ElevatedButton(
-                        //   style: ElevatedButton.styleFrom(
-                        //     backgroundColor: const Color(0xff00E5FF),
-                        //     shape: RoundedRectangleBorder(
-                        //       borderRadius: BorderRadius.circular(12),
-                        //     ),
-                        //   ),
-                        //   onPressed: () {
-                        //     AppNavigator.toHome();
-                        //   },
-                        //   child: Row(
-                        //     mainAxisAlignment: MainAxisAlignment.center,
-                        //     mainAxisSize: MainAxisSize.min,
-                        //     children: [
-                        //       Flexible(
-                        //         child: Text(
-                        //           "Start Transferring",
-                        //           overflow: TextOverflow.ellipsis,
-                        //           style: GoogleFonts.roboto(
-                        //             color: Colors.white,
-                        //             fontSize: 17,
-                        //             fontWeight: FontWeight.w700,
-                        //           ),
-                        //         ),
-                        //       ),
-                        //       const SizedBox(width: 8),
-                        //       const Icon(
-                        //         Icons.arrow_forward,
-                        //         size: 18,
-                        //         color: Colors.white,
-                        //       ),
-                        //     ],
-                        //   ),
-                        // ),
-                        On_BoardingButton(
-                          ontap: () => AppNavigator.toHome(),
-                          height: 40,
-                          width: double.infinity,
-                          text: "Start Transferring",
-                          color: Color(0xff00E5FF),
+                        Text(
+                          "Easily transfer photos, videos, and files easily using WiFi Direct, Bluetooth, or QR Code.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.roboto(color: Color(0xff72777F)),
                         ),
                       ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 30),
-
-                /// DESCRIPTION
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Column(
-                    children: [
-                      Text(
-                        "Easily transfer photos, videos, and files easily using WiFi Direct, Bluetooth, or QR Code.",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.roboto(color: Color(0xff72777F)),
-                      ),
-                    ],
-                  ),
-                ),
 
                   if (showAds)
                     Expanded(
@@ -167,34 +170,34 @@ class OnboardingScreen extends StatelessWidget {
                   else
                     const SizedBox(height: 24),
 
-                /// BUTTON
-                // Padding(
-                //   padding: const EdgeInsets.symmetric(horizontal: 32),
-                //   child: SizedBox(
-                //     width: double.infinity,
-                //     height: 48,
-                //     child: ElevatedButton(
-                //       style: ElevatedButton.styleFrom(
-                //         backgroundColor: Color(0xff00E5FF),
-                //         shape: RoundedRectangleBorder(
-                //           borderRadius: BorderRadius.circular(12),
-                //         ),
-                //       ),
-                //       onPressed: () {
-                //         AppNavigator.toHome();
-                //       },
-                //       child: Text(
-                //         "GET STARTED",
-                //         style: GoogleFonts.roboto(
-                //           color: Colors.white,
-                //           fontSize: 16,
-                //           fontWeight: FontWeight.w700,
-                //         ),
-                //         // style: TextStyle(fontWeight: FontWeight.bold),
-                //       ),
-                //     ),
-                //   ),
-                // ),
+                  /// BUTTON
+                  // Padding(
+                  //   padding: const EdgeInsets.symmetric(horizontal: 32),
+                  //   child: SizedBox(
+                  //     width: double.infinity,
+                  //     height: 48,
+                  //     child: ElevatedButton(
+                  //       style: ElevatedButton.styleFrom(
+                  //         backgroundColor: Color(0xff00E5FF),
+                  //         shape: RoundedRectangleBorder(
+                  //           borderRadius: BorderRadius.circular(12),
+                  //         ),
+                  //       ),
+                  //       onPressed: () {
+                  //         AppNavigator.toHome();
+                  //       },
+                  //       child: Text(
+                  //         "GET STARTED",
+                  //         style: GoogleFonts.roboto(
+                  //           color: Colors.white,
+                  //           fontSize: 16,
+                  //           fontWeight: FontWeight.w700,
+                  //         ),
+                  //         // style: TextStyle(fontWeight: FontWeight.bold),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               );
             }),

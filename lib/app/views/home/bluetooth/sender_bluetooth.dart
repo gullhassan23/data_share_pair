@@ -66,7 +66,9 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
       final granted = await askPermissions();
       if (!granted) {
         // ignore: avoid_print
-        print('[BT][SenderScreen] Permissions not granted – showing error to user');
+        print(
+          '[BT][SenderScreen] Permissions not granted – showing error to user',
+        );
         bluetooth.error.value = 'Bluetooth permission denied';
         return;
       }
@@ -112,7 +114,14 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
                     icon: Icon(Icons.arrow_back),
                   ),
                   SizedBox(width: 5),
-                  Text("Back"),
+                  Text(
+                    "Back",
+                    style: GoogleFonts.roboto(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
                 ],
               ),
 
