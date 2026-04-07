@@ -20,20 +20,19 @@ class On_BoardingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-onTap: ontap,
+      onTap: ontap,
       child: Container(
         height: height,
         width: width,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               text,
-      
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.roboto(
                 color: Colors.white,
@@ -41,8 +40,9 @@ onTap: ontap,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            SizedBox(width: 10),
-            const Icon(Icons.arrow_forward, size: 18, color: Colors.white),
+            SizedBox(width: 8),
+            Image.asset("assets/icons/back_arrow.png", height: 18),
+            // const Icon(Icons.arrow_forward, size: 18, color: Colors.white),
           ],
         ),
       ),

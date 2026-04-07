@@ -4,12 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
-import 'package:share_app_latest/components/transfer_option_card.dart';
+import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/utils/constants.dart';
-import 'package:share_app_latest/utils/images_resource.dart';
+
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
@@ -37,16 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final premium = Get.find<PremiumController>();
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
-          ),
-        ),
+      body: bg_container(
         child: SafeArea(
           child: Obx(() {
             final showAds =
@@ -113,17 +104,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
 
                 const SizedBox(height: 40),
-                Expanded(
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
                   child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0xFFE3F2FD),
+
+                          Color.fromARGB(255, 112, 126, 215),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.08),
-                          blurRadius: 25,
+                          blurRadius: 20,
                           offset: const Offset(0, 10),
                         ),
                       ],
@@ -139,47 +138,53 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          "Choose an option to start transferring between devices.",
+                          "Choose an option to start transferring\n between devices.",
                           textAlign: TextAlign.center,
                           style: GoogleFonts.roboto(
                             fontSize: 14,
-                            color: Colors.grey.shade700,
+                            color: Colors.black,
                           ),
                         ),
-
-                        const SizedBox(height: 18),
-                        Divider(color: Colors.grey.shade300),
 
                         const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            TransferOptionCard(
-                              title: "Send Files",
-                              image: ImageRes.sendFiles,
-                              // onTap:
-                              //     () => AppNavigator.toConnectionMethod(
-                              //       isReceiver: false,
-                              //     ),
+                            InkWell(
                               onTap:
                                   () => Get.to(
                                     () => ChooseMethodScan(isReciver: false),
                                   ),
+                              child: Image.asset(
+                                'assets/icons/Sender.png',
+                                height: 150,
+                                width: 150,
+                              ),
                             ),
-
-                            TransferOptionCard(
-                              title: 'Receive Files',
-                              image: ImageRes.recieveFiles,
-
-                              // onTap:
-                              //     () => AppNavigator.toConnectionMethod(
-                              //       isReceiver: true,
-                              //     ),
+                            InkWell(
                               onTap:
                                   () => Get.to(
                                     () => ChooseMethodScan(isReciver: true),
                                   ),
+                              child: Image.asset(
+                                'assets/icons/Receiver.png',
+                                height: 150,
+                                width: 150,
+                              ),
                             ),
+
+                            // TransferOptionCard(
+                            //   title: "Send Files",
+                            //   image: ImageRes.sendFiles,
+                            //   // onTap:
+                            //   //     () => AppNavigator.toConnectionMethod(
+                            //   //       isReceiver: false,
+                            //   //     ),
+                            //   onTap:
+                            //       () => Get.to(
+                            //         () => ChooseMethodScan(isReciver: false),
+                            //       ),
+                            // ),
                           ],
                         ),
 

@@ -476,191 +476,183 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
     print('🎨 QrSenderScannerScreen building...');
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
+          onPressed: () => Get.back(),
+        ),
         title: Text(
-          'Scan Receiver QR Code',
-          style: GoogleFonts.roboto(fontWeight: FontWeight.bold),
+          'Scan QR To Make Payment',
+          style: GoogleFonts.roboto(
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+            fontSize: 24,
+          ),
         ),
         centerTitle: true,
-        actions:
-            _hasPermission
-                ? [
-                  IconButton(
-                    icon: const Icon(Icons.flashlight_on),
-                    onPressed: () => cameraController.toggleTorch(),
-                  ),
-                ]
-                : null,
+        actions: [
+          TextButton(
+            onPressed: () {},
+            child: Text(
+              'Help',
+              style: GoogleFonts.roboto(
+                color: Colors.black87,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
       body:
           !_hasPermission
               ? const Center(child: CircularProgressIndicator())
               : Stack(
                 children: [
-                  // Camera Scanner
                   MobileScanner(
                     controller: cameraController,
                     onDetect: _onQrCodeDetected,
                   ),
-
-                  // Overlay UI
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                    ),
-                    child: Column(
-                      children: [
-                        // Top instructions
-                        Expanded(
-                          flex: 2,
+                  Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        color: Colors.black.withOpacity(0.78),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Scan any of the following QR Codes',
+                              style: GoogleFonts.roboto(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Sender mode - scanning receiver code',
+                              style: GoogleFonts.roboto(
+                                color: Colors.white70,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
                           child: Container(
-                            padding: const EdgeInsets.all(24),
-                            alignment: Alignment.center,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Scan the receiver\'s QR code',
-                                  style: GoogleFonts.roboto(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
+                            width: 300,
+                            height: 300,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.14),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.25),
+                              ),
+                            ),
+                            child: Stack(
+                              children: const [
+                                Positioned(
+                                  top: 0,
+                                  left: 0,
+                                  child: _ScanCorner(isTop: true, isLeft: true),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Point your camera at the QR code shown by the receiver',
-                                  style: GoogleFonts.roboto(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 14,
-                                  ),
-                                  textAlign: TextAlign.center,
+                                Positioned(
+                                  top: 0,
+                                  right: 0,
+                                  child: _ScanCorner(isTop: true, isLeft: false),
                                 ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  child:
+                                      _ScanCorner(isTop: false, isLeft: true),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child:
+                                      _ScanCorner(isTop: false, isLeft: false),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: double.infinity,
+                        color: Colors.black.withOpacity(0.78),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 16,
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: [
+                                  _bottomAction(
+                                    icon: Icons.dialpad,
+                                    label: 'Enter Till\nNumber',
+                                    onTap: () {},
                                   ),
+                                  _bottomAction(
+                                    icon: Icons.flashlight_on,
+                                    label: 'Torch',
+                                    onTap: () => cameraController.toggleTorch(),
+                                  ),
+                                  _bottomAction(
+                                    icon: Icons.image,
+                                    label: 'Scan from\nGallery',
+                                    onTap: () {},
+                                  ),
+                                  _bottomAction(
+                                    icon: Icons.more_horiz,
+                                    label: 'More',
+                                    onTap: () => Get.back(),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Obx(() {
+                                final canReopen =
+                                    fileTransferController.canReopenPicker.value;
+                                final device =
+                                    qrController.lastPairedReceiver.value;
+                                if (!canReopen || device == null) {
+                                  return const SizedBox.shrink();
+                                }
+                                return TextButton(
+                                  onPressed:
+                                      () => AppNavigator.toTransferFile(
+                                        device: device,
+                                      ),
                                   child: Text(
-                                    'Sending ${widget.selectedFiles.length} file${widget.selectedFiles.length > 1 ? 's' : ''}',
+                                    'Pick file again',
                                     style: GoogleFonts.roboto(
                                       color: Colors.white,
-                                      fontSize: 16,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
-                                    textAlign: TextAlign.center,
                                   ),
-                                ),
-                              ],
-                            ),
+                                );
+                              }),
+                            ],
                           ),
                         ),
-
-                        // Scanner frame
-                        Expanded(
-                          flex: 3,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 40),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.white, width: 2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-
-                        // Bottom instructions
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.all(24),
-                            alignment: Alignment.center,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  'Make sure the QR code is well lit and in focus',
-                                  style: GoogleFonts.roboto(
-                                    color: Colors.white.withOpacity(0.8),
-                                    fontSize: 14,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 24),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    ElevatedButton.icon(
-                                      onPressed: () => Get.back(),
-                                      icon: const Icon(Icons.cancel),
-                                      label: const Text('Cancel'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red.withOpacity(
-                                          0.8,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 24,
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                // If user cancelled the OS file picker after QR pairing,
-                                // show a subtle pill-style button to reopen file
-                                // selection for the same paired device.
-                                Obx(() {
-                                  final canReopen =
-                                      fileTransferController.canReopenPicker.value;
-                                  final device =
-                                      qrController.lastPairedReceiver.value;
-                                  if (!canReopen || device == null) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return TextButton.icon(
-                                    onPressed: () {
-                                      AppNavigator.toTransferFile(device: device);
-                                    },
-                                    icon: const Icon(
-                                      Icons.refresh,
-                                      size: 18,
-                                      color: Colors.white,
-                                    ),
-                                    label: Text(
-                                      'Pick file again',
-                                      style: GoogleFonts.roboto(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 10,
-                                      ),
-                                      backgroundColor:
-                                          Colors.white.withOpacity(0.18),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-
                   ...(_isProcessing
                       ? [
                         Container(
@@ -692,4 +684,90 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
               ),
     );
   }
+
+  Widget _bottomAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(26),
+          child: Ink(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.85),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.roboto(
+            color: Colors.white,
+            fontSize: 14,
+            height: 1.15,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScanCorner extends StatelessWidget {
+  final bool isTop;
+  final bool isLeft;
+
+  const _ScanCorner({required this.isTop, required this.isLeft});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: CustomPaint(
+        painter: _CornerPainter(isTop: isTop, isLeft: isLeft),
+      ),
+    );
+  }
+}
+
+class _CornerPainter extends CustomPainter {
+  final bool isTop;
+  final bool isLeft;
+
+  _CornerPainter({required this.isTop, required this.isLeft});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = const Color(0xFF00E676)
+          ..strokeWidth = 4
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+
+    final path = Path();
+    final xStart = isLeft ? 0.0 : size.width;
+    final xMid = isLeft ? size.width : 0.0;
+    final yStart = isTop ? 0.0 : size.height;
+    final yMid = isTop ? size.height : 0.0;
+
+    path.moveTo(xStart, yMid);
+    path.lineTo(xStart, yStart);
+    path.lineTo(xMid, yStart);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

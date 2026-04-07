@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_app_latest/components/bg_container.dart';
+
 import 'package:share_app_latest/routes/app_navigator.dart';
 
 import 'package:share_app_latest/utils/constants.dart';
@@ -19,16 +21,7 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
-          ),
-        ),
+      body: bg_container(
         child: SafeArea(
           child: Column(
             children: [
@@ -69,71 +62,94 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
               const SizedBox(height: 40),
 
               /// Main White Card
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      widget.isReciver ? "Receiver Via" : "Sender Via",
-                      style: GoogleFonts.roboto(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Use either our core transfer method through\nWiFi or rely on third party services.",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFE3F2FD),
 
-                    const SizedBox(height: 18),
-                    Divider(color: Colors.grey.shade300),
-
-                    const SizedBox(height: 20),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        TransferOptionIconCard(
-                          title: "WiFi-direct",
-                          icon: Icons.wifi,
-
-                          onTap:
-                              () => AppNavigator.toPairing(
-                                isReceiver: widget.isReciver,
-                              ),
-                        ),
-                        TransferOptionIconCard(
-                          title: "QR",
-                          icon: Icons.qr_code_scanner,
-                          onTap: () {
-                            if (widget.isReciver) {
-                              AppNavigator.toQrReceiver();
-                            } else {
-                              AppNavigator.toQrSender(<String>[]);
-                            }
-                          },
-                          // onTap: () => AppNavigator.toPairing(),
-                        ),
+                        Color.fromARGB(255, 112, 126, 215),
                       ],
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        widget.isReciver ? "Receiver Via" : "Sender Via",
+                        style: GoogleFonts.roboto(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Use either our core transfer method through\nWiFi or rely on third party services.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+
+                      const SizedBox(height: 18),
+                      Divider(color: Colors.grey.shade300),
+
+                      const SizedBox(height: 20),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          // TransferOptionIconCard(
+                          //   title: "WiFi-direct",
+                          //   icon: Icons.wifi,
+
+                          //   onTap:
+                          //       () => AppNavigator.toPairing(
+                          //         isReceiver: widget.isReciver,
+                          //       ),
+                          // ),
+                          InkWell(
+                            onTap:
+                                () => AppNavigator.toPairing(
+                                  isReceiver: widget.isReciver,
+                                ),
+                            child: Image.asset(
+                              'assets/icons/Wi-Fi.png',
+                              height: 150,
+                              width: 150,
+                            ),
+                          ),
+                          InkWell(
+                            onTap: () {
+                              if (widget.isReciver) {
+                                AppNavigator.toQrReceiver();
+                              } else {
+                                AppNavigator.toQrSender(<String>[]);
+                              }
+                            },
+                            child: Image.network(
+                              'https://cdn.discordapp.com/attachments/1426112900694544438/1491040427451748446/QR.png?ex=69d63f1c&is=69d4ed9c&hm=af939d26545e8032352bcec1de22d7df629d8d2a91e815e78d4a76ab2477073b&ss',
+                              height: 150,
+                              width: 150,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

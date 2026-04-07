@@ -19,35 +19,42 @@ class TransferOptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 120,
-        height: 120,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [const Color(0xffF2F6FF), const Color(0xffEAF0FF)],
-
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.blue.shade200, width: 1.3),
+            borderRadius: BorderRadius.circular(20),
           ),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: Colors.blue.shade200, width: 1.3),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(image, height: 35, width: 35, color: Colors.blue),
-            // Icon(icon, size: 30, color: Colors.blue),
-            const SizedBox(height: 14),
-            Text(
-              textAlign: TextAlign.center,
-              title,
-              style: GoogleFonts.roboto(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.blue,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/icons/bg.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.center,
               ),
-            ),
-          ],
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(image, height: 35, width: 35, color: Colors.blue),
+                  const SizedBox(height: 14),
+                  Text(
+                    textAlign: TextAlign.center,
+                    title,
+                    style: GoogleFonts.roboto(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/components/select_device_name.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -418,16 +419,7 @@ class _PairingScreenState extends State<PairingScreen>
   Widget _buildMainContent() {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
-          ),
-        ),
+      body: bg_container(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(16),

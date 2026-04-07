@@ -12,7 +12,7 @@ import 'package:share_app_latest/app/views/home/wifi-direct/pairing_page.dart';
 import 'package:share_app_latest/app/views/home/received_files_screen.dart';
 import 'package:share_app_latest/app/views/home/remove_duplicates/duplicate_preview_screen.dart';
 import 'package:share_app_latest/app/views/home/remove_duplicates/duplicate_scan_screen.dart';
-import 'package:share_app_latest/app/views/onboarding/onboarding_screen.dart';
+import 'package:share_app_latest/app/views/getStarted/get_started.dart';
 import 'package:share_app_latest/app/views/transfer_recovery/transfer_recovery_screen.dart';
 import 'package:share_app_latest/components/transfer_progress_screen.dart';
 import 'package:share_app_latest/app/views/splash/splash_screen.dart';
@@ -29,7 +29,7 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.onboaring,
-      page: () => const OnboardingScreen(),
+      page: () => const getStartedScreen(),
       transition: Transition.downToUp,
     ),
     GetPage(
