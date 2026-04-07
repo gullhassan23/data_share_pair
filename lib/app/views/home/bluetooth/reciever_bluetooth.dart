@@ -204,7 +204,6 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
         };
         await bluetooth.sendMessage(jsonEncode(acceptMsg));
         bluetooth.incomingOffer.value = null;
-        Get.back();
       },
     );
   }

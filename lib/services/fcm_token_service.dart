@@ -10,7 +10,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Retries getToken() so APNS can become ready on iOS (e.g. after permission).
-Future<String?> _getFcmTokenWithRetry({int maxAttempts = 5, Duration delay = const Duration(seconds: 2)}) async {
+Future<String?> _getFcmTokenWithRetry({
+  int maxAttempts = 5,
+  Duration delay = const Duration(seconds: 2),
+}) async {
   for (var attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       final token = await FirebaseMessaging.instance.getToken();
@@ -28,13 +31,14 @@ Future<void> updateFcmTokenInFirestore() async {
     final userId = await getOrCreateUserId();
     final token = await _getFcmTokenWithRetry();
     if (token == null || token.isEmpty) {
-      debugPrint('[FCM] No token available after retries (e.g. APNS not set or permission denied)');
+      debugPrint(
+        '[FCM] No token available after retries (e.g. APNS not set or permission denied)',
+      );
       return;
     }
-    await FirebaseFirestore.instance.collection('Users').doc(userId).set(
-      {'fcmToken': token},
-      SetOptions(merge: true),
-    );
+    await FirebaseFirestore.instance.collection('Users').doc(userId).set({
+      'fcmToken': token,
+    }, SetOptions(merge: true));
     debugPrint('[FCM] Token saved for user $userId');
   } catch (e) {
     debugPrint('[FCM] Failed to update token: $e');
@@ -47,11 +51,12 @@ Future<void> initializeFcmAndUploadToken() async {
     await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
     // iOS: allow notification display while app is in foreground.
-    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    await FirebaseMessaging.instance
+        .setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
 
     // Register background handler early.
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -66,7 +71,9 @@ Future<void> initializeFcmAndUploadToken() async {
 
     // App opened from notification tap.
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      debugPrint('[FCM][OPEN] messageId=${message.messageId} data=${message.data}');
+      debugPrint(
+        '[FCM][OPEN] messageId=${message.messageId} data=${message.data}',
+      );
     });
 
     final settings = await FirebaseMessaging.instance.requestPermission(
@@ -85,10 +92,9 @@ Future<void> initializeFcmAndUploadToken() async {
       try {
         if (newToken.isEmpty) return;
         final userId = await getOrCreateUserId();
-        await FirebaseFirestore.instance.collection('Users').doc(userId).set(
-          {'fcmToken': newToken},
-          SetOptions(merge: true),
-        );
+        await FirebaseFirestore.instance.collection('Users').doc(userId).set({
+          'fcmToken': newToken,
+        }, SetOptions(merge: true));
         debugPrint('[FCM] Token refreshed and saved for user $userId');
       } catch (e) {
         debugPrint('[FCM] Failed to persist refreshed token: $e');
