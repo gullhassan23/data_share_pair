@@ -924,7 +924,13 @@ class TransferController extends GetxController {
         '📁 File picker result: ${result != null ? 'Success' : 'Cancelled'}',
       );
       if (result != null && result.files.isNotEmpty) {
-        selectedPath = result.files.first.path;
+        final picked = result.files.first;
+        selectedPath = picked.path;
+        if (selectedPath == null || selectedPath.isEmpty) {
+          // Some providers return a content stream without a filesystem path
+          // (commonly seen with very large files). Materialize to temp file.
+          selectedPath = await _materializePickedFile(picked);
+        }
         print('📁 Selected file path: $selectedPath');
       }
     } on PlatformException catch (e) {
@@ -945,6 +951,41 @@ class TransferController extends GetxController {
     }
 
     return selectedPath;
+  }
+
+  Future<String?> _materializePickedFile(PlatformFile picked) async {
+    final stream = picked.readStream;
+    if (stream == null) {
+      return null;
+    }
+    final dir = await getTemporaryDirectory();
+    final safeName =
+        picked.name.trim().isNotEmpty ? picked.name.trim() : 'picked_file.bin';
+    final targetPath = p.join(
+      dir.path,
+      'picked_${DateTime.now().millisecondsSinceEpoch}_$safeName',
+    );
+    final outFile = File(targetPath);
+    final sink = outFile.openWrite();
+    try {
+      await for (final chunk in stream) {
+        sink.add(chunk);
+      }
+      await sink.flush();
+      await sink.close();
+      return targetPath;
+    } catch (e) {
+      try {
+        await sink.close();
+      } catch (_) {}
+      try {
+        if (await outFile.exists()) {
+          await outFile.delete();
+        }
+      } catch (_) {}
+      print('❌ Failed to materialize picked stream: $e');
+      return null;
+    }
   }
 
   Future<void> initiateFileTransfer(DeviceInfo targetDevice) async {

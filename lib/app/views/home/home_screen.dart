@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
+import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
 import 'package:share_app_latest/components/transfer_option_card.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
@@ -48,152 +49,170 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: SafeArea(
           child: Obx(() {
-            final showAds = AdUnitIds.kForceFreeUserForAdTesting
-                ? true
-                : !(premium.isPremium || SubscriptionIAPService().isPremium);
+            final showAds =
+                AdUnitIds.kForceFreeUserForAdTesting
+                    ? true
+                    : !(premium.isPremium ||
+                        SubscriptionIAPService().isPremium);
             return Column(
               children: [
-              const SizedBox(height: 19),
+                const SizedBox(height: 19),
 
-              /// Back Row
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      AppNavigator.toOnboarding();
-                    },
-                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    "Back",
-                    style: GoogleFonts.roboto(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+                /// Back Row
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        AppNavigator.toOnboarding();
+                      },
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: Colors.black,
+                        size: 28,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => AppNavigator.toPremium(),
-                    icon: const Icon(Icons.star, color: Colors.amber, size: 20),
-                    label: Text(
-                      'Premium',
+                    const SizedBox(width: 12),
+                    Text(
+                      "Back",
                       style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 19),
-
-              /// Progress Barss
-              StepProgressBar(
-                currentStep: 1,
-                totalSteps: kTransferFlowTotalSteps,
-                activeColor: Theme.of(context).colorScheme.primary,
-                inactiveColor: Colors.grey.shade300,
-                height: 6,
-                segmentSpacing: 5,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-              ),
-
-              const SizedBox(height: 40),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 25,
-                        offset: const Offset(0, 10),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => AppNavigator.toPremium(),
+                      icon: const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        "Start Transfer",
-                        style: GoogleFonts.roboto(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Choose an option to start transferring between devices.",
-                        textAlign: TextAlign.center,
+                      label: Text(
+                        'Premium',
                         style: GoogleFonts.roboto(
                           fontSize: 14,
-                          color: Colors.grey.shade700,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 19),
 
-                      const SizedBox(height: 18),
-                      Divider(color: Colors.grey.shade300),
+                /// Progress Barss
+                StepProgressBar(
+                  currentStep: 1,
+                  totalSteps: kTransferFlowTotalSteps,
+                  activeColor: Theme.of(context).colorScheme.primary,
+                  inactiveColor: Colors.grey.shade300,
+                  height: 6,
+                  segmentSpacing: 5,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                ),
 
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          TransferOptionCard(
-                            title: "Send Files",
-                            image: ImageRes.sendFiles,
-                            onTap:
-                                () => AppNavigator.toConnectionMethod(
-                                  isReceiver: false,
-                                ),
+                const SizedBox(height: 40),
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 25,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          "Start Transfer",
+                          style: GoogleFonts.roboto(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Choose an option to start transferring between devices.",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.roboto(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
 
-                          TransferOptionCard(
-                            title: 'Receive Files',
-                            image: ImageRes.recieveFiles,
-                            onTap:
-                                () => AppNavigator.toConnectionMethod(
-                                  isReceiver: true,
+                        const SizedBox(height: 18),
+                        Divider(color: Colors.grey.shade300),
+
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            TransferOptionCard(
+                              title: "Send Files",
+                              image: ImageRes.sendFiles,
+                              // onTap:
+                              //     () => AppNavigator.toConnectionMethod(
+                              //       isReceiver: false,
+                              //     ),
+                              onTap:
+                                  () => Get.to(
+                                    () => ChooseMethodScan(isReciver: false),
                                   ),
-                          ),
-                        ],
-                      ),
-                      // const SizedBox(height: 16),
-                      // _RemoveDuplicatesButton(),
-                      // TransferOptionCard(
-                      //   title: 'Remove Duplications',
-                      //   image: ImageRes.delete,
-                      //   onTap: () async {
-                      //     final granted = await requestMediaPermissions();
-                      //     if (!granted) {
-                      //       Get.snackbar(
-                      //         'Permission needed',
-                      //         'Gallery access is required to find duplicate photos and videos.',
-                      //         backgroundColor: Colors.orange.withOpacity(0.8),
-                      //         colorText: Colors.white,
-                      //       );
-                      //       return;
-                      //     }
-                      //     AppNavigator.toRemoveDuplicates();
-                      //   },
-                      // ),
-                     
-                    ],
+                            ),
+
+                            TransferOptionCard(
+                              title: 'Receive Files',
+                              image: ImageRes.recieveFiles,
+
+                              // onTap:
+                              //     () => AppNavigator.toConnectionMethod(
+                              //       isReceiver: true,
+                              //     ),
+                              onTap:
+                                  () => Get.to(
+                                    () => ChooseMethodScan(isReciver: true),
+                                  ),
+                            ),
+                          ],
+                        ),
+
+                        // const SizedBox(height: 16),
+                        // _RemoveDuplicatesButton(),
+                        // TransferOptionCard(
+                        //   title: 'Remove Duplications',
+                        //   image: ImageRes.delete,
+                        //   onTap: () async {
+                        //     final granted = await requestMediaPermissions();
+                        //     if (!granted) {
+                        //       Get.snackbar(
+                        //         'Permission needed',
+                        //         'Gallery access is required to find duplicate photos and videos.',
+                        //         backgroundColor: Colors.orange.withOpacity(0.8),
+                        //         colorText: Colors.white,
+                        //       );
+                        //       return;
+                        //     }
+                        //     AppNavigator.toRemoveDuplicates();
+                        //   },
+                        // ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: AdLargeRectWidget(),
                   ),
-                )
-              
+                ),
               ],
             );
           }),

@@ -283,7 +283,12 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     FileType type,
     List<String>? allowedExtensions,
   ) async {
-    Get.back(); // Close the file type selection dialog
+    // Close only the modal selector dialog (if open). This method is also
+    // used directly from the main screen cards, so unconditional back would
+    // pop the whole screen and break the transfer flow.
+    if (Get.isDialogOpen ?? false) {
+      Get.back();
+    }
 
     if (_isPickingFile) return;
     _isPickingFile = true;

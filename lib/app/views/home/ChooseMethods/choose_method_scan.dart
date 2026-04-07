@@ -86,7 +86,7 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                 child: Column(
                   children: [
                     Text(
-                      "Choose Transfer Method",
+                      widget.isReciver ? "Receiver Via" : "Sender Via",
                       style: GoogleFonts.roboto(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
