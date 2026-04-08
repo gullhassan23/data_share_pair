@@ -140,8 +140,8 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                                 AppNavigator.toQrSender(<String>[]);
                               }
                             },
-                            child: Image.network(
-                              'https://cdn.discordapp.com/attachments/1426112900694544438/1491040427451748446/QR.png?ex=69d63f1c&is=69d4ed9c&hm=af939d26545e8032352bcec1de22d7df629d8d2a91e815e78d4a76ab2477073b&ss',
+                            child: Image.asset(
+                              'assets/icons/QR.png',
                               height: 150,
                               width: 150,
                             ),

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
+import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/components/custom_upload_bar.dart';
 
 import 'package:share_app_latest/utils/constants.dart';
@@ -290,16 +291,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
         }
       },
       child: Scaffold(
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
-            ),
-          ),
+        body: bg_container(
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(18.0),

@@ -17,6 +17,7 @@ import 'package:share_app_latest/services/transfer_foreground_service.dart';
 import 'package:share_app_latest/services/transfer_state_persistence.dart';
 import 'package:share_app_latest/services/transfer_temp_manager.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/app/views/home/transfer_file/transfer_complete_screen.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
 import '../models/file_meta.dart';
@@ -64,30 +65,14 @@ class TransferController extends GetxController {
 
     if (status == 'sent') {
       print('✅ File successfully sent to receiver!');
-      Get.snackbar(
-        'Transfer Completed',
-        'Your file transferred successfully 🎉',
-        backgroundColor: Colors.green.withOpacity(0.8),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
+      Get.off(
+        () => const TransferCompleteScreen(isSender: true),
       );
-      Future.delayed(const Duration(seconds: 2), () {
-        AppNavigator.toHome();
-      });
     } else if (status == 'received') {
       print('✅ File successfully received from sender!');
-      Get.snackbar(
-        'Transfer Completed',
-        'File received successfully 🎉',
-        backgroundColor: Colors.green.withOpacity(0.8),
-        colorText: Colors.white,
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
+      Get.off(
+        () => const TransferCompleteScreen(isSender: false),
       );
-      Future.delayed(const Duration(seconds: 2), () {
-        AppNavigator.toReceivedFiles(device: null);
-      });
     }
   }
 

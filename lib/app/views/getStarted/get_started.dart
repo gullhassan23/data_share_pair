@@ -16,8 +16,6 @@ class getStartedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final premium = Get.find<PremiumController>();
-
-    const ringImageHeight = 180.0;
     return Scaffold(
       body: bg_container(
         child: SafeArea(
@@ -111,16 +109,20 @@ class getStartedScreen extends StatelessWidget {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.roboto(
-                                      fontSize: 25,
+                                      fontSize: 24,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black87,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
                                   Text(
-                                    "Transfer all your data in one tap",
+                                    "Transfer all your data in\none tap.",
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.roboto(fontSize: 15),
+                                    style: GoogleFonts.roboto(
+                                      fontSize: 15,
+                                      height: 1.2,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -130,10 +132,55 @@ class getStartedScreen extends StatelessWidget {
                               flex: 4,
                               child: Align(
                                 alignment: Alignment.centerRight,
-                                child: Image.asset(
-                                  "assets/icons/ring.png",
-                                  height: ringImageHeight,
-                                  fit: BoxFit.contain,
+                                child: SizedBox(
+                                  height: 170,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Positioned.fill(
+                                        child: Image.asset(
+                                          "assets/icons/Circle.png",
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                      Align(
+                                        alignment: Alignment.center,
+                                        child: Image.asset(
+                                          "assets/icons/File Folder.png",
+                                          height: 56,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                      Positioned(
+                                        left: -6,
+                                        top: 72,
+                                        child: Image.asset(
+                                          "assets/icons/Like.png",
+                                          height: 34,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: -2,
+                                        right: -4,
+                                        child: Image.asset(
+                                          "assets/icons/Thums Up.png",
+                                          height: 46,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: 2,
+                                        left: 10,
+                                        child: Image.asset(
+                                          "assets/icons/QR.png",
+                                          height: 20,
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

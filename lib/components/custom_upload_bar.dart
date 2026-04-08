@@ -84,6 +84,7 @@ class CustomUploadProgress extends StatelessWidget {
                   child: Center(
                     child: Stack(
                       alignment: Alignment.center,
+                      clipBehavior: Clip.none,
                       children: [
                         SizedBox(
                           width: 150,
@@ -98,7 +99,7 @@ class CustomUploadProgress extends StatelessWidget {
                           ),
                         ),
                         Positioned(
-                          top: 8,
+                          top: -12,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -117,37 +118,41 @@ class CustomUploadProgress extends StatelessWidget {
                               style: const TextStyle(
                                 color: Color(0xFF5A69F0),
                                 fontWeight: FontWeight.w700,
-                                fontSize: 12,
+                                fontSize: 15,
                               ),
                             ),
                           ),
                         ),
+
                         Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            SizedBox(height: 26),
                             Text(
                               _formatSize(sentMB),
                               style: const TextStyle(
                                 color: Color(0xFF4A59E4),
-                                fontSize: 46,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w700,
                                 height: 1.0,
                               ),
                             ),
+
                             Text(
                               "of ${_formatSize(totalMB)}",
                               style: const TextStyle(
                                 color: Color(0xFF4B4B4B),
-                                fontSize: 24,
+                                fontSize: 20,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                            SizedBox(height: 6),
                             if (showSpeed)
                               Text(
                                 "${speedMBps.toStringAsFixed(1)} MB/s",
                                 style: const TextStyle(
                                   color: Color(0xFF777777),
-                                  fontSize: 12,
+                                  fontSize: 20,
                                 ),
                               ),
                           ],
