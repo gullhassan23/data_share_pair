@@ -156,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     () => ChooseMethodScan(isReciver: false),
                                   ),
                               child: Image.asset(
-                                'assets/icons/Sender.png',
+                                'assets/icons/Send.png',
                                 height: 150,
                                 width: 150,
                               ),
@@ -167,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     () => ChooseMethodScan(isReciver: true),
                                   ),
                               child: Image.asset(
-                                'assets/icons/Receiver.png',
+                                'assets/icons/Receive.png',
                                 height: 150,
                                 width: 150,
                               ),

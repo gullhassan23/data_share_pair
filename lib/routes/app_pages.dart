@@ -89,7 +89,11 @@ class AppPages {
 
     GetPage(
       name: AppRoutes.pairing,
-      page: () => const PairingScreen(),
+      page: () {
+        final args = Get.arguments as Map<String, dynamic>?;
+        final isReceiver = args?['isReceiver'] as bool? ?? false;
+        return PairingScreen(isReceiver: isReceiver);
+      },
       transition: Transition.downToUp,
     ),
     GetPage(

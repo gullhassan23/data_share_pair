@@ -11,13 +11,37 @@ import 'package:ui_background_task/ui_background_task.dart';
 /// - NEVER cancel transfer on lifecycle — only on explicit user cancel
 class TransferForegroundService {
   static const int _serviceId = 0x54464253; // "TFBS" hex
+  static bool _initialized = false;
 
   /// iOS: task ID from beginBackgroundTask; end when transfer completes/fails.
   static int? _iosBackgroundTaskId;
 
   /// Call from main() before runApp
   static void init() {
+    if (_initialized) return;
     FlutterForegroundTask.initCommunicationPort();
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'transfer_channel',
+        channelName: 'File Transfer',
+        channelDescription:
+            'Keeps file transfer running in background and screen-off state.',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(
+        showNotification: true,
+        playSound: false,
+      ),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.nothing(),
+        autoRunOnBoot: false,
+        autoRunOnMyPackageReplaced: false,
+        allowWakeLock: true,
+        allowWifiLock: true,
+      ),
+    );
+    _initialized = true;
   }
 
   /// Start foreground service (Android) or background task (iOS) when transfer begins.
@@ -29,7 +53,8 @@ class TransferForegroundService {
       try {
         // iOS: request notification permission (parity with Android) so we can show transfer status if needed
         await Permission.notification.request();
-        _iosBackgroundTaskId = await UiBackgroundTask.instance.beginBackgroundTask();
+        _iosBackgroundTaskId =
+            await UiBackgroundTask.instance.beginBackgroundTask();
         return true;
       } catch (e) {
         return false;
@@ -83,7 +108,8 @@ class TransferForegroundService {
 
     try {
       final pct = (progress * 100).toInt();
-      final text = '${sentMB.toStringAsFixed(1)} / ${totalMB.toStringAsFixed(1)} MB ($pct%) · ${speedMBps.toStringAsFixed(1)} MB/s';
+      final text =
+          '${sentMB.toStringAsFixed(1)} / ${totalMB.toStringAsFixed(1)} MB ($pct%) · ${speedMBps.toStringAsFixed(1)} MB/s';
       final title = isSender ? 'Sending' : 'Receiving';
 
       await FlutterForegroundTask.updateService(
@@ -111,7 +137,6 @@ class TransferForegroundService {
       await FlutterForegroundTask.stopService();
     } catch (_) {}
   }
-
 }
 
 /// Top-level callback for foreground task. Required by plugin.

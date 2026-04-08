@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:path/path.dart' as p;
+import 'package:share_app_latest/components/bg_container.dart';
 
 import 'package:share_app_latest/components/build_choose_option.dart';
 
@@ -34,9 +35,14 @@ class TransferFileScreen extends StatefulWidget {
 class _TransferFileScreenState extends State<TransferFileScreen> {
   DeviceInfo? device;
   bool isSender = false;
+
   /// When sending contacts, path to the temp VCF file so progress screen can register it for cleanup.
   String? _senderTempPath;
   bool _isPickingFile = false;
+  String? _selectedFilePath;
+  String? _selectedFileLabel;
+  int _selectedFileBytes = 0;
+  String? _selectedCategory;
 
   final transfer = Get.put(TransferController());
   final pairing = Get.put(PairingController());
@@ -140,7 +146,8 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                   TextButton(
                     onPressed: () {
                       Get.back(); // close dialog
-                      _didAutoNavigate = false; // allow next transfer to trigger completion again
+                      _didAutoNavigate =
+                          false; // allow next transfer to trigger completion again
                       // Return to TransferFileScreen so user can pick another file
                       if (Get.key.currentState?.canPop() ?? false) {
                         Get.back();
@@ -213,7 +220,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Choose what type of files you want to send',
+                'Choose what type of filess you want to send',
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
@@ -233,7 +240,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                       icon: Icons.video_library,
                       label: 'Videos',
                       color: Colors.red,
-                      onTap: () => _pickFileWithType(FileType.video, null),
+                      onTap:
+                          () =>
+                              _pickFileWithType(FileType.video, null, 'Videos'),
                     ),
                   ),
                 ],
@@ -246,7 +255,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                       icon: Icons.photo_library,
                       label: 'Photos',
                       color: Colors.blue,
-                      onTap: () => _pickFileWithType(FileType.image, null),
+                      onTap:
+                          () =>
+                              _pickFileWithType(FileType.image, null, 'Images'),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -255,7 +266,8 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                       icon: Icons.insert_drive_file,
                       label: 'Files',
                       color: Colors.orange,
-                      onTap: () => _pickFileWithType(FileType.any, null),
+                      onTap:
+                          () => _pickFileWithType(FileType.any, null, 'Files'),
                     ),
                   ),
                 ],
@@ -282,6 +294,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   Future<void> _pickFileWithType(
     FileType type,
     List<String>? allowedExtensions,
+    String category,
   ) async {
     // Close only the modal selector dialog (if open). This method is also
     // used directly from the main screen cards, so unconditional back would
@@ -300,8 +313,20 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       );
 
       if (selectedPath != null) {
-        // Now initiate the transfer with the selected file
-        await _sendSelectedFile(selectedPath);
+        final selectedFile = File(selectedPath);
+        final fileExists = await selectedFile.exists();
+        if (!fileExists) {
+          throw Exception('Selected file no longer exists.');
+        }
+        final bytes = await selectedFile.length();
+        if (!mounted) return;
+        setState(() {
+          _selectedFilePath = selectedPath;
+          _selectedFileLabel = p.basename(selectedPath);
+          _selectedFileBytes = bytes;
+          _selectedCategory = category;
+        });
+        _senderTempPath = null;
       }
     } catch (e) {
       print('❌ File picker error: $e');
@@ -340,8 +365,14 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       );
       if (path != null && mounted) {
         _senderTempPath = path;
-        await _sendSelectedFile(path);
-        _senderTempPath = null;
+        final selectedFile = File(path);
+        final bytes = await selectedFile.length();
+        setState(() {
+          _selectedFilePath = path;
+          _selectedFileLabel = 'Contacts';
+          _selectedFileBytes = bytes;
+          _selectedCategory = 'Contacts';
+        });
       }
     } catch (e) {
       print('❌ Contacts flow error: $e');
@@ -668,7 +699,9 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
 
     timeoutTimer = Timer(const Duration(seconds: 30), () {
       // ignore: avoid_print
-      print('[BT][TransferFileScreen] BLE offer timeout waiting for receiver response');
+      print(
+        '[BT][TransferFileScreen] BLE offer timeout waiting for receiver response',
+      );
       if (_bleOfferAcceptedWorker != null) {
         _bleOfferAcceptedWorker?.dispose();
         _bleOfferAcceptedWorker = null;
@@ -734,6 +767,33 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     return 'file';
   }
 
+  String _formatFileSize(int bytes) {
+    if (bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    double size = bytes.toDouble();
+    int unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    final value =
+        size >= 100 ? size.toStringAsFixed(0) : size.toStringAsFixed(1);
+    return '$value ${units[unitIndex]}';
+  }
+
+  Future<void> _continueWithSelectedFile() async {
+    final path = _selectedFilePath;
+    if (path == null || path.isEmpty) {
+      Get.snackbar(
+        'Select file',
+        'Please select a file before continuing.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+    await _sendSelectedFile(path);
+  }
+
   Future<void> pickAndSendFile() async {
     try {
       final d = device;
@@ -758,151 +818,188 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasSelectedFile = _selectedFilePath != null;
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
-          ),
-        ),
+      body: bg_container(
         child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  StepProgressBar(
-                    currentStep: 5, // ✅ step increased
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.black,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Back",
+                      style: GoogleFonts.roboto(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: StepProgressBar(
+                    currentStep: 5,
                     totalSteps: kTransferFlowTotalSteps,
-                    activeColor: Theme.of(context).colorScheme.primary,
+                    activeColor: const Color(0xFF4A67F6),
                     inactiveColor: Colors.grey.shade300,
-                    height: 6,
-                    segmentSpacing: 5,
-                    padding: const EdgeInsets.only(top: 8, bottom: 16),
+                    height: 12,
+                    segmentSpacing: 8,
+                    padding: const EdgeInsets.only(top: 8, bottom: 13),
                   ),
-                  const SizedBox(height: 20),
-
-                  /// Top Info Card
-
-                  /// Main Content
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
+                ),
+                const SizedBox(height: 12),
+                if (hasSelectedFile)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4A67F6),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
                       children: [
-                        /// Select File Button
-                        // SizedBox(
-                        //   width: double.infinity,
-                        //   child: ElevatedButton(
-                        //     onPressed: _showFileTypeSelection,
-                        //     child: const Text('Select File'),
-                        //   ),
-                        // ),
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 20),
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
+                        const Icon(Icons.check, color: Colors.white),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            // _selectedFileLabel ??
+                            'Your Selection',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.roboto(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
-
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Select File Type',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Choose what type of files you want to send',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: BuildChooseOption(
-                                      icon: Icons.contacts,
-                                      title: 'Contacts',
-                                      subtitle: "",
-                                      color: Colors.teal,
-                                      onTap: _openContactsFlow,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: BuildChooseOption(
-                                      icon: Icons.video_library,
-                                      title: 'Videos',
-                                      subtitle: "",
-                                      color: Colors.red,
-                                      onTap:
-                                          () => _pickFileWithType(
-                                            FileType.video,
-                                            null,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: BuildChooseOption(
-                                      icon: Icons.photo_library,
-                                      title: 'Photos',
-                                      subtitle: "",
-                                      color: Colors.blue,
-                                      onTap:
-                                          () => _pickFileWithType(
-                                            FileType.image,
-                                            null,
-                                          ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: BuildChooseOption(
-                                      icon: Icons.insert_drive_file,
-                                      title: 'Files',
-                                      subtitle: "",
-                                      color: Colors.orange,
-                                      onTap:
-                                          () => _pickFileWithType(
-                                            FileType.any,
-                                            null,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatFileSize(_selectedFileBytes),
+                          style: GoogleFonts.roboto(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                if (hasSelectedFile) const SizedBox(height: 18),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        BuildChooseOption(
+                          icon: Icons.video_library,
+                          title: 'Videos',
+                          isSelected: _selectedCategory == 'Videos',
+                          color: Colors.red,
+                          onTap:
+                              () => _pickFileWithType(
+                                FileType.video,
+                                null,
+                                'Videos',
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        BuildChooseOption(
+                          icon: Icons.photo_library,
+                          title: 'Images',
+                          isSelected: _selectedCategory == 'Images',
+                          color: Colors.blue,
+                          onTap:
+                              () => _pickFileWithType(
+                                FileType.image,
+                                null,
+                                'Images',
+                              ),
+                        ),
+                        const SizedBox(height: 12),
+                        BuildChooseOption(
+                          icon: Icons.contacts,
+                          title: 'Contacts',
+                          isSelected: _selectedCategory == 'Contacts',
+                          color: Colors.teal,
+                          onTap: _openContactsFlow,
+                        ),
+                        const SizedBox(height: 12),
+                        BuildChooseOption(
+                          icon: Icons.insert_drive_file,
+                          title: 'Files',
+                          isSelected: _selectedCategory == 'Files',
+                          color: Colors.orange,
+                          onTap:
+                              () => _pickFileWithType(
+                                FileType.any,
+                                null,
+                                'Files',
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed:
+                        (hasSelectedFile && !_isPickingFile)
+                            ? _continueWithSelectedFile
+                            : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A67F6),
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child:
+                        _isPickingFile
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                            : Text(
+                              'Continue',
+                              style: GoogleFonts.roboto(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -943,14 +1040,19 @@ class _ContactsSelectionPageState extends State<_ContactsSelectionPage> {
       final vcfContent = sb.toString();
       if (vcfContent.isEmpty) return;
       final dir = await getTemporaryDirectory();
-      final name = 'contacts_export_${DateTime.now().millisecondsSinceEpoch}.vcf';
+      final name =
+          'contacts_export_${DateTime.now().millisecondsSinceEpoch}.vcf';
       final path = p.join(dir.path, name);
       await File(path).writeAsString(vcfContent);
       if (!mounted) return;
       Get.back(result: path);
     } catch (e) {
       print('❌ Export contacts error: $e');
-      Get.snackbar('Export failed', e.toString(), snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar(
+        'Export failed',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -974,7 +1076,10 @@ class _ContactsSelectionPageState extends State<_ContactsSelectionPage> {
               'Send $selectedCount',
               style: GoogleFonts.roboto(
                 fontWeight: FontWeight.w600,
-                color: selectedCount > 0 ? Theme.of(context).colorScheme.primary : Colors.grey,
+                color:
+                    selectedCount > 0
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.grey,
               ),
             ),
           ),
@@ -999,7 +1104,16 @@ class _ContactsSelectionPageState extends State<_ContactsSelectionPage> {
               });
             },
             title: Text(name, style: GoogleFonts.roboto()),
-            subtitle: subtitle.isNotEmpty ? Text(subtitle, style: GoogleFonts.roboto(fontSize: 12, color: Colors.grey)) : null,
+            subtitle:
+                subtitle.isNotEmpty
+                    ? Text(
+                      subtitle,
+                      style: GoogleFonts.roboto(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    )
+                    : null,
             activeColor: Colors.teal,
           );
         },

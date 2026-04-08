@@ -85,215 +85,6 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
     }
   }
 
-  // Future<void> _processQrCode(String qrData) async {
-  //   if (await Vibration.hasVibrator()) {
-  //     Vibration.vibrate(duration: 500); // 500 ms
-  //   }
-  //   if (_dialogShown) return; // Already showing a dialog, ignore
-  //   _dialogShown = true; // Mark dialog as showing
-  //   setState(() {
-  //     _isProcessing = true;
-  //     _processingStatus = 'Parsing QR code...';
-  //   });
-
-  //   try {
-  //     // Parse QR code data - should contain receiver's connection info
-  //     final hotspotInfo = hotspotController.parseQrCodeData(qrData);
-
-  //     if (hotspotInfo == null) {
-  //       Get.snackbar(
-  //         'Invalid QR Code',
-  //         'This QR code does not contain valid connection information.',
-  //         backgroundColor: Colors.red.withOpacity(0.8),
-  //         colorText: Colors.white,
-  //       );
-  //       _dialogShown = false;
-  //       setState(() => _isProcessing = false);
-  //       return;
-  //     }
-
-  //     if (hotspotInfo.ip.isEmpty) {
-  //       Get.snackbar(
-  //         'Invalid QR Code',
-  //         'QR code has no IP address. Ensure the receiver is connected to Wi-Fi and try again.',
-  //         backgroundColor: Colors.red.withOpacity(0.8),
-  //         colorText: Colors.white,
-  //       );
-  //       _dialogShown = false;
-  //       setState(() => _isProcessing = false);
-  //       return;
-  //     }
-
-  //     // Do NOT try to programmatically connect to Wi-Fi/hotspot on modern Android.
-  //     // Instead, use the QR data (IP/port) for discovery and pairing. Show receiver card,
-  //     // and only start TCP transfer when user explicitly taps the device.
-  //     final displayName =
-  //         hotspotInfo.deviceName.trim().isNotEmpty
-  //             ? hotspotInfo.deviceName.trim()
-  //             : null;
-  //     setState(
-  //       () =>
-  //           _processingStatus =
-  //               displayName != null
-  //                   ? 'Resolving receiver on $displayName...'
-  //                   : 'Resolving receiver…',
-  //     );
-
-  //     final tempDevice = DeviceInfo(
-  //       name: displayName ?? 'Unknown',
-  //       ip: hotspotInfo.ip,
-  //       wsPort: 7070, // Default PairingController port
-  //       transferPort: hotspotInfo.port,
-  //     );
-
-  //     print('[QR] QR parsed ip=${hotspotInfo.ip} port=${hotspotInfo.port}');
-  //     print('[QR] QR scan success, resolving receiver at ${hotspotInfo.ip}');
-  //     await qrController.pairWith(tempDevice);
-  //     final receiver = qrController.devices.firstWhereOrNull(
-  //       (d) => d.ip == hotspotInfo.ip,
-  //     );
-
-  //     _isProcessing = false;
-
-  //     if (receiver == null) {
-  //       _dialogShown = false;
-  //       print('[QR] pairWith failed (receiver null)');
-  //       print('[QR] Pairing rejected or timed out, no navigation');
-  //       Get.snackbar(
-  //         'Pairing Declined',
-  //         'The receiver did not accept pairing or the request timed out. Try again.',
-  //         backgroundColor: Colors.orange.withOpacity(0.8),
-  //         colorText: Colors.white,
-  //       );
-  //       return;
-  //     }
-
-  //     _dialogShown = false;
-  //     print('[QR] pairWith success device=${receiver.name} ip=${receiver.ip}');
-  //     if (widget.selectedFiles.isEmpty) {
-  //       print(
-  //         '[QR] Pairing accepted, navigating to TransferFileScreen for ${receiver.name}',
-  //       );
-  //       Get.back();
-  //       AppNavigator.toTransferFile(device: receiver);
-  //       return;
-  //     }
-  //     // Show confirmation dialog with receiver info; user taps Send to initiate offer
-  //     Get.dialog(
-  //       AlertDialog(
-  //         title: Text('Send to ${receiver.name}?'),
-  //         content: Text(
-  //           'Send ${widget.selectedFiles.length} file(s) to ${receiver.name} (${receiver.ip})',
-  //         ),
-  //         actions: [
-  //           TextButton(
-  //             onPressed: () {
-  //               Get.back();
-  //             },
-  //             child: const Text('Cancel'),
-  //           ),
-  //           ElevatedButton(
-  //             onPressed: () async {
-  //               Get.back();
-  //               String targetIp = receiver.ip;
-
-  //               // If the discovered device has a P2P hardware address (MAC), attempt native connect
-  //               final looksLikeMac =
-  //                   targetIp.contains(":") && targetIp.length >= 12;
-  //               if (looksLikeMac) {
-  //                 final ok = await qrController.connectToPeer(targetIp);
-  //                 if (!ok) {
-  //                   Get.snackbar(
-  //                     'Connection Failed',
-  //                     'Failed to establish P2P connection. Please try again.',
-  //                     backgroundColor: Colors.red.withOpacity(0.8),
-  //                     colorText: Colors.white,
-  //                   );
-  //                   return;
-  //                 }
-
-  //                 // Wait for native to provide groupOwner IP via EventChannel
-  //                 String groupIp = '';
-  //                 final timeout = DateTime.now().add(
-  //                   const Duration(seconds: 10),
-  //                 );
-  //                 while (DateTime.now().isBefore(timeout)) {
-  //                   if (qrController.wsDisplayIp.value.isNotEmpty) {
-  //                     groupIp = qrController.wsDisplayIp.value;
-  //                     break;
-  //                   }
-  //                   await Future.delayed(const Duration(milliseconds: 300));
-  //                 }
-  //                 if (groupIp.isEmpty) {
-  //                   Get.snackbar(
-  //                     'No IP Found',
-  //                     'Could not obtain peer IP after P2P connect.',
-  //                     backgroundColor: Colors.orange.withOpacity(0.8),
-  //                     colorText: Colors.white,
-  //                   );
-  //                   return;
-  //                 }
-  //                 targetIp = groupIp;
-  //               }
-
-  //               final firstFile = widget.selectedFiles.first;
-  //               final meta = FileMeta(
-  //                 name: p.basename(firstFile),
-  //                 size: await File(firstFile).length(),
-  //                 type: 'file',
-  //               );
-
-  //               // Build a DeviceInfo with resolved IP
-  //               final resolved = DeviceInfo(
-  //                 name: receiver.name,
-  //                 ip: targetIp,
-  //                 wsPort: receiver.wsPort,
-  //                 transferPort: receiver.transferPort,
-  //               );
-  //               print('📤 Sending offer to ${resolved.ip}:${resolved.wsPort}');
-  //               print('[QR] sendOffer called from Qr_sender ip=${resolved.ip} wsPort=${resolved.wsPort}');
-  //               final accepted = await qrController.sendOffer(resolved, meta);
-  //               print('[QR] response received accepted=$accepted');
-  //               print('📥 Offer accepted? $accepted');
-
-  //               _dialogShown = false;
-  //               if (accepted) {
-  //                 await _startFileTransfer(
-  //                   HotspotInfo(
-  //                     ssid: receiver.name,
-  //                     password: '',
-  //                     ip: targetIp,
-  //                     port: resolved.transferPort,
-  //                     deviceName: receiver.name,
-  //                   ),
-  //                 );
-  //               } else {
-  //                 Get.snackbar(
-  //                   'Offer Rejected',
-  //                   'The receiver declined the file transfer.',
-  //                   backgroundColor: Colors.orange.withOpacity(0.8),
-  //                   colorText: Colors.white,
-  //                 );
-  //               }
-  //             },
-  //             child: const Text('Send'),
-  //           ),
-  //         ],
-  //       ),
-  //     );
-  //   } catch (e) {
-  //     _dialogShown = false;
-  //     Get.back(); // Close any open dialogs
-  //     Get.snackbar(
-  //       'Error',
-  //       'Failed to process QR code: $e',
-  //       backgroundColor: Colors.red.withOpacity(0.8),
-  //       colorText: Colors.white,
-  //     );
-  //     setState(() => _isProcessing = false);
-  //   }
-  // }
-
   Future<void> _processQrCode(String qrData) async {
     if (await Vibration.hasVibrator()) {
       Vibration.vibrate(duration: 500); // 500 ms
@@ -483,7 +274,7 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
           onPressed: () => Get.back(),
         ),
         title: Text(
-          'Scan QR To Make Payment',
+          'Scan QR to Send Files',
           style: GoogleFonts.roboto(
             fontWeight: FontWeight.w600,
             color: Colors.black87,
@@ -491,19 +282,6 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: () {},
-            child: Text(
-              'Help',
-              style: GoogleFonts.roboto(
-                color: Colors.black87,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
       ),
       body:
           !_hasPermission
@@ -526,7 +304,7 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                         child: Column(
                           children: [
                             Text(
-                              'Scan any of the following QR Codes',
+                              'Scan the receiver’s QR code',
                               style: GoogleFonts.roboto(
                                 color: Colors.white,
                                 fontSize: 22,
@@ -535,7 +313,7 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Sender mode - scanning receiver code',
+                              'Scan the receiver’s QR code to start file transfer',
                               style: GoogleFonts.roboto(
                                 color: Colors.white70,
                                 fontSize: 15,
@@ -566,91 +344,101 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                                 Positioned(
                                   top: 0,
                                   right: 0,
-                                  child: _ScanCorner(isTop: true, isLeft: false),
+                                  child: _ScanCorner(
+                                    isTop: true,
+                                    isLeft: false,
+                                  ),
                                 ),
                                 Positioned(
                                   bottom: 0,
                                   left: 0,
-                                  child:
-                                      _ScanCorner(isTop: false, isLeft: true),
+                                  child: _ScanCorner(
+                                    isTop: false,
+                                    isLeft: true,
+                                  ),
                                 ),
                                 Positioned(
                                   bottom: 0,
                                   right: 0,
-                                  child:
-                                      _ScanCorner(isTop: false, isLeft: false),
+                                  child: _ScanCorner(
+                                    isTop: false,
+                                    isLeft: false,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
                         ),
                       ),
-                      Container(
-                        width: double.infinity,
-                        color: Colors.black.withOpacity(0.78),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 16,
-                        ),
-                        child: SafeArea(
-                          top: false,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
-                                children: [
-                                  _bottomAction(
-                                    icon: Icons.dialpad,
-                                    label: 'Enter Till\nNumber',
-                                    onTap: () {},
-                                  ),
-                                  _bottomAction(
-                                    icon: Icons.flashlight_on,
-                                    label: 'Torch',
-                                    onTap: () => cameraController.toggleTorch(),
-                                  ),
-                                  _bottomAction(
-                                    icon: Icons.image,
-                                    label: 'Scan from\nGallery',
-                                    onTap: () {},
-                                  ),
-                                  _bottomAction(
-                                    icon: Icons.more_horiz,
-                                    label: 'More',
-                                    onTap: () => Get.back(),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Obx(() {
-                                final canReopen =
-                                    fileTransferController.canReopenPicker.value;
-                                final device =
-                                    qrController.lastPairedReceiver.value;
-                                if (!canReopen || device == null) {
-                                  return const SizedBox.shrink();
-                                }
-                                return TextButton(
-                                  onPressed:
-                                      () => AppNavigator.toTransferFile(
-                                        device: device,
-                                      ),
-                                  child: Text(
-                                    'Pick file again',
-                                    style: GoogleFonts.roboto(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                );
-                              }),
-                            ],
-                          ),
-                        ),
-                      ),
+
+                      // Container(
+                      //   width: double.infinity,
+                      //   color: Colors.black.withOpacity(0.78),
+                      //   padding: const EdgeInsets.symmetric(
+                      //     horizontal: 20,
+                      //     vertical: 16,
+                      //   ),
+                      //   child: SafeArea(
+                      //     top: false,
+                      //     child: Column(
+                      //       mainAxisSize: MainAxisSize.min,
+                      //       children: [
+                      //         Row(
+                      //           mainAxisAlignment:
+                      //               MainAxisAlignment.spaceAround,
+                      //           children: [
+                      //             _bottomAction(
+                      //               icon: Icons.dialpad,
+                      //               label: 'Enter Till\nNumber',
+                      //               onTap: () {},
+                      //             ),
+                      //             _bottomAction(
+                      //               icon: Icons.flashlight_on,
+                      //               label: 'Torch',
+                      //               onTap: () => cameraController.toggleTorch(),
+                      //             ),
+                      //             _bottomAction(
+                      //               icon: Icons.image,
+                      //               label: 'Scan from\nGallery',
+                      //               onTap: () {},
+                      //             ),
+                      //             _bottomAction(
+                      //               icon: Icons.more_horiz,
+                      //               label: 'More',
+                      //               onTap: () => Get.back(),
+                      //             ),
+                      //           ],
+                      //         ),
+                      //         const SizedBox(height: 10),
+                      //         Obx(() {
+                      //           final canReopen =
+                      //               fileTransferController
+                      //                   .canReopenPicker
+                      //                   .value;
+                      //           final device =
+                      //               qrController.lastPairedReceiver.value;
+                      //           if (!canReopen || device == null) {
+                      //             return const SizedBox.shrink();
+                      //           }
+                      //           return TextButton(
+                      //             onPressed:
+                      //                 () => AppNavigator.toTransferFile(
+                      //                   device: device,
+                      //                 ),
+                      //             child: Text(
+                      //               'Pick file again',
+                      //               style: GoogleFonts.roboto(
+                      //                 color: Colors.white,
+                      //                 fontSize: 13,
+                      //                 fontWeight: FontWeight.w500,
+                      //               ),
+                      //             ),
+                      //           );
+                      //         }),
+                      //       ],
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                   ...(_isProcessing
@@ -684,42 +472,6 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
               ),
     );
   }
-
-  Widget _bottomAction({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(26),
-          child: Ink(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.85),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white12),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: GoogleFonts.roboto(
-            color: Colors.white,
-            fontSize: 14,
-            height: 1.15,
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _ScanCorner extends StatelessWidget {
@@ -733,9 +485,7 @@ class _ScanCorner extends StatelessWidget {
     return SizedBox(
       width: 28,
       height: 28,
-      child: CustomPaint(
-        painter: _CornerPainter(isTop: isTop, isLeft: isLeft),
-      ),
+      child: CustomPaint(painter: _CornerPainter(isTop: isTop, isLeft: isLeft)),
     );
   }
 }

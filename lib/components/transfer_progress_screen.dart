@@ -360,30 +360,15 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
                   Expanded(
                     child: Center(
                       child: SingleChildScrollView(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 20),
-                          padding: const EdgeInsets.all(32),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Obx(() {
-                            final hasError = progress.error.value.isNotEmpty;
+                        child: Obx(() {
+                          final hasError = progress.error.value.isNotEmpty;
 
-                            if (hasError) {
-                              return _buildErrorState();
-                            }
+                          if (hasError) {
+                            return _buildErrorState();
+                          }
 
-                            return _buildProgressState();
-                          }),
-                        ),
+                          return _buildProgressState();
+                        }),
                       ),
                     ),
                   ),
@@ -401,63 +386,64 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         // Icon
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            isSender
-                ? Icons.cloud_upload_rounded
-                : Icons.cloud_download_rounded,
-            size: 64,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
+        // Container(
+        //   padding: const EdgeInsets.all(20),
+        //   decoration: BoxDecoration(
+        //     color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        //     shape: BoxShape.circle,
+        //   ),
+        //   child: Icon(
+        //     isSender
+        //         ? Icons.cloud_upload_rounded
+        //         : Icons.cloud_download_rounded,
+        //     size: 64,
+        //     color: Theme.of(context).colorScheme.primary,
+        //   ),
+        // ),
 
-        const SizedBox(height: 24),
+        // const SizedBox(height: 24),
 
-        // Title
-        Text(
-          isSender ? "Transferring File" : "Receiving File",
-          style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w600),
-        ),
+        // // Title
+        // Text(
+        //   isSender ? "Transferring File" : "Receiving File",
+        //   style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w600),
+        // ),
 
-        const SizedBox(height: 8),
+        // const SizedBox(height: 8),
 
-        // File Name
-        if ((fileName ?? '').isNotEmpty)
-          Text(
-            fileName ?? '',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.roboto(
-              fontSize: 14,
-              color: Colors.grey.shade600,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
+        // // File Name
+        // if ((fileName ?? '').isNotEmpty)
+        //   Text(
+        //     fileName ?? '',
+        //     textAlign: TextAlign.center,
+        //     style: GoogleFonts.roboto(
+        //       fontSize: 14,
+        //       color: Colors.grey.shade600,
+        //     ),
+        //     maxLines: 2,
+        //     overflow: TextOverflow.ellipsis,
+        //   ),
 
-        const SizedBox(height: 8),
+        // const SizedBox(height: 8),
 
-        // Device Name (receiver: show sender name; sender: show receiver name)
-        if (device != null)
-          Text(
-            isSender
-                ? "To: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Unknown'}"
-                : "From: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Sender'}",
-            style: GoogleFonts.roboto(
-              fontSize: 12,
-              color: Colors.grey.shade500,
-            ),
-          ),
+        // // Device Name (receiver: show sender name; sender: show receiver name)
+        // if (device != null)
+        //   Text(
+        //     isSender
+        //         ? "To: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Unknown'}"
+        //         : "From: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Sender'}",
+        //     style: GoogleFonts.roboto(
+        //       fontSize: 12,
+        //       color: Colors.grey.shade500,
+        //     ),
+        //   ),
 
-        const SizedBox(height: 32),
+        // const SizedBox(height: 32),
 
         // Progress Bar
         Obx(
           () => CustomUploadProgress(
+            isSender: isSender,
             progress:
                 isSender
                     ? progress.sendProgress.value

@@ -10,6 +10,8 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
 import 'package:share_app_latest/app/models/hotspot_info.dart';
+import 'package:share_app_latest/components/bg_container.dart'
+    show bg_container;
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/show_uploadbar_dialogue.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
@@ -46,41 +48,6 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     print('📱 QrReceiverDisplayScreen initialized');
     _initializeReceiving();
 
-    // Listen for file transfer session state changes
-    // ever(fileTransferController.sessionState, (TransferSessionState state) {
-
-    //   if ((state == TransferSessionState.connected ||
-    //           state == TransferSessionState.transferring) &&
-    //       mounted) {
-    //     // Once connected or transferring, move to progress screen
-    //     AppNavigator.replaceWithTransferProgress(false);
-    //   }
-    // });
-
-    // ever(fileTransferController.sessionState, (state) {
-    //   if (state == TransferSessionState.completed && mounted) {
-    //     // ✅ Success Snackbar
-    //     Get.snackbar(
-    //       'File Received',
-    //       'File received successfully',
-    //       snackPosition: SnackPosition.BOTTOM,
-    //       backgroundColor: Colors.green.withOpacity(0.9),
-    //       colorText: Colors.white,
-    //       icon: const Icon(Icons.check_circle, color: Colors.white),
-    //     );
-
-    //     // ✅ Navigate to Receive Files Screen
-    //     AppNavigator.toReceivedFiles();
-    //     // if (connectedDevice != null) {
-    //     //   // "!" laga kar force karein kyunke hum check kar chuke hain ke ye null nahi hai
-    //     //   AppNavigator.toTransferFile(device: connectedDevice!);
-    //     // } else {
-    //     //   print("❌ Error: Device info not found for navigation");
-    //     //   // Fallback agar device null ho (optional)
-    //     //   // AppNavigator.toReceivedFiles();
-    //     // }
-    //   }
-    // });
     ever(fileTransferController.sessionState, (state) {
       if (state == TransferSessionState.completed ||
           state == TransferSessionState.error) {
@@ -380,16 +347,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   Widget build(BuildContext context) {
     print('🎨 QrReceiverDisplayScreen building...');
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
-          ),
-        ),
+      body: bg_container(
         child: SafeArea(
           child: Column(
             children: [
@@ -543,52 +501,6 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Status Indicator
-                        // Container(
-                        //   padding: const EdgeInsets.symmetric(
-                        //     horizontal: 16,
-                        //     vertical: 8,
-                        //   ),
-                        //   decoration: BoxDecoration(
-                        //     color: Colors.green.withOpacity(0.2),
-                        //     borderRadius: BorderRadius.circular(20),
-                        //     border: Border.all(color: Colors.green, width: 2),
-                        //   ),
-                        //   child: Row(
-                        //     mainAxisSize: MainAxisSize.min,
-                        //     children: [
-                        //       Container(
-                        //         width: 8,
-                        //         height: 8,
-                        //         decoration: const BoxDecoration(
-                        //           color: Colors.green,
-                        //           shape: BoxShape.circle,
-                        //         ),
-                        //       ),
-                        //       const SizedBox(width: 8),
-                        //       Obx(() {
-                        //         if (hotspotController.isHotspotActive.value) {
-                        //           return const Text(
-                        //             'Hotspot Active',
-                        //             style: TextStyle(
-                        //               color: Colors.green,
-                        //               fontWeight: FontWeight.bold,
-                        //             ),
-                        //           );
-                        //         } else {
-                        //           return const Text(
-                        //             'Hotspot Not Active',
-                        //             style: TextStyle(
-                        //               color: Colors.orange,
-                        //               fontWeight: FontWeight.bold,
-                        //             ),
-                        //           );
-                        //         }
-                        //       }),
-                        //     ],
-                        //   ),
-                        // ),
-                        // Status Indicator
                         Obx(() {
                           String statusText;
                           Color statusColor;
@@ -674,28 +586,6 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-                                // const SizedBox(height: 8),
-                                // ElevatedButton.icon(
-                                //   onPressed: () async {
-                                //     try {
-                                //       await HotspotService.openHotspotSettings();
-                                //     } catch (_) {
-                                //       Get.snackbar(
-                                //         'Unable to open settings',
-                                //         'Please open hotspot/wifi settings manually.',
-                                //         backgroundColor: Colors.orange
-                                //             .withOpacity(0.9),
-                                //         colorText: Colors.white,
-                                //       );
-                                //     }
-                                //   },
-                                //   icon: const Icon(Icons.settings),
-                                //   label: const Text('Open Hotspot Settings'),
-                                //   style: ElevatedButton.styleFrom(
-                                //     backgroundColor: Colors.orange,
-                                //     foregroundColor: Colors.white,
-                                //   ),
-                                // ),
                               ],
                             );
                           }
@@ -704,90 +594,6 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
 
                         const SizedBox(height: 40),
 
-                        // QR Code Container
-                        // Container(
-                        //   padding: const EdgeInsets.all(20),
-                        //   decoration: BoxDecoration(
-                        //     color: Colors.white,
-                        //     borderRadius: BorderRadius.circular(20),
-                        //     boxShadow: [
-                        //       BoxShadow(
-                        //         color: Colors.black.withOpacity(0.1),
-                        //         blurRadius: 20,
-                        //         offset: const Offset(0, 10),
-                        //       ),
-                        //     ],
-                        //   ),
-                        //   child: Column(
-                        //     children: [
-                        //       // QR Code
-                        //       QrImageView(
-                        //         data: qrData,
-                        //         version: QrVersions.auto,
-                        //         size: 200.0,
-                        //         backgroundColor: Colors.white,
-                        //       ),
-
-                        //       const SizedBox(height: 20),
-
-                        //       // Hotspot Details
-                        //       Text(
-                        //         'Connection Details',
-                        //         style: GoogleFonts.roboto(
-                        //           fontSize: 18,
-                        //           fontWeight: FontWeight.bold,
-                        //           color: Colors.black87,
-                        //         ),
-                        //       ),
-
-                        //       const SizedBox(height: 16),
-
-                        //       // Network Name
-                        //       _buildDetailRow('Network', displayInfo.ssid),
-                        //       const SizedBox(height: 8),
-
-                        //       // Password
-                        //       _buildDetailRow(
-                        //         'Password',
-                        //         displayInfo.password.isEmpty
-                        //             ? 'Not required'
-                        //             : displayInfo.password,
-                        //       ),
-                        //       const SizedBox(height: 8),
-
-                        //       // IP Address
-                        //       _buildDetailRow('IP Address', displayInfo.ip),
-
-                        //       const SizedBox(height: 20),
-
-                        //       // Copy Button
-                        //       ElevatedButton.icon(
-                        //         onPressed: () {
-                        //           // TODO: Implement copy to clipboard
-                        //           Get.snackbar(
-                        //             'Copied',
-                        //             'Connection details copied to clipboard',
-                        //             backgroundColor: Colors.green.withOpacity(
-                        //               0.8,
-                        //             ),
-                        //             colorText: Colors.white,
-                        //           );
-                        //         },
-                        //         icon: const Icon(Icons.copy),
-                        //         label: const Text('Copy Details'),
-                        //         style: ElevatedButton.styleFrom(
-                        //           backgroundColor: const Color(0xFF5DADE2),
-                        //           foregroundColor: Colors.white,
-                        //           shape: RoundedRectangleBorder(
-                        //             borderRadius: BorderRadius.circular(12),
-                        //           ),
-                        //         ),
-                        //       ),
-                        //     ],
-                        //   ),
-                        // ),
-
-                        // QR Code Container
                         if (!_isPaired)
                           Container(
                             padding: const EdgeInsets.all(20),

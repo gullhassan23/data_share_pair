@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 
 class CustomUploadProgress extends StatelessWidget {
@@ -6,22 +7,36 @@ class CustomUploadProgress extends StatelessWidget {
   final double totalMB;
   final double speedMBps;
   final bool showSpeed;
-
+  final bool isSender;
   const CustomUploadProgress({
-    super.key,
+    Key? key,
     required this.progress,
     required this.sentMB,
     required this.totalMB,
     required this.speedMBps,
     this.showSpeed = true,
-  });
+    required this.isSender,
+  }) : super(key: key);
+
+  String _formatSize(double valueInMB) {
+    if (valueInMB >= 1024) {
+      return "${(valueInMB / 1024).toStringAsFixed(2)} GB";
+    }
+    return "${valueInMB.toStringAsFixed(0)} MB";
+  }
 
   @override
   Widget build(BuildContext context) {
+    final double safeProgress = progress.clamp(0.0, 1.0);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF3D88FC),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFD5D9FF), Color(0xFF5F74FF)],
+        ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -32,75 +47,195 @@ class CustomUploadProgress extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          /// Top Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "UPLOADING...",
-                style: TextStyle(color: Colors.white, fontSize: 14),
-              ),
-              Text(
-                "${(progress * 100).toInt()}%",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          Text(
+            isSender ? "Sending your files" : "Receiving your files",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF232323),
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-
-          const SizedBox(height: 12),
-
-          /// Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Stack(
+          const SizedBox(height: 4),
+          const Text(
+            "Hang in there, we are almost done!",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF3C3C3C),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F8F8),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFD0D0D0)),
+            ),
+            child: Column(
               children: [
-                /// Background track
-                Container(height: 10, color: const Color(0xFF353535)),
-
-                /// Gradient progress
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Container(
-                      height: 10,
-                      width: constraints.maxWidth * progress,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Color(0xFF00FFE9),
-                            Color(0xFF2F3944),
-                            Color(0xFFBDFF70),
+                SizedBox(
+                  height: 190,
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 150,
+                          height: 150,
+                          child: CircularProgressIndicator(
+                            value: safeProgress,
+                            strokeWidth: 6,
+                            backgroundColor: const Color(0xFFE4E4E4),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Color(0xFFE24A35),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8E8F8),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: const Color(0xFF5A69F0),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Text(
+                              "${(safeProgress * 100).toInt()}%",
+                              style: const TextStyle(
+                                color: Color(0xFF5A69F0),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _formatSize(sentMB),
+                              style: const TextStyle(
+                                color: Color(0xFF4A59E4),
+                                fontSize: 46,
+                                fontWeight: FontWeight.w700,
+                                height: 1.0,
+                              ),
+                            ),
+                            Text(
+                              "of ${_formatSize(totalMB)}",
+                              style: const TextStyle(
+                                color: Color(0xFF4B4B4B),
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (showSpeed)
+                              Text(
+                                "${speedMBps.toStringAsFixed(1)} MB/s",
+                                style: const TextStyle(
+                                  color: Color(0xFF777777),
+                                  fontSize: 12,
+                                ),
+                              ),
                           ],
                         ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        "Videos",
+                        textAlign: TextAlign.left,
+                        style: TextStyle(
+                          color: Color(0xFF303030),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    );
-                  },
+                    ),
+                    Expanded(
+                      child: Text(
+                        "Images",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF303030),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        "Contacts",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF303030),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        "Calendar",
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          color: Color(0xFF303030),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 9,
+                        color: const Color(0xFFE24A35),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 9,
+                        color: const Color(0xFF20D56B),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 9,
+                        color: const Color(0xFFEAB525),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 9,
+                        color: const Color(0xFF4E62DF),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-
-          const SizedBox(height: 10),
-
-          /// Bottom Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "${sentMB.toStringAsFixed(2)}MB  OF  ${totalMB.toStringAsFixed(2)}MB",
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
-              if (showSpeed)
-                Text(
-                  "${speedMBps.toStringAsFixed(1)}MB/S",
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                ),
-            ],
           ),
         ],
       ),

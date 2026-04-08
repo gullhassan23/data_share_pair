@@ -1,23 +1,28 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/components/select_device_name.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
-import '../../../controllers/pairing_controller.dart';
-import '../../../controllers/QR_controller.dart';
-import '../../../controllers/transfer_controller.dart';
-import '../../../models/file_meta.dart';
-import '../../../models/device_info.dart';
+
 import '../../../../components/radar.dart';
-import 'dart:math' as math;
+import '../../../controllers/QR_controller.dart';
+import '../../../controllers/pairing_controller.dart';
+import '../../../controllers/transfer_controller.dart';
+import '../../../models/device_info.dart';
+import '../../../models/file_meta.dart';
 
 class PairingScreen extends StatefulWidget {
-  const PairingScreen({super.key});
+  final bool isReceiver;
+  PairingScreen({Key? key, required this.isReceiver}) : super(key: key);
   @override
   State<PairingScreen> createState() => _PairingScreenState();
 }
@@ -451,12 +456,21 @@ class _PairingScreenState extends State<PairingScreen>
                 ),
                 const SizedBox(height: 22),
                 Text(
-                  "Searching for nearby devices",
+                  widget.isReceiver
+                      ? "Waiting for sender device..."
+                      : "Searching for nearby receiver...",
                   style: GoogleFonts.roboto(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
+                // Text(
+                //   "Searching for nearby devices",
+                //   style: GoogleFonts.roboto(
+                //     fontSize: 22,
+                //     fontWeight: FontWeight.bold,
+                //   ),
+                // ),
                 SizedBox(height: 3),
                 Text(
                   "We are using out radar to catch devices near you. Be patient this may take little while",
