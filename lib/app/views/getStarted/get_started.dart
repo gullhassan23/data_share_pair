@@ -147,7 +147,7 @@ class getStartedScreen extends StatelessWidget {
                                       Align(
                                         alignment: Alignment.center,
                                         child: Image.asset(
-                                          "assets/icons/File Folder.png",
+                                          "assets/icons/File Share logo.png",
                                           height: 56,
                                           fit: BoxFit.contain,
                                         ),
@@ -167,15 +167,6 @@ class getStartedScreen extends StatelessWidget {
                                         child: Image.asset(
                                           "assets/icons/Thums Up.png",
                                           height: 46,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                      Positioned(
-                                        bottom: 2,
-                                        left: 10,
-                                        child: Image.asset(
-                                          "assets/icons/QR.png",
-                                          height: 20,
                                           fit: BoxFit.contain,
                                         ),
                                       ),
