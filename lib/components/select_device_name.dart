@@ -6,6 +6,7 @@ import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
@@ -38,6 +39,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsScreenTracker.trackScreen('select_device_screen');
     if (widget.isBluetooth) {
       final bluetooth = Get.find<BluetoothController>(tag: 'sender');
       _connectedDeviceWorker = ever(bluetooth.connectedDevice, (device) {

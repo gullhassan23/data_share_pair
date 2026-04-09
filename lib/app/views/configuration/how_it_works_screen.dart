@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 
 class HowItWorksScreen extends StatefulWidget {
   const HowItWorksScreen({super.key});
@@ -12,6 +13,12 @@ class HowItWorksScreen extends StatefulWidget {
 
 class _HowItWorksScreenState extends State<HowItWorksScreen> {
   static const Color _textDark = Color(0xFF333333);
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsScreenTracker.trackScreen('how_it_works_screen');
+  }
 
   @override
   Widget build(BuildContext context) {

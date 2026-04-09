@@ -149,28 +149,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         const SizedBox(height: 20),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            InkWell(
-                              onTap:
-                                  () => Get.to(
-                                    () => ChooseMethodScan(isReciver: false),
-                                  ),
-                              child: Image.asset(
-                                'assets/icons/Send.png',
-                                height: 150,
-                                width: 150,
+                            Expanded(
+                              child: InkWell(
+                                onTap:
+                                    () => Get.to(
+                                      () => ChooseMethodScan(isReciver: false),
+                                    ),
+                                child: Image.asset(
+                                  'assets/icons/send.png',
+                                  height: 130,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
-                            InkWell(
-                              onTap:
-                                  () => Get.to(
-                                    () => ChooseMethodScan(isReciver: true),
-                                  ),
-                              child: Image.asset(
-                                'assets/icons/Receive.png',
-                                height: 150,
-                                width: 150,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: InkWell(
+                                onTap:
+                                    () => Get.to(
+                                      () => ChooseMethodScan(isReciver: true),
+                                    ),
+                                child: Image.asset(
+                                  'assets/icons/Receive.png',
+                                  height: 130,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
 
