@@ -139,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 8),
                         Text(
                           "Choose an option to start transferring\n between devices.",
+
                           textAlign: TextAlign.center,
                           style: GoogleFonts.roboto(
                             fontSize: 14,

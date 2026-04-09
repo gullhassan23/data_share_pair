@@ -14,15 +14,18 @@ import 'package:share_app_latest/services/adapty_service.dart';
 Set<String> get kPremiumProductIds {
   final monthly = dotenv.env['IAP_PRODUCT_MONTHLY'];
   final yearly = dotenv.env['IAP_PRODUCT_YEARLY'];
+  final weekly = dotenv.env['IAP_PRODUCT_WEEKLY'];
 
   final ids = <String>{};
   if (monthly != null && monthly.isNotEmpty) ids.add(monthly);
   if (yearly != null && yearly.isNotEmpty) ids.add(yearly);
+  if (weekly != null && weekly.isNotEmpty) ids.add(weekly);
 
   if (ids.isEmpty) {
     ids.addAll({
       'com.share.transfer.file.all.data.app.premium.monthly',
       'com.share.transfer.file.all.data.app.premium.yearly',
+      'com.share.transfer.file.all.data.app.premium.weekly',
     });
   }
 
@@ -94,40 +97,51 @@ class SubscriptionIAPService {
       return;
     }
 
-    _subscription ??=
-        _inAppPurchase.purchaseStream.listen(_onPurchaseUpdated, onError: (e) {
-      debugPrint('[SubscriptionIAP] purchaseStream error: $e');
-    }, onDone: () {
-      debugPrint('[SubscriptionIAP] purchaseStream done');
-      _subscription?.cancel();
-    });
+    _subscription ??= _inAppPurchase.purchaseStream.listen(
+      _onPurchaseUpdated,
+      onError: (e) {
+        debugPrint('[SubscriptionIAP] purchaseStream error: $e');
+      },
+      onDone: () {
+        debugPrint('[SubscriptionIAP] purchaseStream done');
+        _subscription?.cancel();
+      },
+    );
     debugPrint('[SubscriptionIAP] init: purchase stream listener attached');
 
     await _loadProducts();
-    debugPrint('[SubscriptionIAP] init: completed (products count: ${_products.length})');
+    debugPrint(
+      '[SubscriptionIAP] init: completed (products count: ${_products.length})',
+    );
     isLoading.value = false;
   }
 
   Future<void> _loadProducts() async {
-    debugPrint('[SubscriptionIAP] _loadProducts: querying product IDs: $kPremiumProductIds');
+    debugPrint(
+      '[SubscriptionIAP] _loadProducts: querying product IDs: $kPremiumProductIds',
+    );
     final response = await _inAppPurchase.queryProductDetails(
       kPremiumProductIds,
     );
 
     if (response.error != null) {
-      debugPrint('[SubscriptionIAP] _loadProducts: query error: ${response.error}');
+      debugPrint(
+        '[SubscriptionIAP] _loadProducts: query error: ${response.error}',
+      );
       return;
     }
 
     _products = response.productDetails;
-    debugPrint('[SubscriptionIAP] _loadProducts: fetched ${_products.length} product(s): ${_products.map((p) => p.id).toList()}');
+    debugPrint(
+      '[SubscriptionIAP] _loadProducts: fetched ${_products.length} product(s): ${_products.map((p) => p.id).toList()}',
+    );
   }
 
   PremiumPlan? planForId(String id) {
     final product = _products.cast<ProductDetails?>().firstWhere(
-          (p) => p?.id == id,
-          orElse: () => null,
-        );
+      (p) => p?.id == id,
+      orElse: () => null,
+    );
     if (product == null) return null;
 
     return PremiumPlan(
@@ -139,18 +153,22 @@ class SubscriptionIAPService {
   }
 
   Future<void> buy(String productId) async {
-    debugPrint('[SubscriptionIAP] buy: productId=$productId, isAvailable=$_isAvailable');
+    debugPrint(
+      '[SubscriptionIAP] buy: productId=$productId, isAvailable=$_isAvailable',
+    );
     if (!_isAvailable) {
       debugPrint('[SubscriptionIAP] buy: aborting (IAP not available)');
       return;
     }
 
     final product = _products.cast<ProductDetails?>().firstWhere(
-          (p) => p?.id == productId,
-          orElse: () => null,
-        );
+      (p) => p?.id == productId,
+      orElse: () => null,
+    );
     if (product == null) {
-      debugPrint('[SubscriptionIAP] buy: product not found: $productId (available: ${_products.map((p) => p.id).toList()})');
+      debugPrint(
+        '[SubscriptionIAP] buy: product not found: $productId (available: ${_products.map((p) => p.id).toList()})',
+      );
       return;
     }
 
@@ -159,7 +177,9 @@ class SubscriptionIAPService {
     isLoading.value = true;
     try {
       await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-      debugPrint('[SubscriptionIAP] buy: buyNonConsumable returned (result will come via purchase stream)');
+      debugPrint(
+        '[SubscriptionIAP] buy: buyNonConsumable returned (result will come via purchase stream)',
+      );
     } catch (e, st) {
       debugPrint('[SubscriptionIAP] buy: exception: $e');
       debugPrint('[SubscriptionIAP] buy: stackTrace: $st');
@@ -169,33 +189,49 @@ class SubscriptionIAPService {
   }
 
   Future<void> restorePurchases() async {
-    debugPrint('[SubscriptionIAP] restorePurchases: starting, isAvailable=$_isAvailable');
+    debugPrint(
+      '[SubscriptionIAP] restorePurchases: starting, isAvailable=$_isAvailable',
+    );
     if (!_isAvailable) {
-      debugPrint('[SubscriptionIAP] restorePurchases: aborting (IAP not available)');
+      debugPrint(
+        '[SubscriptionIAP] restorePurchases: aborting (IAP not available)',
+      );
       return;
     }
     await _inAppPurchase.restorePurchases();
-    debugPrint('[SubscriptionIAP] restorePurchases: restore call completed (results via purchase stream)');
+    debugPrint(
+      '[SubscriptionIAP] restorePurchases: restore call completed (results via purchase stream)',
+    );
   }
 
   Future<void> _onPurchaseUpdated(
     List<PurchaseDetails> purchaseDetailsList,
   ) async {
-    debugPrint('[SubscriptionIAP] _onPurchaseUpdated: received ${purchaseDetailsList.length} update(s)');
+    debugPrint(
+      '[SubscriptionIAP] _onPurchaseUpdated: received ${purchaseDetailsList.length} update(s)',
+    );
     for (final purchaseDetails in purchaseDetailsList) {
-      debugPrint('[SubscriptionIAP] _onPurchaseUpdated: productId=${purchaseDetails.productID}, status=${purchaseDetails.status}');
+      debugPrint(
+        '[SubscriptionIAP] _onPurchaseUpdated: productId=${purchaseDetails.productID}, status=${purchaseDetails.status}',
+      );
       switch (purchaseDetails.status) {
         case PurchaseStatus.pending:
           debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=PENDING');
           isLoading.value = true;
           break;
         case PurchaseStatus.purchased:
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=PURCHASED, verifying with backend...');
+          debugPrint(
+            '[SubscriptionIAP] _onPurchaseUpdated: status=PURCHASED, verifying with backend...',
+          );
           final isValid = await _verifyPurchaseWithBackend(purchaseDetails);
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: verification result isValid=$isValid');
+          debugPrint(
+            '[SubscriptionIAP] _onPurchaseUpdated: verification result isValid=$isValid',
+          );
           if (isValid) {
             setCachedPremium(true);
-            debugPrint('[SubscriptionIAP] _onPurchaseUpdated: success — premium granted');
+            debugPrint(
+              '[SubscriptionIAP] _onPurchaseUpdated: success — premium granted',
+            );
             // Immediate UI update (do not wait for Firestore roundtrip).
             if (Get.isRegistered<PremiumController>()) {
               final c = Get.find<PremiumController>();
@@ -212,21 +248,34 @@ class SubscriptionIAPService {
               await Get.find<PremiumController>().refreshSubscriptionStatus();
             }
           } else {
-            debugPrint('[SubscriptionIAP] _onPurchaseUpdated: verification failed — premium not granted');
+            debugPrint(
+              '[SubscriptionIAP] _onPurchaseUpdated: verification failed — premium not granted',
+            );
           }
           if (purchaseDetails.pendingCompletePurchase) {
             await _inAppPurchase.completePurchase(purchaseDetails);
-            debugPrint('[SubscriptionIAP] _onPurchaseUpdated: purchase completed');
+            debugPrint(
+              '[SubscriptionIAP] _onPurchaseUpdated: purchase completed',
+            );
           }
           isLoading.value = false;
           break;
         case PurchaseStatus.restored:
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=RESTORED, verifying with backend...');
-          final isValid = await _verifyPurchaseWithBackend(purchaseDetails, isRestore: true);
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore verification isValid=$isValid');
+          debugPrint(
+            '[SubscriptionIAP] _onPurchaseUpdated: status=RESTORED, verifying with backend...',
+          );
+          final isValid = await _verifyPurchaseWithBackend(
+            purchaseDetails,
+            isRestore: true,
+          );
+          debugPrint(
+            '[SubscriptionIAP] _onPurchaseUpdated: restore verification isValid=$isValid',
+          );
           if (isValid) {
             setCachedPremium(true);
-            debugPrint('[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted');
+            debugPrint(
+              '[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted',
+            );
             // Immediate UI update (do not wait for Firestore roundtrip).
             if (Get.isRegistered<PremiumController>()) {
               final c = Get.find<PremiumController>();
@@ -249,15 +298,21 @@ class SubscriptionIAPService {
           isLoading.value = false;
           break;
         case PurchaseStatus.error:
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=ERROR: ${purchaseDetails.error}');
+          debugPrint(
+            '[SubscriptionIAP] _onPurchaseUpdated: status=ERROR: ${purchaseDetails.error}',
+          );
           isLoading.value = false;
           break;
         case PurchaseStatus.canceled:
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=CANCELED (user cancelled)');
+          debugPrint(
+            '[SubscriptionIAP] _onPurchaseUpdated: status=CANCELED (user cancelled)',
+          );
           isLoading.value = false;
           break;
         default:
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=OTHER (${purchaseDetails.status})');
+          debugPrint(
+            '[SubscriptionIAP] _onPurchaseUpdated: status=OTHER (${purchaseDetails.status})',
+          );
           isLoading.value = false;
           break;
       }
@@ -265,22 +320,31 @@ class SubscriptionIAPService {
   }
 
   /// Retries getToken() so APNS can become ready on iOS. Ensures notification + Firestore data both work.
-  static Future<String?> _getFcmTokenWithRetry({int maxAttempts = 3, Duration delay = const Duration(seconds: 2)}) async {
+  static Future<String?> _getFcmTokenWithRetry({
+    int maxAttempts = 3,
+    Duration delay = const Duration(seconds: 2),
+  }) async {
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         final token = await FirebaseMessaging.instance.getToken();
         if (token != null && token.isNotEmpty) {
-          debugPrint('[SubscriptionIAP] _getFcmTokenWithRetry: token obtained on attempt $attempt');
+          debugPrint(
+            '[SubscriptionIAP] _getFcmTokenWithRetry: token obtained on attempt $attempt',
+          );
           return token;
         }
       } catch (e) {
-        debugPrint('[SubscriptionIAP] _getFcmTokenWithRetry: attempt $attempt failed: $e');
+        debugPrint(
+          '[SubscriptionIAP] _getFcmTokenWithRetry: attempt $attempt failed: $e',
+        );
         if (attempt < maxAttempts) {
           await Future<void>.delayed(delay);
         }
       }
     }
-    debugPrint('[SubscriptionIAP] _getFcmTokenWithRetry: no token after $maxAttempts attempts');
+    debugPrint(
+      '[SubscriptionIAP] _getFcmTokenWithRetry: no token after $maxAttempts attempts',
+    );
     return null;
   }
 
@@ -288,7 +352,9 @@ class SubscriptionIAPService {
     PurchaseDetails purchaseDetails, {
     bool isRestore = false,
   }) async {
-    debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: productId=${purchaseDetails.productID}, isRestore=$isRestore');
+    debugPrint(
+      '[SubscriptionIAP] _verifyPurchaseWithBackend: productId=${purchaseDetails.productID}, isRestore=$isRestore',
+    );
     try {
       final receiptData =
           purchaseDetails.verificationData.serverVerificationData;
@@ -316,9 +382,7 @@ class SubscriptionIAPService {
 
       final response = await http.post(
         uri,
-        headers: {
-          HttpHeaders.contentTypeHeader: 'application/json',
-        },
+        headers: {HttpHeaders.contentTypeHeader: 'application/json'},
         body: jsonEncode(body),
       );
 
@@ -331,11 +395,15 @@ class SubscriptionIAPService {
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final isValid = decoded['isValid'] == true;
-      debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid');
+      debugPrint(
+        '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid',
+      );
       return isValid;
     } catch (e, st) {
       debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: exception: $e');
-      debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: stackTrace: $st');
+      debugPrint(
+        '[SubscriptionIAP] _verifyPurchaseWithBackend: stackTrace: $st',
+      );
       return false;
     }
   }
