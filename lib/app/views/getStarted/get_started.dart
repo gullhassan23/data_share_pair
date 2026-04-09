@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/components/on_boardingbutton.dart';
 import 'package:get/get.dart';
+import 'dart:math' as math;
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -10,8 +11,31 @@ import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 
-class getStartedScreen extends StatelessWidget {
+class getStartedScreen extends StatefulWidget {
   const getStartedScreen({super.key});
+
+  @override
+  State<getStartedScreen> createState() => _getStartedScreenState();
+}
+
+class _getStartedScreenState extends State<getStartedScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ringController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ringController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ringController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,35 +52,23 @@ class getStartedScreen extends StatelessWidget {
             return Column(
               children: [
                 /// TOP BAR
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.menu,
-                          color: Color(0xff4e66fc),
-                          size: 30,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    child: IconButton(
+                      onPressed: () => AppNavigator.toConfiguration(),
+                      icon: const Icon(
+                        Icons.menu,
+                        color: Color(0xff4e66fc),
+                        size: 30,
                       ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.settings,
-                          color: Color(0xff4e66fc),
-                          size: 30,
-                        ),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
                   ),
                 ),
 
@@ -134,43 +146,63 @@ class getStartedScreen extends StatelessWidget {
                                 alignment: Alignment.centerRight,
                                 child: SizedBox(
                                   height: 170,
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    alignment: Alignment.center,
-                                    children: [
-                                      Positioned.fill(
-                                        child: Image.asset(
-                                          "assets/icons/Circle.png",
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                      Align(
+                                  child: AnimatedBuilder(
+                                    animation: _ringController,
+                                    builder: (context, _) {
+                                      final angle =
+                                          _ringController.value * 2 * math.pi;
+                                      return Stack(
+                                        clipBehavior: Clip.none,
                                         alignment: Alignment.center,
-                                        child: Image.asset(
-                                          "assets/icons/File Share logo.png",
-                                          height: 56,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                      Positioned(
-                                        left: -6,
-                                        top: 72,
-                                        child: Image.asset(
-                                          "assets/icons/Like.png",
-                                          height: 34,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: -2,
-                                        right: -4,
-                                        child: Image.asset(
-                                          "assets/icons/Thums Up.png",
-                                          height: 46,
-                                          fit: BoxFit.contain,
-                                        ),
-                                      ),
-                                    ],
+                                        children: [
+                                          Positioned.fill(
+                                            child: Image.asset(
+                                              "assets/icons/Circle.png",
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                          Align(
+                                            alignment: Alignment.center,
+                                            child: Image.asset(
+                                              "assets/icons/File Share logo.png",
+                                              height: 56,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                          Positioned(
+                                            left:
+                                                85 + math.cos(angle) * 56 - 17,
+                                            top: 85 + math.sin(angle) * 36 - 17,
+                                            child: Image.asset(
+                                              "assets/icons/Like.png",
+                                              height: 34,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                          Positioned(
+                                            left:
+                                                85 +
+                                                math.cos(
+                                                      angle + (2 * math.pi / 3),
+                                                    ) *
+                                                    60 -
+                                                21,
+                                            top:
+                                                85 +
+                                                math.sin(
+                                                      angle + (2 * math.pi / 3),
+                                                    ) *
+                                                    42 -
+                                                21,
+                                            child: Image.asset(
+                                              "assets/icons/Thums Up.png",
+                                              height: 42,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
                                 ),
                               ),

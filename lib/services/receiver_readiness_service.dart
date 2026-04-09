@@ -93,4 +93,25 @@ class ReceiverReadinessService {
     }
     return null;
   }
+
+  /// All non-loopback IPv4 addresses on this device (Wi‑Fi, cellular, VPN, etc.).
+  /// Used to exclude "self" from discovery when [discoverLocalIp] disagrees with the
+  /// interface used for the scan (common on some OEMs / dual-network setups).
+  static Future<Set<String>> allLocalIpv4Addresses() async {
+    final out = <String>{};
+    try {
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLoopback: false,
+      );
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          if (addr.isLoopback) continue;
+          final a = addr.address;
+          if (a.isNotEmpty) out.add(a);
+        }
+      }
+    } catch (_) {}
+    return out;
+  }
 }

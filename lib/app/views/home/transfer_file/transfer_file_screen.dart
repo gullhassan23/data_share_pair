@@ -89,29 +89,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       return;
     }
 
-    // Auto-close this screen as soon as the upload completes successfully.
-    // This does NOT change transfer logic; it only reacts to existing progress signals.
-    // _transferCompleteWorker = ever<double>(progress.sendProgress, (value) {
-    //   if (_didAutoNavigate) return;
-
-    //   final isDone = value >= 1.0;
-    //   final isSuccess = progress.status.value == 'sent';
-    //   final hasError = progress.error.value.isNotEmpty;
-
-    //   if (isDone && isSuccess && !hasError) {
-    //     _didAutoNavigate = true;
-    //     // Navigate to the "next" screen by popping this transfer screen if possible.
-    //     // Fallback to home if it can't pop.
-    //     WidgetsBinding.instance.addPostFrameCallback((_) {
-    //       if (!mounted) return;
-    //       if (Get.key.currentState?.canPop() ?? false) {
-    //         Get.back();
-    //       } else {
-    //         AppNavigator.toHome();
-    //       }
-    //     });
-    //   }
-    // });
+   
 
     _transferCompleteWorker = ever<String>(progress.status, (status) {
       if (_didAutoNavigate) return;

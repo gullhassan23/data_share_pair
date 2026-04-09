@@ -129,6 +129,10 @@ class AppNavigator {
     Get.toNamed(AppRoutes.premium);
   }
 
+  static void toConfiguration() {
+    Get.toNamed(AppRoutes.configuration);
+  }
+
   static void back() {
     if (Get.key.currentState?.canPop() ?? false) {
       Get.back();

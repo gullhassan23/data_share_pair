@@ -23,6 +23,8 @@ class PairingController extends GetxController {
   final incomingOffer = Rxn<Map<String, dynamic>>();
   final Map<String, WebSocket> _pendingSockets = {};
   final Set<String> _autoAcceptHandshakeIps = <String>{};
+  /// Cached LAN IPs for this device; refreshed in [startServer] and [discover] so we never list "self".
+  final Set<String> _localIpv4 = <String>{};
   final isScanning = false.obs;
   final wifiSsid = Rx<String?>(null);
 
@@ -178,6 +180,13 @@ class PairingController extends GetxController {
         wifiIp = InternetAddress.anyIPv4.address;
       }
 
+      _localIpv4
+        ..clear()
+        ..addAll(await ReceiverReadinessService.allLocalIpv4Addresses());
+      if (wifiIp != InternetAddress.anyIPv4.address) {
+        _localIpv4.add(wifiIp);
+      }
+
       // Bind to all interfaces so we're reachable on any address (WiFi + cellular if present).
       // We still advertise wifiIp in device_info so the scan subnet matches.
       final bindAddress = InternetAddress.anyIPv4;
@@ -251,8 +260,10 @@ class PairingController extends GetxController {
                       (map['name'] as String?)?.trim() ?? 'Unknown';
                   if (peerIp == null ||
                       peerIp.isEmpty ||
-                      peerIp == wifiIp ||
                       peerIp == InternetAddress.anyIPv4.address) {
+                    return;
+                  }
+                  if (peerIp == wifiIp || _localIpv4.contains(peerIp)) {
                     return;
                   }
                   final peer = DeviceInfo(
@@ -408,11 +419,22 @@ class PairingController extends GetxController {
   Future<void> discover({bool mergeResults = false}) async {
     print('🔍 [DISCOVER] Starting device discovery (merge: $mergeResults)...');
 
+    _localIpv4
+      ..clear()
+      ..addAll(await ReceiverReadinessService.allLocalIpv4Addresses());
+
     String? localIp = await ReceiverReadinessService.discoverLocalIp();
+    if ((localIp == null || localIp.isEmpty) && _localIpv4.isNotEmpty) {
+      localIp = _localIpv4.first;
+      print(
+        '🔍 [DISCOVER] discoverLocalIp empty; using $_localIpv4 for subnet anchor: $localIp',
+      );
+    }
     if (localIp == null || localIp.isEmpty) {
       print("❌ [DISCOVER] Cannot determine local IP for network scanning");
       return;
     }
+    _localIpv4.add(localIp);
 
     final base = localIp.split('.');
     if (base.length != 4) {
@@ -464,10 +486,10 @@ class PairingController extends GetxController {
             '🔍 [DISCOVER] Actively found device: ${d.name} at ${d.ip}:${d.transferPort}',
           );
 
-          // Don't add our own device to the list
-          if (d.ip == localIp) {
+          // Don't add our own device (single-IP check misses OEM/timing mismatches).
+          if (_localIpv4.contains(d.ip)) {
             print(
-              '🚫 [DISCOVER] Skipping own device: ${d.ip} (local IP: $localIp)',
+              '🚫 [DISCOVER] Skipping own device: ${d.ip} (local IPs: $_localIpv4)',
             );
             return;
           }
@@ -532,9 +554,11 @@ class PairingController extends GetxController {
       final jsonMap = jsonDecode(first as String) as Map<String, dynamic>;
       final peer = DeviceInfo.fromJson(jsonMap);
       ws.close();
-      final localIp = await ReceiverReadinessService.discoverLocalIp();
+      _localIpv4
+        ..clear()
+        ..addAll(await ReceiverReadinessService.allLocalIpv4Addresses());
       // Don't add our own device to the list
-      if (peer.ip != localIp) {
+      if (!_localIpv4.contains(peer.ip)) {
         final existing = devices.where((e) => e.ip == peer.ip).isNotEmpty;
         if (!existing) devices.add(peer);
       }

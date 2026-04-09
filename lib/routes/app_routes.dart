@@ -17,4 +17,5 @@ abstract class AppRoutes {
   static const removeDuplicates = '/remove-duplicates';
   static const duplicatePreview = '/duplicate-preview';
   static const premium = '/premium';
+  static const configuration = '/configuration';
 }

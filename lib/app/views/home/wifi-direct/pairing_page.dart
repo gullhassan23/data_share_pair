@@ -439,8 +439,9 @@ class _PairingScreenState extends State<PairingScreen>
                     Text(
                       "Back",
                       style: GoogleFonts.roboto(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
                   ],
@@ -457,8 +458,8 @@ class _PairingScreenState extends State<PairingScreen>
                 const SizedBox(height: 22),
                 Text(
                   widget.isReceiver
-                      ? "Waiting for sender device..."
-                      : "Searching for nearby receiver...",
+                      ? "Waiting for sender device to recieve file"
+                      : "Searching for nearby receiver to send file",
                   style: GoogleFonts.roboto(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,

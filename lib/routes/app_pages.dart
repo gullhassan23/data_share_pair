@@ -17,6 +17,7 @@ import 'package:share_app_latest/app/views/transfer_recovery/transfer_recovery_s
 import 'package:share_app_latest/components/transfer_progress_screen.dart';
 import 'package:share_app_latest/app/views/splash/splash_screen.dart';
 import 'package:share_app_latest/app/views/premium/premium_page.dart';
+import 'package:share_app_latest/app/views/configuration/configuration_screen.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'app_routes.dart';
 
@@ -133,6 +134,11 @@ class AppPages {
         Get.lazyPut<PremiumController>(() => PremiumController());
       }),
       transition: Transition.fade,
+    ),
+    GetPage(
+      name: AppRoutes.configuration,
+      page: () => const ConfigurationScreen(),
+      transition: Transition.rightToLeft,
     ),
   ];
 }
