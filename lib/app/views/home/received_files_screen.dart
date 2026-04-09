@@ -92,63 +92,69 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
 
                 /// Main Content Card
                 Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 25,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        /// Header
-                        const SizedBox(height: 20),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 25,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          /// Header
+                          const SizedBox(height: 20),
 
-                        /// Files List
-                        Expanded(
-                          child: Obx(() {
+                          /// Files List
+                          Obx(() {
                             final files = transfer.receivedFiles;
                             if (files.isEmpty) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.inbox,
-                                      size: 64,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      "No received files yet",
-                                      style: GoogleFonts.roboto(
-                                        fontSize: 18,
-                                        color: Colors.black,
+                              return SizedBox(
+                                height: 260,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.inbox,
+                                        size: 64,
+                                        color: Colors.grey.shade400,
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "Files you receive will appear here",
-                                      style: GoogleFonts.roboto(
-                                        fontSize: 14,
-                                        color: Colors.black,
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        "No received files yet",
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 18,
+                                          color: Colors.black,
+                                        ),
                                       ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        "Files you receive will appear here",
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 14,
+                                          color: Colors.black,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               );
                             }
 
                             return GridView.builder(
                               itemCount: files.length,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
                               gridDelegate:
                                   const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 3,
@@ -237,8 +243,8 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                               },
                             );
                           }),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

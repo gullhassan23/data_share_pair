@@ -22,7 +22,25 @@ class CustomUploadProgress extends StatelessWidget {
     if (valueInMB >= 1024) {
       return "${(valueInMB / 1024).toStringAsFixed(2)} GB";
     }
-    return "${valueInMB.toStringAsFixed(0)} MB";
+    if (valueInMB >= 1) {
+      return "${valueInMB.toStringAsFixed(2)} MB";
+    }
+    if (valueInMB > 0) {
+      final kb = valueInMB * 1000;
+      return "${kb.toStringAsFixed(0)} KB";
+    }
+    return "0 MB";
+  }
+
+  String _formatSpeed(double speedInMBps) {
+    if (speedInMBps >= 1) {
+      return "${speedInMBps.toStringAsFixed(2)} MB/s";
+    }
+    if (speedInMBps > 0) {
+      final kbps = speedInMBps * 1000;
+      return "${kbps.toStringAsFixed(0)} KB/s";
+    }
+    return "0 KB/s";
   }
 
   @override
@@ -149,7 +167,7 @@ class CustomUploadProgress extends StatelessWidget {
                             SizedBox(height: 6),
                             if (showSpeed)
                               Text(
-                                "${speedMBps.toStringAsFixed(1)} MB/s",
+                                _formatSpeed(speedMBps),
                                 style: const TextStyle(
                                   color: Color(0xFF777777),
                                   fontSize: 20,

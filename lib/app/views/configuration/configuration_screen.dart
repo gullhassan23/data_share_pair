@@ -23,15 +23,13 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   static const Color _iconCircleFill = Color(0xFFE8EEFF);
 
-  static const String _playStorePackageId =
-      'com.share.transfer.file.all.data.app';
   static const String _supportEmail = 'admin@maxgamesproduction.com';
   static const String _iosAppStoreId = '6759640831';
 
   Future<void> _shareAppLink(BuildContext context) async {
     final info = await PackageInfo.fromPlatform();
     final url =
-        'https://play.google.com/store/apps/details?id=$_playStorePackageId';
+        'https://apps.apple.com/us/app/share-all-file-transfer-app/id6759640831';
     final text = '${info.appName}\n$url';
     final box = context.findRenderObject() as RenderBox?;
     final Rect? origin =
