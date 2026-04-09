@@ -20,6 +20,7 @@ import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -80,6 +81,14 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: AppRoutes.splash,
       getPages: AppPages.pages,
+      routingCallback: (routing) {
+        final current = routing?.current;
+        final previous = routing?.previous;
+        AnalyticsScreenTracker.trackCurrentRoute(
+          current,
+          previousRouteName: previous,
+        );
+      },
       builder: (context, child) => _TransferLifecycleWrapper(child: child!),
     );
   }
@@ -139,10 +148,12 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     }
     if (state == AppLifecycleState.paused) {
       _logAppLifecycleEvent('app_background', 'paused');
+      AnalyticsScreenTracker.onAppBackground();
       return;
     }
     if (state == AppLifecycleState.detached) {
       _logAppLifecycleEvent('app_close', 'detached');
+      AnalyticsScreenTracker.onAppBackground();
     }
   }
 
