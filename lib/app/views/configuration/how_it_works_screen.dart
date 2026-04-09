@@ -12,8 +12,6 @@ class HowItWorksScreen extends StatefulWidget {
 
 class _HowItWorksScreenState extends State<HowItWorksScreen> {
   static const Color _textDark = Color(0xFF333333);
-  bool _isFirstExpanded = true;
-  bool _isSecondExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -28,67 +26,38 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   children: [
-                    _buildQuestionTile(
-                      title: 'What is Copy My Data?',
-                      isExpanded: _isFirstExpanded,
-                      onTap: () {
-                        setState(() {
-                          _isFirstExpanded = !_isFirstExpanded;
-                        });
-                      },
-                    ),
-                    if (_isFirstExpanded) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F8),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          "Enable either put the OTP and files will begin to be shared.",
-                          style: GoogleFonts.roboto(
-                            fontSize: 29 * 0.5,
-                            height: 1.3,
-                            color: _textDark,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    _buildQuestionTile(
-                      title: 'How does Copy My Data work?',
-                      isExpanded: _isSecondExpanded,
-                      onTap: () {
-                        setState(() {
-                          _isSecondExpanded = !_isSecondExpanded;
-                        });
-                      },
-                    ),
-                    if (_isSecondExpanded) ...[
-                      const SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF3F4F8),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          "Enable either Wi-Fi hotspot or connect both phones to the same Wifi network. Make sure you have the Copy My Data app on both phones installed, and have one phone set to Send the other sent on Receive. On the sender phone, select the files you want to share, on the receiving phone select the sender's phone out of the list. Make sure to input the OTP and files will begin to be shared.",
-                          style: GoogleFonts.roboto(
-                            fontSize: 29 * 0.5,
-                            height: 1.3,
-                            color: _textDark,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ],
-
+                    _buildIntroCard(),
                     const SizedBox(height: 12),
+                    _buildStepCard(
+                      step: 'Step 1',
+                      title: 'Connect to the same Wi-Fi',
+                      description:
+                          'Make sure both devices are on the same Wi-Fi network. This is required before pairing.',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStepCard(
+                      step: 'Step 2',
+                      title: 'Show receiver QR code',
+                      description:
+                          'On the receiving device, open Receive mode to generate your QR code.',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStepCard(
+                      step: 'Step 3',
+                      title: 'Scan and pair',
+                      description:
+                          'On the sending device, scan the QR code with your camera. A pairing request is sent to the receiver.',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStepCard(
+                      step: 'Step 4',
+                      title: 'Accept and transfer',
+                      description:
+                          'After the receiver accepts, a secure local connection is created and files transfer instantly over Wi-Fi - no internet needed.',
+                    ),
+                    const SizedBox(height: 12),
+                    _buildTipCard(),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -125,7 +94,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
             ),
           ),
           Text(
-            'How it works?',
+            'How It Works',
             style: GoogleFonts.roboto(
               fontSize: 34 * 0.57,
               fontWeight: FontWeight.bold,
@@ -137,10 +106,30 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
     );
   }
 
-  Widget _buildQuestionTile({
+  Widget _buildIntroCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F8),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'Share files between devices quickly and safely. Just pair once with QR code, then transfer over your local Wi-Fi.',
+        style: GoogleFonts.roboto(
+          fontSize: 15,
+          height: 1.35,
+          color: _textDark,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepCard({
+    required String step,
     required String title,
-    required bool isExpanded,
-    required VoidCallback onTap,
+    required String description,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -156,32 +145,71 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
       ),
       child: Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.roboto(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: _textDark,
-                    ),
-                  ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                step,
+                style: GoogleFonts.roboto(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF6B6B6B),
                 ),
-                Icon(
-                  isExpanded ? Icons.expand_less : Icons.expand_more,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: GoogleFonts.roboto(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
                   color: _textDark,
-                  size: 24,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                description,
+                style: GoogleFonts.roboto(
+                  fontSize: 14,
+                  height: 1.35,
+                  color: _textDark,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTipCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9F3FF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFB7D7FF)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.lightbulb_outline, color: Color(0xFF126AC7), size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Tip: If pairing does not appear, check that both devices are on the same Wi-Fi and keep screens unlocked during connection.',
+              style: GoogleFonts.roboto(
+                fontSize: 13.5,
+                height: 1.35,
+                color: _textDark,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -35,20 +35,23 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   final hotspotController = Get.put(HotspotController());
   final fileTransferController = Get.put(TransferController());
   final qrController = Get.find<QrController>();
-  DeviceInfo? connectedDevice;
-  bool _startupError = false;
-  String _startupErrorMsg = '';
-  bool _isInitializing = true;
+  final Rxn<DeviceInfo> connectedDevice = Rxn<DeviceInfo>();
+  final RxBool _startupError = false.obs;
+  final RxString _startupErrorMsg = ''.obs;
+  final RxBool _isInitializing = true.obs;
   bool _pairingDialogShown = false;
-  bool _isPaired = false;
-  String _pairedDeviceName = '';
+  final RxBool _isPaired = false.obs;
+  final RxString _pairedDeviceName = ''.obs;
+  Worker? _sessionStateWorker;
+  Worker? _pairingRequestWorker;
+  Worker? _incomingOfferWorker;
   @override
   void initState() {
     super.initState();
     print('📱 QrReceiverDisplayScreen initialized');
     _initializeReceiving();
 
-    ever(fileTransferController.sessionState, (state) {
+    _sessionStateWorker = ever(fileTransferController.sessionState, (state) {
       if (state == TransferSessionState.completed ||
           state == TransferSessionState.error) {
         if (Get.isDialogOpen ?? false) Get.back();
@@ -77,7 +80,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     });
 
     // Listen for incoming pairing requests (sender scanned our QR)
-    ever(qrController.incomingPairingRequest, (request) {
+    _pairingRequestWorker = ever(qrController.incomingPairingRequest, (request) {
       if (request != null && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && request == qrController.incomingPairingRequest.value) {
@@ -88,7 +91,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     });
 
     // Listen for incoming file offers
-    ever(qrController.incomingOffer, (offer) {
+    _incomingOfferWorker = ever(qrController.incomingOffer, (offer) {
       if (offer != null && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && offer == qrController.incomingOffer.value) {
@@ -104,11 +107,9 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   /// No magic delays; readiness-based sequencing.
   Future<void> _initializeReceiving() async {
     if (!mounted) return;
-    setState(() {
-      _isInitializing = true;
-      _startupError = false;
-      _startupErrorMsg = '';
-    });
+    _isInitializing.value = true;
+    _startupError.value = false;
+    _startupErrorMsg.value = '';
 
     try {
       // Free port 7070 and clear Wi‑Fi Direct state so QR flow can use it
@@ -156,17 +157,16 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     } catch (e) {
       print('❌ Receiver init failed: $e');
       if (mounted) {
-        setState(() {
-          _startupError = true;
-          _startupErrorMsg = e.toString().replaceAll('Exception:', '').trim();
-          _isInitializing = false;
-        });
+        _startupError.value = true;
+        _startupErrorMsg.value =
+            e.toString().replaceAll('Exception:', '').trim();
+        _isInitializing.value = false;
       }
       return;
     }
 
     if (mounted) {
-      setState(() => _isInitializing = false);
+      _isInitializing.value = false;
     }
   }
 
@@ -274,10 +274,8 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
         responded = true;
         _pairingDialogShown = false;
         qrController.respondToPairing(fromIp, true);
-        setState(() {
-          _isPaired = true;
-          _pairedDeviceName = senderName;
-        });
+        _isPaired.value = true;
+        _pairedDeviceName.value = senderName;
       },
     );
   }
@@ -290,13 +288,11 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     final meta = offer['meta'] as Map<String, dynamic>;
     final fileName = meta['name'] as String;
     final senderName = meta['deviceName'] ?? "Sender Device";
-    setState(() {
-      connectedDevice = DeviceInfo(
-        name: senderName,
-        ip: fromIp,
-        transferPort: qrController.transferPort,
-      );
-    });
+    connectedDevice.value = DeviceInfo(
+      name: senderName,
+      ip: fromIp,
+      transferPort: qrController.transferPort,
+    );
     await showAppDialog<void>(
       title: 'Incoming File',
       message: 'A sender wants to send you: $fileName. Do you accept?',
@@ -335,6 +331,9 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
   @override
   void dispose() {
     _pairingDialogShown = false;
+    _sessionStateWorker?.dispose();
+    _pairingRequestWorker?.dispose();
+    _incomingOfferWorker?.dispose();
     // Free pairing WebSocket, transfer server, P2P, and hotspot so Wi‑Fi flows can reuse ports
     qrController.stopServer();
     qrController.stopP2P();
@@ -432,7 +431,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                       );
                     }
 
-                    if (_startupError) {
+                    if (_startupError.value) {
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -455,8 +454,8 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Text(
-                              _startupErrorMsg.isNotEmpty
-                                  ? _startupErrorMsg
+                              _startupErrorMsg.value.isNotEmpty
+                                  ? _startupErrorMsg.value
                                   : 'Check Wi-Fi and try again.',
                               style: GoogleFonts.roboto(
                                 fontSize: 14,
@@ -478,14 +477,14 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                         ],
                       );
                     }
-                    if (displayInfo == null || _isInitializing) {
+                    if (displayInfo == null || _isInitializing.value) {
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const CircularProgressIndicator(),
                           const SizedBox(height: 12),
                           Text(
-                            _isInitializing
+                            _isInitializing.value
                                 ? 'Starting receiver...\nPlease wait'
                                 : 'Starting receiver server...\nPlease wait',
                             style: GoogleFonts.roboto(
@@ -594,7 +593,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
 
                         const SizedBox(height: 40),
 
-                        if (!_isPaired)
+                        if (!_isPaired.value)
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -636,7 +635,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Device successfully connected to $_pairedDeviceName',
+                                  'Device successfully connected to ${_pairedDeviceName.value}',
                                   style: GoogleFonts.roboto(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,

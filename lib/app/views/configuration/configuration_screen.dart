@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -25,6 +26,56 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   static const String _supportEmail = 'admin@maxgamesproduction.com';
   static const String _iosAppStoreId = '6759640831';
+
+  String _envUrl(List<String> keys, String fallback) {
+    for (final key in keys) {
+      final value = dotenv.env[key]?.trim();
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+    return fallback;
+  }
+
+  Future<void> _openExternalUrl(BuildContext context, String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid URL in app configuration')),
+        );
+      }
+      return;
+    }
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not open link')));
+    }
+  }
+
+  Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final privacyUrl = _envUrl([
+      'PRIVACY_POLICY_URL',
+      'PRIVACY_AND_POLICY_URL',
+    ], 'https://maxgamesproduction.blogspot.com/2023/01/privacy-policy.html');
+    await _openExternalUrl(context, privacyUrl);
+  }
+
+  Future<void> _openTermsAndConditions(BuildContext context) async {
+    final termsUrl = _envUrl([
+      'TERMS_OF_CONDITIONS_URL',
+      'TERMS_AND_CONDITIONS_URL',
+      'TERMS_OF_USE_URL',
+    ], 'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/');
+    await _openExternalUrl(context, termsUrl);
+  }
 
   Future<void> _shareAppLink(BuildContext context) async {
     final info = await PackageInfo.fromPlatform();
@@ -291,6 +342,18 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                       label: 'Feedback & Troubleshooting',
                       onTap: () => _openFeedbackEmail(context),
                     ),
+                    const SizedBox(height: 10),
+                    _buildMenuTile(
+                      leading: _circleIcon(Icons.privacy_tip_outlined),
+                      label: 'Privacy Policy',
+                      onTap: () => _openPrivacyPolicy(context),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildMenuTile(
+                      leading: _circleIcon(Icons.gavel_outlined),
+                      label: 'Terms & Conditions',
+                      onTap: () => _openTermsAndConditions(context),
+                    ),
                   ],
                 ),
               ),
@@ -399,8 +462,14 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                const _ProBannerGraphic(),
+
+                // const _ProBannerGraphic(),
+                Image.asset(
+                  'assets/icons/Premium Image_.png',
+                  height: 80,
+                  width: 80,
+                ),
+                SizedBox(width: 4),
               ],
             ),
           ),
@@ -410,6 +479,17 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   }
 
   Widget _feedbackIcon() {
+    return _circleIcon(
+      Icons.chat_bubble_outline,
+      child: Positioned(
+        right: 8,
+        bottom: 8,
+        child: Icon(Icons.star, color: _primaryBlue, size: 11),
+      ),
+    );
+  }
+
+  Widget _circleIcon(IconData icon, {Widget? child}) {
     return Container(
       width: 44,
       height: 44,
@@ -421,12 +501,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline, color: _primaryBlue, size: 22),
-          Positioned(
-            right: 8,
-            bottom: 8,
-            child: Icon(Icons.star, color: _primaryBlue, size: 11),
-          ),
+          Icon(icon, color: _primaryBlue, size: 22),
+          if (child != null) child,
         ],
       ),
     );
@@ -500,18 +576,6 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 }
 
 /// White line-art style diamond + laurel + sparkles (matches reference layout).
-class _ProBannerGraphic extends StatelessWidget {
-  const _ProBannerGraphic();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 100,
-      height: 88,
-      child: CustomPaint(painter: _ProBannerArtPainter()),
-    );
-  }
-}
 
 class _RatePopupContent {
   final String emoji;
@@ -523,68 +587,4 @@ class _RatePopupContent {
     required this.title,
     required this.subtitle,
   });
-}
-
-class _ProBannerArtPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final stroke =
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.4;
-
-    final fill =
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
-
-    final cx = size.width * 0.42;
-    final cy = size.height * 0.52;
-
-    // Laurel-like arcs
-    final leftArc =
-        Path()..addArc(
-          Rect.fromCircle(center: Offset(cx - 8, cy), radius: 28),
-          2.1,
-          1.25,
-        );
-    final rightArc =
-        Path()..addArc(
-          Rect.fromCircle(center: Offset(cx + 8, cy), radius: 28),
-          0.35,
-          -1.25,
-        );
-    canvas.drawPath(leftArc, stroke);
-    canvas.drawPath(rightArc, stroke);
-
-    // Diamond
-    const dw = 18.0;
-    const dh = 22.0;
-    final diamond =
-        Path()
-          ..moveTo(cx, cy - dh)
-          ..lineTo(cx + dw, cy)
-          ..lineTo(cx, cy + dh)
-          ..lineTo(cx - dw, cy)
-          ..close();
-    canvas.drawPath(diamond, fill);
-
-    // Small sparkle crosses
-    void drawPlus(Offset o, double s) {
-      final p =
-          Paint()
-            ..color = Colors.white
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1;
-      canvas.drawLine(Offset(o.dx - s, o.dy), Offset(o.dx + s, o.dy), p);
-      canvas.drawLine(Offset(o.dx, o.dy - s), Offset(o.dx, o.dy + s), p);
-    }
-
-    drawPlus(Offset(size.width * 0.78, size.height * 0.22), 3);
-    drawPlus(Offset(size.width * 0.88, size.height * 0.55), 2.5);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
 import 'package:vibration/vibration.dart';
@@ -24,121 +23,101 @@ class QrSenderScannerScreen extends StatefulWidget {
   State<QrSenderScannerScreen> createState() => _QrSenderScannerScreenState();
 }
 
-class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
-  final hotspotController = Get.find<HotspotController>();
-  // final fileTransferController = Get.find<FileTransferController>();
-  final fileTransferController = Get.find<TransferController>();
-  final qrController = Get.find<QrController>();
+class QrSenderScannerController extends GetxController {
+  QrSenderScannerController({
+    required this.hotspotController,
+    required this.qrController,
+  });
 
-  late final MobileScannerController cameraController;
-  bool _isProcessing = false;
-  bool _dialogShown = false;
-  String _processingStatus = '';
-  bool _hasPermission = false;
+  final HotspotController hotspotController;
+  final QrController qrController;
+
+  MobileScannerController? cameraController;
+  final isProcessing = false.obs;
+  final dialogShown = false.obs;
+  final processingStatus = ''.obs;
+  final hasPermission = false.obs;
 
   @override
-  void initState() {
-    super.initState();
-    print('📷 QrSenderScannerScreen initialized');
-    qrController.flowState.value = TransferFlowState.idle;
-    _initializeCamera();
-
-    // Note: Progress dialog is shown in _startFileTransfer and closed after all files are sent.
+  void onClose() {
+    cameraController?.dispose();
+    super.onClose();
   }
 
-  Future<void> _initializeCamera() async {
-    // Request camera permission
+  Future<void> initializeCamera() async {
     final status = await Permission.camera.request();
     if (status.isGranted) {
       cameraController = MobileScannerController();
-      setState(() {
-        _hasPermission = true;
-      });
-    } else {
-      Get.snackbar(
-        'Camera Permission Required',
-        'Please grant camera permission to scan QR codes',
-        backgroundColor: Colors.red.withOpacity(0.8),
-        colorText: Colors.white,
-      );
-      Get.back(); // Go back if no permission
+      hasPermission.value = true;
+      return;
     }
+
+    Get.snackbar(
+      'Camera Access Needed',
+      'Allow camera access to scan QR codes and connect devices.',
+      backgroundColor: Colors.red.withOpacity(0.8),
+      colorText: Colors.white,
+    );
+    Get.back();
   }
 
-  @override
-  void dispose() {
-    if (_hasPermission) {
-      cameraController.dispose();
-    }
-    super.dispose();
-  }
-
-  void _onQrCodeDetected(BarcodeCapture capture) {
-    if (_isProcessing) return;
+  void onQrCodeDetected(BarcodeCapture capture) {
+    if (isProcessing.value) return;
 
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isNotEmpty) {
       final barcode = barcodes.first;
       if (barcode.rawValue != null) {
-        _processQrCode(barcode.rawValue!);
+        processQrCode(barcode.rawValue!);
       }
     }
   }
 
-  Future<void> _processQrCode(String qrData) async {
+  Future<void> processQrCode(String qrData) async {
     if (await Vibration.hasVibrator()) {
-      Vibration.vibrate(duration: 500); // 500 ms
+      Vibration.vibrate(duration: 500);
     }
-    if (_dialogShown) return; // Already showing a dialog, ignore
-    _dialogShown = true; // Mark dialog as showing
-    setState(() {
-      _isProcessing = true;
-      _processingStatus = 'Parsing QR code...';
-    });
+    if (dialogShown.value) return;
+    dialogShown.value = true;
+    isProcessing.value = true;
+    processingStatus.value = 'Reading QR code...';
 
     try {
-      // Parse QR code data - should contain receiver's connection info
       print('[QR] Sender: raw qrData = $qrData');
       final hotspotInfo = hotspotController.parseQrCodeData(qrData);
 
       if (hotspotInfo == null) {
         Get.snackbar(
           'Invalid QR Code',
-          'This QR code does not contain valid connection information.',
+          'This QR code is not recognized. Please scan the QR code from the receiver device.',
           backgroundColor: Colors.red.withOpacity(0.8),
           colorText: Colors.white,
         );
-        _dialogShown = false;
-        setState(() => _isProcessing = false);
+        dialogShown.value = false;
+        isProcessing.value = false;
         return;
       }
 
       if (hotspotInfo.ip.isEmpty) {
         Get.snackbar(
           'Invalid QR Code',
-          'QR code has no IP address. Ensure the receiver is connected to Wi-Fi and try again.',
+          'Receiver is not ready. Ensure both devices are on the same Wi-Fi and try again.',
           backgroundColor: Colors.red.withOpacity(0.8),
           colorText: Colors.white,
         );
-        _dialogShown = false;
-        setState(() => _isProcessing = false);
+        dialogShown.value = false;
+        isProcessing.value = false;
         return;
       }
 
-      // Do NOT try to programmatically connect to Wi-Fi/hotspot on modern Android.
-      // Instead, use the QR data (IP/port) for discovery and pairing. Show receiver card,
-      // and only start TCP transfer when user explicitly taps the device.
       final displayName =
           hotspotInfo.deviceName.trim().isNotEmpty
               ? hotspotInfo.deviceName.trim()
               : null;
-      setState(
-        () =>
-            _processingStatus =
-                displayName != null
-                    ? 'Resolving receiver on $displayName...'
-                    : 'Resolving receiver…',
-      );
+      processingStatus.value =
+          displayName != null
+              ? 'Connecting to $displayName...'
+              : 'Establishing secure connection...';
 
       print(
         '[QR] Sender: parsed hotspotInfo ip=${hotspotInfo.ip} '
@@ -148,12 +127,10 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
       final tempDevice = DeviceInfo(
         name: displayName ?? 'Unknown',
         ip: hotspotInfo.ip,
-        wsPort: 7070, // Default PairingController port
+        wsPort: 7070,
         transferPort: hotspotInfo.port,
       );
 
-      // Handshake: send pairing_request and wait for receiver to accept.
-      // After accept: only navigate to TransferFileScreen. No file dialog, no sendOffer here.
       print(
         '[QR] Sender: calling requestPairing to '
         '${tempDevice.ip}:${tempDevice.wsPort} (transferPort=${tempDevice.transferPort})',
@@ -161,14 +138,14 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
       final pairingAccepted = await qrController.requestPairing(tempDevice);
       print('[QR] Sender: requestPairing result = $pairingAccepted');
       if (!pairingAccepted) {
-        _dialogShown = false;
-        setState(() => _isProcessing = false);
+        dialogShown.value = false;
+        isProcessing.value = false;
         final message =
             Platform.isIOS
-                ? 'Ensure both devices are on the same Wi-Fi and that you allowed Local Network access when prompted.'
-                : 'The receiver did not accept pairing or the request timed out. Try again.';
+                ? 'Make sure both devices are on the same Wi-Fi and Local Network permission is enabled.'
+                : 'Could not connect to the receiver. Make sure both devices are on the same Wi-Fi and try again.';
         Get.snackbar(
-          'Pairing Failed',
+          'Connection Failed',
           message,
           backgroundColor: Colors.orange.withOpacity(0.8),
           colorText: Colors.white,
@@ -180,8 +157,8 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
         (d) => d.ip == hotspotInfo.ip,
       );
 
-      setState(() => _isProcessing = false);
-      _dialogShown = false;
+      isProcessing.value = false;
+      dialogShown.value = false;
 
       if (receiver != null) {
         print(
@@ -189,30 +166,27 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
           'name=${receiver.name} ip=${receiver.ip} wsPort=${receiver.wsPort} '
           'transferPort=${receiver.transferPort}',
         );
-        // Pairing only: set flow state and remember receiver so user can
-        // reopen file picker from scanner screen if they cancel later.
         qrController.flowState.value = TransferFlowState.paired;
         qrController.lastPairedReceiver.value = receiver;
         Get.back();
         AppNavigator.toTransferFile(device: receiver);
       } else {
-        // Edge case: pairing accepted but receiver not in devices list
         print(
           '[QR] Sender: pairingAccepted=$pairingAccepted but receiver not found '
           'in qrController.devices for ip=${hotspotInfo.ip}. '
           'Devices list=${qrController.devices.map((d) => '${d.name}@${d.ip}:${d.wsPort}').toList()}',
         );
         Get.snackbar(
-          'Receiver Not Found',
-          'Pairing was accepted but the receiver could not be found. Try again.',
+          'Connection Error',
+          'Receiver not found after connection. Please scan again.',
           backgroundColor: Colors.orange.withOpacity(0.8),
           colorText: Colors.white,
         );
       }
     } catch (e) {
-      _dialogShown = false;
-      setState(() => _isProcessing = false);
-      Get.back(); // Close any open dialogs
+      dialogShown.value = false;
+      isProcessing.value = false;
+      Get.back();
       Get.snackbar(
         'Error',
         'Failed to process QR code: $e',
@@ -220,6 +194,36 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
         colorText: Colors.white,
       );
     }
+  }
+}
+
+class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
+  late final QrSenderScannerController screenController;
+  late final String controllerTag;
+
+  @override
+  void initState() {
+    super.initState();
+    print('📷 QrSenderScannerScreen initialized');
+    controllerTag = 'qr_sender_scanner_${UniqueKey()}';
+    final qrController = Get.find<QrController>();
+    qrController.flowState.value = TransferFlowState.idle;
+    screenController = Get.put(
+      QrSenderScannerController(
+        hotspotController: Get.find<HotspotController>(),
+        qrController: qrController,
+      ),
+      tag: controllerTag,
+    );
+    screenController.initializeCamera();
+  }
+
+  @override
+  void dispose() {
+    if (Get.isRegistered<QrSenderScannerController>(tag: controllerTag)) {
+      Get.delete<QrSenderScannerController>(tag: controllerTag);
+    }
+    super.dispose();
   }
   // Future<void> _startFileTransfer(HotspotInfo receiverInfo) async {
   //   try {
@@ -265,111 +269,112 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
   @override
   Widget build(BuildContext context) {
     print('🎨 QrSenderScannerScreen building...');
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
-          onPressed: () => Get.back(),
-        ),
-        title: Text(
-          'Scan QR to Send Files',
-          style: GoogleFonts.roboto(
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-            fontSize: 24,
+    return Obx(
+      () => Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            onPressed: () => Get.back(),
           ),
+          title: Text(
+            'Scan to Connect',
+            style: GoogleFonts.roboto(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              fontSize: 24,
+            ),
+          ),
+          centerTitle: true,
         ),
-        centerTitle: true,
-      ),
-      body:
-          !_hasPermission
-              ? const Center(child: CircularProgressIndicator())
-              : Stack(
-                children: [
-                  MobileScanner(
-                    controller: cameraController,
-                    onDetect: _onQrCodeDetected,
-                  ),
-                  Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        color: Colors.black.withOpacity(0.78),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 14,
+        body:
+            !screenController.hasPermission.value
+                ? const Center(child: CircularProgressIndicator())
+                : Stack(
+                  children: [
+                    MobileScanner(
+                      controller: screenController.cameraController!,
+                      onDetect: screenController.onQrCodeDetected,
+                    ),
+                    Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          color: Colors.black.withOpacity(0.78),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 14,
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Connect to Receiver',
+                                style: GoogleFonts.roboto(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Make sure both devices are connected to the same Wi-Fi network. Then scan the QR code shown on the receiver device to continue.',
+                                style: GoogleFonts.roboto(
+                                  color: Colors.white70,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Column(
-                          children: [
-                            Text(
-                              'Scan the receiver’s QR code',
-                              style: GoogleFonts.roboto(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w500,
+                        Expanded(
+                          child: Center(
+                            child: Container(
+                              width: 300,
+                              height: 300,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.14),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.25),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Scan the receiver’s QR code to start file transfer',
-                              style: GoogleFonts.roboto(
-                                color: Colors.white70,
-                                fontSize: 15,
+                              child: Stack(
+                                children: const [
+                                  Positioned(
+                                    top: 0,
+                                    left: 0,
+                                    child: _ScanCorner(isTop: true, isLeft: true),
+                                  ),
+                                  Positioned(
+                                    top: 0,
+                                    right: 0,
+                                    child: _ScanCorner(
+                                      isTop: true,
+                                      isLeft: false,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    left: 0,
+                                    child: _ScanCorner(
+                                      isTop: false,
+                                      isLeft: true,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: _ScanCorner(
+                                      isTop: false,
+                                      isLeft: false,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: Container(
-                            width: 300,
-                            height: 300,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.14),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.25),
-                              ),
-                            ),
-                            child: Stack(
-                              children: const [
-                                Positioned(
-                                  top: 0,
-                                  left: 0,
-                                  child: _ScanCorner(isTop: true, isLeft: true),
-                                ),
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: _ScanCorner(
-                                    isTop: true,
-                                    isLeft: false,
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  left: 0,
-                                  child: _ScanCorner(
-                                    isTop: false,
-                                    isLeft: true,
-                                  ),
-                                ),
-                                Positioned(
-                                  bottom: 0,
-                                  right: 0,
-                                  child: _ScanCorner(
-                                    isTop: false,
-                                    isLeft: false,
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ),
-                      ),
 
                       // Container(
                       //   width: double.infinity,
@@ -439,37 +444,38 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                       //     ),
                       //   ),
                       // ),
-                    ],
-                  ),
-                  ...(_isProcessing
-                      ? [
-                        Container(
-                          color: Colors.black.withOpacity(0.8),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const CircularProgressIndicator(
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(height: 24),
-                                Text(
-                                  _processingStatus,
-                                  style: GoogleFonts.roboto(
+                      ],
+                    ),
+                    ...(screenController.isProcessing.value
+                        ? [
+                          Container(
+                            color: Colors.black.withOpacity(0.8),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const CircularProgressIndicator(
                                     color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    screenController.processingStatus.value,
+                                    style: GoogleFonts.roboto(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ]
-                      : []),
-                ],
-              ),
+                        ]
+                        : []),
+                  ],
+                ),
+      ),
     );
   }
 }

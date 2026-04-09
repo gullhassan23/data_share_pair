@@ -1,6 +1,5 @@
 import 'package:get/get.dart';
-import 'package:share_app_latest/app/views/auth/login/login.dart';
-import 'package:share_app_latest/app/views/auth/sign_up/signup.dart';
+
 import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
 import 'package:share_app_latest/app/views/home/QR/Qr_reciever.dart';
 import 'package:share_app_latest/app/views/home/QR/Qr_sender.dart';
@@ -32,16 +31,6 @@ class AppPages {
       name: AppRoutes.onboaring,
       page: () => const getStartedScreen(),
       transition: Transition.downToUp,
-    ),
-    GetPage(
-      name: AppRoutes.login,
-      page: () => const LoginScreen(),
-      transition: Transition.fade,
-    ),
-    GetPage(
-      name: AppRoutes.signup,
-      page: () => const SignUpScreen(),
-      transition: Transition.rightToLeft,
     ),
 
     GetPage(
