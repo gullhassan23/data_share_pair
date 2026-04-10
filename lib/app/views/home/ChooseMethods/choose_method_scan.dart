@@ -57,7 +57,11 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                     const Spacer(),
                     TextButton.icon(
                       onPressed: () => AppNavigator.toPremium(),
-                      icon: const Icon(Icons.star, color: Colors.amber, size: 20),
+                      icon: const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
                       label: Text(
                         isPremium ? 'Premium' : 'Free Plan',
                         style: GoogleFonts.roboto(
@@ -70,112 +74,112 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                   ],
                 ),
 
-              /// Back Row
+                /// Back Row
 
-              /// Progress Barss
-              StepProgressBar(
-                currentStep: 2,
-                totalSteps: kTransferFlowTotalSteps,
-                activeColor: Theme.of(context).colorScheme.primary,
-                inactiveColor: Colors.grey.shade300,
-                height: 6,
-                segmentSpacing: 5,
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-              ),
+                /// Progress Barss
+                StepProgressBar(
+                  currentStep: 2,
+                  totalSteps: kTransferFlowTotalSteps,
+                  activeColor: Theme.of(context).colorScheme.primary,
+                  inactiveColor: Colors.grey.shade300,
+                  height: 6,
+                  segmentSpacing: 5,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                ),
 
-              const SizedBox(height: 40),
+                const SizedBox(height: 40),
 
-              /// Main White Card
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFFE3F2FD),
+                /// Main White Card
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0xFFE3F2FD),
 
-                        Color.fromARGB(255, 112, 126, 215),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        widget.isReciver ? "Receiver Via" : "Sender Via",
-                        style: GoogleFonts.roboto(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Use either our core transfer method through\nWiFi or rely on third party services.",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.roboto(
-                          fontSize: 14,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-
-                      const SizedBox(height: 18),
-                      Divider(color: Colors.grey.shade300),
-
-                      const SizedBox(height: 20),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          // TransferOptionIconCard(
-                          //   title: "WiFi-direct",
-                          //   icon: Icons.wifi,
-
-                          //   onTap:
-                          //       () => AppNavigator.toPairing(
-                          //         isReceiver: widget.isReciver,
-                          //       ),
-                          // ),
-                          InkWell(
-                            onTap:
-                                () => AppNavigator.toPairing(
-                                  isReceiver: widget.isReciver,
-                                ),
-                            child: Image.asset(
-                              'assets/icons/Wi-Fi.png',
-                              height: 150,
-                              width: 150,
-                            ),
-                          ),
-                          InkWell(
-                            onTap: () {
-                              if (widget.isReciver) {
-                                AppNavigator.toQrReceiver();
-                              } else {
-                                AppNavigator.toQrSender(<String>[]);
-                              }
-                            },
-                            child: Image.asset(
-                              'assets/icons/QR.png',
-                              height: 150,
-                              width: 150,
-                            ),
-                          ),
+                          Color.fromARGB(255, 112, 126, 215),
                         ],
                       ),
-                    ],
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          widget.isReciver ? "Receiver Via" : "Sender Via",
+                          style: GoogleFonts.roboto(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "Use either our core transfer method through\nWiFi and QR code",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.roboto(
+                            fontSize: 14,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+
+                        const SizedBox(height: 18),
+                        Divider(color: Colors.grey.shade300),
+
+                        const SizedBox(height: 20),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            // TransferOptionIconCard(
+                            //   title: "WiFi-direct",
+                            //   icon: Icons.wifi,
+
+                            //   onTap:
+                            //       () => AppNavigator.toPairing(
+                            //         isReceiver: widget.isReciver,
+                            //       ),
+                            // ),
+                            InkWell(
+                              onTap:
+                                  () => AppNavigator.toPairing(
+                                    isReceiver: widget.isReciver,
+                                  ),
+                              child: Image.asset(
+                                'assets/icons/Wi-Fi.png',
+                                height: 150,
+                                width: 150,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                if (widget.isReciver) {
+                                  AppNavigator.toQrReceiver();
+                                } else {
+                                  AppNavigator.toQrSender(<String>[]);
+                                }
+                              },
+                              child: Image.asset(
+                                'assets/icons/QR.png',
+                                height: 150,
+                                width: 150,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 16),
