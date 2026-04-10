@@ -58,7 +58,7 @@ class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
                         icon: Icon(Icons.adaptive.arrow_back),
                       ),
                       Text(
-                        "Back",
+                        "Done",
                         style: GoogleFonts.roboto(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -109,7 +109,9 @@ class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
                           ),
                           const SizedBox(height: 14),
                           Text(
-                            'Transfer Complete!',
+                            widget.isSender
+                                ? 'Send Complete!'
+                                : 'Receive Complete!',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.roboto(
                               fontSize: 20,
