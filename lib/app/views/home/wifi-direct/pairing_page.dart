@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:share_app_latest/components/bg_container.dart';
+import 'package:share_app_latest/components/app_dialog.dart';
 import 'package:share_app_latest/components/select_device_name.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
@@ -259,141 +260,72 @@ class _PairingScreenState extends State<PairingScreen>
 
     _offerDialogShown = true;
 
-    // Dialog content is reactive: always shows current pairing.incomingOffer
-    // so when a new offer arrives it updates ("latest offer wins") and
-    // Accept/Reject use the current offer.
-    Get.dialog(
-      Center(
-        child: Obx(() {
-          final currentOffer = pairing.incomingOffer.value;
-          if (currentOffer == null) {
-            return const SizedBox.shrink();
-          }
-          final ip = currentOffer['fromIp'] as String? ?? '';
-          final meta = FileMeta.fromJson(
-            currentOffer['meta'] as Map<String, dynamic>,
-          );
-          final raw = currentOffer['senderName'];
-          final senderName =
-              (raw is String ? raw.trim() : '').isEmpty
-                  ? 'Sender'
-                  : (raw as String).trim();
+    // Use the same dialog style as QR flow for exact visual parity.
+    final ip = offer['fromIp'] as String? ?? '';
+    final meta = FileMeta.fromJson(offer['meta'] as Map<String, dynamic>);
 
-          return Card(
-            color: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Color(0xFF5DADE2),
-                      child: Icon(Icons.phone_android, color: Colors.white),
-                    ),
-                    title: Text(meta.name),
-                    subtitle: Text(
-                      'From: $senderName${ip.isNotEmpty ? ' ($ip)' : ''}',
-                      style: GoogleFonts.roboto(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          final o = pairing.incomingOffer.value;
-                          if (o != null) {
-                            final fromIp = o['fromIp'] as String? ?? '';
-                            print('❌ User rejected file transfer from $fromIp');
-                            pairing.respondToOffer(fromIp, false);
-                          }
-                          _offerDialogShown = false;
-                          Get.back();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        child: const Text(
-                          'Reject',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final o = pairing.incomingOffer.value;
-                          if (o == null) {
-                            _offerDialogShown = false;
-                            Get.back();
-                            return;
-                          }
-                          final fromIp = o['fromIp'] as String? ?? '';
-                          final rawName = o['senderName'];
-                          final name =
-                              (rawName is String ? rawName.trim() : '').isEmpty
-                                  ? 'Sender'
-                                  : (rawName as String).trim();
-                          final fileMeta = FileMeta.fromJson(
-                            o['meta'] as Map<String, dynamic>,
-                          );
-
-                          print(
-                            '✅ User accepted file transfer from $fromIp (sender: $name)',
-                          );
-                          pairing.respondToOffer(fromIp, true);
-                          _offerDialogShown = false;
-                          Get.back();
-
-                          final transferController =
-                              Get.find<TransferController>();
-                          // Wi‑Fi receiver: use dedicated transfer port 9091
-                          await transferController.startServer(port: 9091);
-
-                          final senderDevice = DeviceInfo(
-                            name: name,
-                            ip: fromIp,
-                            wsPort: 7071,
-                            transferPort: 9091,
-                          );
-
-                          transfer.progress.reset();
-                          await AppNavigator.toTransferProgress(
-                            device: senderDevice,
-                            filePath: '',
-                            fileName: fileMeta.name,
-                          );
-
-                          Get.snackbar(
-                            'Accepted',
-                            'Accepted transfer from $name',
-                            backgroundColor: Colors.green.withOpacity(0.8),
-                            colorText: Colors.white,
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF5DADE2),
-                        ),
-                        child: const Text(
-                          'Accept',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ),
+    showAppDialog<void>(
+      title: 'Incoming File',
+      message: 'A sender wants to send you: ${meta.name}. Do you accept?',
+      primaryLabel: 'Accept',
+      secondaryLabel: 'Reject',
       barrierDismissible: false,
+      onSecondary: () {
+        final o = pairing.incomingOffer.value;
+        if (o != null) {
+          final fromIp = o['fromIp'] as String? ?? ip;
+          print('❌ User rejected file transfer from $fromIp');
+          pairing.respondToOffer(fromIp, false);
+        } else if (ip.isNotEmpty) {
+          pairing.respondToOffer(ip, false);
+        }
+        _offerDialogShown = false;
+      },
+      onPrimary: () async {
+        final o = pairing.incomingOffer.value;
+        final fromIp = (o?['fromIp'] as String?) ?? ip;
+        if (fromIp.isEmpty) {
+          _offerDialogShown = false;
+          return;
+        }
+        final rawName = o?['senderName'];
+        final name =
+            (rawName is String ? rawName.trim() : '').isEmpty
+                ? 'Sender'
+                : (rawName as String).trim();
+        final fileMeta = FileMeta.fromJson(
+          (o?['meta'] as Map<String, dynamic>?) ?? offer['meta'] as Map<String, dynamic>,
+        );
+
+        print('✅ User accepted file transfer from $fromIp (sender: $name)');
+        pairing.respondToOffer(fromIp, true);
+        _offerDialogShown = false;
+
+        final transferController = Get.find<TransferController>();
+        // Wi‑Fi receiver: use dedicated transfer port 9091
+        await transferController.startServer(port: 9091);
+
+        final senderDevice = DeviceInfo(
+          name: name,
+          ip: fromIp,
+          wsPort: 7071,
+          transferPort: 9091,
+        );
+
+        transfer.progress.reset();
+        await AppNavigator.toTransferProgress(
+          device: senderDevice,
+          filePath: '',
+          fileName: fileMeta.name,
+        );
+
+        Get.snackbar(
+          'Accepted',
+          'Accepted transfer from $name',
+          backgroundColor: Colors.green.withOpacity(0.8),
+          colorText: Colors.white,
+        );
+      },
     );
   }
 

@@ -36,6 +36,7 @@ Future<void> updateFcmTokenInFirestore() async {
       );
       return;
     }
+    debugPrint('[FCM] Current token: $token');
     await FirebaseFirestore.instance.collection('Users').doc(userId).set({
       'fcmToken': token,
     }, SetOptions(merge: true));

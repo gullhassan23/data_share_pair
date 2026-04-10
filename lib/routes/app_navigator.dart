@@ -43,6 +43,7 @@ class AppNavigator {
     required String filePath,
     required String fileName,
     String? senderTempPath,
+    List<String>? filePaths,
   }) {
     return Get.toNamed(
       AppRoutes.transferProgress,
@@ -50,6 +51,7 @@ class AppNavigator {
         'device': device,
         'filePath': filePath,
         'fileName': fileName,
+        if (filePaths != null) 'filePaths': filePaths,
         if (senderTempPath != null) 'senderTempPath': senderTempPath,
       },
     );

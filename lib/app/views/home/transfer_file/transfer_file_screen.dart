@@ -39,8 +39,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   /// When sending contacts, path to the temp VCF file so progress screen can register it for cleanup.
   String? _senderTempPath;
   bool _isPickingFile = false;
-  String? _selectedFilePath;
-  String? _selectedFileLabel;
+  List<String> _selectedFilePaths = <String>[];
   int _selectedFileBytes = 0;
   String? _selectedCategory;
 
@@ -280,24 +279,26 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
     if (_isPickingFile) return;
     _isPickingFile = true;
     try {
-      // Use TransferController to select file
-      final selectedPath = await transfer.selectFile(
+      final selectedPaths = await transfer.selectFiles(
         type: type,
         allowedExtensions: allowedExtensions,
+        allowMultiple: true,
       );
 
-      if (selectedPath != null) {
-        final selectedFile = File(selectedPath);
-        final fileExists = await selectedFile.exists();
-        if (!fileExists) {
-          throw Exception('Selected file no longer exists.');
+      if (selectedPaths.isNotEmpty) {
+        int totalBytes = 0;
+        for (final path in selectedPaths) {
+          final selectedFile = File(path);
+          final fileExists = await selectedFile.exists();
+          if (!fileExists) {
+            throw Exception('Selected file no longer exists.');
+          }
+          totalBytes += await selectedFile.length();
         }
-        final bytes = await selectedFile.length();
         if (!mounted) return;
         setState(() {
-          _selectedFilePath = selectedPath;
-          _selectedFileLabel = p.basename(selectedPath);
-          _selectedFileBytes = bytes;
+          _selectedFilePaths = selectedPaths;
+          _selectedFileBytes = totalBytes;
           _selectedCategory = category;
         });
         _senderTempPath = null;
@@ -343,8 +344,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
         final selectedFile = File(path);
         final bytes = await selectedFile.length();
         setState(() {
-          _selectedFilePath = path;
-          _selectedFileLabel = 'Contacts';
+          _selectedFilePaths = <String>[path];
           _selectedFileBytes = bytes;
           _selectedCategory = 'Contacts';
         });
@@ -504,6 +504,10 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
             filePath: path,
             fileName: fileName,
             senderTempPath: _senderTempPath,
+            filePaths:
+                _selectedFilePaths.length > 1
+                    ? List<String>.from(_selectedFilePaths)
+                    : null,
           );
           _senderTempPath = null;
           print('✅ Navigation to TransferProgressScreen completed');
@@ -757,16 +761,15 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   }
 
   Future<void> _continueWithSelectedFile() async {
-    final path = _selectedFilePath;
-    if (path == null || path.isEmpty) {
+    if (_selectedFilePaths.isEmpty) {
       Get.snackbar(
         'Select file',
-        'Please select a file before continuing.',
+        'Please select one or more files before continuing.',
         snackPosition: SnackPosition.BOTTOM,
       );
       return;
     }
-    await _sendSelectedFile(path);
+    await _sendSelectedFile(_selectedFilePaths.first);
   }
 
   Future<void> pickAndSendFile() async {
@@ -793,7 +796,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hasSelectedFile = _selectedFilePath != null;
+    final hasSelectedFile = _selectedFilePaths.isNotEmpty;
     return Scaffold(
       body: bg_container(
         child: SafeArea(
@@ -860,8 +863,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            // _selectedFileLabel ??
-                            'Your Selection',
+                            '${_selectedFilePaths.length} file(s) selected',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.roboto(

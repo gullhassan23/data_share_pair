@@ -41,6 +41,7 @@ class TransferController extends GetxController {
   Worker? _completionWorker;
 
   bool _isSelectingFile = false;
+  bool suppressCompletionRouting = false;
   /// Becomes true if the last file-picker interaction was cancelled/closed
   /// so UI screens (e.g. SelectDevice) can show a "Pick again" button.
   final canReopenPicker = false.obs;
@@ -60,6 +61,7 @@ class TransferController extends GetxController {
   /// Handles transfer completion (sent/received) from a long-lived controller so completion
   /// runs even when TransferProgressScreen is disposed (e.g. app backgrounded).
   void _onTransferStatusChanged(String status) {
+    if (suppressCompletionRouting) return;
     final isSuccess = status == 'sent' || status == 'received';
     final hasError = progress.error.value.isNotEmpty;
     if (!isSuccess || hasError) return;
@@ -881,9 +883,22 @@ class TransferController extends GetxController {
     FileType type = FileType.any,
     List<String>? allowedExtensions,
   }) async {
+    final selected = await selectFiles(
+      type: type,
+      allowedExtensions: allowedExtensions,
+      allowMultiple: false,
+    );
+    return selected.isNotEmpty ? selected.first : null;
+  }
+
+  Future<List<String>> selectFiles({
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    bool allowMultiple = true,
+  }) async {
     if (_isSelectingFile) {
       // Another picker is already open; ignore this tap.
-      return null;
+      return <String>[];
     }
     _isSelectingFile = true;
     // Reset previous state before opening a new picker.
@@ -893,17 +908,19 @@ class TransferController extends GetxController {
     );
 
     FilePickerResult? result;
-    String? selectedPath;
+    final selectedPaths = <String>[];
     try {
       if (type == FileType.custom && allowedExtensions != null) {
         result = await FilePicker.platform.pickFiles(
           type: type,
           allowedExtensions: allowedExtensions,
+          allowMultiple: allowMultiple,
           withReadStream: true,
         );
       } else {
         result = await FilePicker.platform.pickFiles(
           type: type,
+          allowMultiple: allowMultiple,
           withReadStream: true,
         );
       }
@@ -912,14 +929,18 @@ class TransferController extends GetxController {
         '📁 File picker result: ${result != null ? 'Success' : 'Cancelled'}',
       );
       if (result != null && result.files.isNotEmpty) {
-        final picked = result.files.first;
-        selectedPath = picked.path;
-        if (selectedPath == null || selectedPath.isEmpty) {
-          // Some providers return a content stream without a filesystem path
-          // (commonly seen with very large files). Materialize to temp file.
-          selectedPath = await _materializePickedFile(picked);
+        for (final picked in result.files) {
+          String? selectedPath = picked.path;
+          if (selectedPath == null || selectedPath.isEmpty) {
+            // Some providers return a content stream without a filesystem path
+            // (commonly seen with very large files). Materialize to temp file.
+            selectedPath = await _materializePickedFile(picked);
+          }
+          if (selectedPath != null && selectedPath.isNotEmpty) {
+            selectedPaths.add(selectedPath);
+          }
         }
-        print('📁 Selected file path: $selectedPath');
+        print('📁 Selected ${selectedPaths.length} file(s)');
       }
     } on PlatformException catch (e) {
       // User cancelled or multiple_request – don't treat as hard error so next open works.
@@ -932,13 +953,13 @@ class TransferController extends GetxController {
     }
 
     // If no file was selected, remember that so UI can offer "pick again".
-    if (selectedPath == null) {
+    if (selectedPaths.isEmpty) {
       canReopenPicker.value = true;
     } else {
       canReopenPicker.value = false;
     }
 
-    return selectedPath;
+    return selectedPaths;
   }
 
   Future<String?> _materializePickedFile(PlatformFile picked) async {

@@ -26,6 +26,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
   String? filePath;
   String? fileName;
   String? senderTempPath;
+  List<String> batchFilePaths = <String>[];
   bool isSender = true; // Determine mode based on filePath
 
   late final ProgressController progress;
@@ -59,6 +60,13 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
         args['senderTempPath'] is String
             ? args['senderTempPath'] as String
             : null;
+    if (args['filePaths'] is List) {
+      batchFilePaths =
+          (args['filePaths'] as List)
+              .whereType<String>()
+              .where((v) => v.trim().isNotEmpty)
+              .toList();
+    }
     final resume = args['resume'] == true;
 
     print('🔍 DEBUG: TransferProgressScreen arguments parsed:');
@@ -230,6 +238,53 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
       print(
         "🔍 DEBUG: Calling sendFile with path=$safeFilePath, ip=$deviceIp, port=$devicePort",
       );
+
+      if (batchFilePaths.length > 1) {
+        transfer.suppressCompletionRouting = true;
+        try {
+          for (int i = 0; i < batchFilePaths.length; i++) {
+            final currentPath = batchFilePaths[i];
+            final currentFile = File(currentPath);
+            if (!await currentFile.exists()) {
+              throw Exception('File not found: $currentPath');
+            }
+            if (!mounted) return;
+            setState(() {
+              filePath = currentPath;
+              fileName = currentPath.split('/').last;
+            });
+            print(
+              '📤 Batch transfer ${i + 1}/${batchFilePaths.length}: ${fileName ?? currentPath}',
+            );
+            await transfer.sendFile(
+              currentPath,
+              deviceIp,
+              devicePort,
+              senderTempPath: i == 0 ? senderTempPath : null,
+              deviceName: safeDevice.name,
+            );
+            if (progress.error.value.isNotEmpty) {
+              throw Exception(progress.error.value);
+            }
+          }
+          Get.snackbar(
+            'Transfer Completed',
+            '${batchFilePaths.length} files sent successfully',
+            backgroundColor: Colors.green.withOpacity(0.8),
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+            duration: const Duration(seconds: 2),
+          );
+          Future.delayed(const Duration(milliseconds: 600), () {
+            if (mounted) {
+              AppNavigator.toHome();
+            }
+          });
+          return;
+        } finally {
+          transfer.suppressCompletionRouting = false;
+        }
+      }
 
       // Start the transfer with validated, non-null variables
       await transfer.sendFile(
