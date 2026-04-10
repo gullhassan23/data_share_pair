@@ -153,33 +153,33 @@ class PremiumPage extends GetView<PremiumController> {
                             vertical: _screenVerticalPadding,
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               const SizedBox(height: _sectionSpacing),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  IconButton(
-                                    onPressed:
-                                        disableActions
-                                            ? null
-                                            : () async {
-                                              await AdMobService.instance
-                                                  .showInterstitial();
-                                              AppNavigator.back();
-                                            },
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              // Row(
+                              //   mainAxisAlignment: MainAxisAlignment.end,
+                              //   children: [
+                              //     IconButton(
+                              //       onPressed:
+                              //           disableActions
+                              //               ? null
+                              //               : () async {
+                              //                 await AdMobService.instance
+                              //                     .showInterstitial();
+                              //                 AppNavigator.back();
+                              //               },
+                              //       icon: const Icon(
+                              //         Icons.close,
+                              //         color: Colors.white,
+                              //         size: 28,
+                              //       ),
+                              //     ),
+                              //   ],
+                              // ),
                               _buildTitle(),
-                              const SizedBox(height: _titleBottom),
+                              const SizedBox(height: 20),
                               _buildBenefits(),
-                              const SizedBox(height: _benefitsBottom),
+                              const SizedBox(height: 6),
                               _PremiumPlansSection(
                                 monthlyId: monthlyId,
                                 weeklyId: weeklyId,
@@ -190,7 +190,7 @@ class PremiumPage extends GetView<PremiumController> {
                                 isDisabled: disableActions,
                                 onBuy: controller.buy,
                               ),
-                              const SizedBox(height: _sectionSpacing),
+                              const SizedBox(height: 2),
                               _buildRestoreLink(
                                 onRestore:
                                     disableActions
@@ -198,9 +198,9 @@ class PremiumPage extends GetView<PremiumController> {
                                         : controller.restorePurchases,
                                 isRestoring: controller.isRestoring.value,
                               ),
-                              const SizedBox(height: _footerTop),
+                              const SizedBox(height: 1),
                               _buildFooter(context),
-                              const SizedBox(height: _footerBottom),
+                              // const SizedBox(height: _footerBottom),
                             ],
                           ),
                         ),
@@ -235,23 +235,41 @@ class PremiumPage extends GetView<PremiumController> {
   }
 
   Widget _buildTitle() {
-    return ShaderMask(
-      blendMode: BlendMode.srcIn,
-      shaderCallback:
-          (bounds) => const LinearGradient(
-            colors: [_cyan, _purple],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ).createShader(bounds),
-      child: Text(
-        'UNLOCK PRO\nFILE TRANSFER',
-        style: GoogleFonts.roboto(
-          fontSize: 26,
-          fontWeight: FontWeight.bold,
-          height: 1.25,
-          color: Colors.white,
+    return Column(
+      children: [
+        Image.asset("assets/icons/crown.png", height: 48),
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [_cyan, _purple],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ).createShader(bounds),
+          child: Column(
+            children: [
+              Text(
+                'UNLOCK',
+                style: GoogleFonts.roboto(
+                  fontSize: 23,
+                  fontWeight: FontWeight.bold,
+                  height: 1.25,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                'PRO FILE TRANSFER',
+                style: GoogleFonts.roboto(
+                  fontSize: 23,
+                  fontWeight: FontWeight.bold,
+                  height: 1.25,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -486,13 +504,12 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
     return Column(
       children: [
         _PlanCard(
-          title: 'Premium Yearly Subscription',
-          price: widget.yearlyPlan?.price ?? '—',
-          priceSuffix: 'per year',
-          isSelected: yearlySelected,
-          onTap: () => setState(() => _selectedId = widget.yearlyId),
+          title: 'Premium Weekly Subscription',
+          price: widget.weeklyPlan?.price ?? '—',
+          priceSuffix: 'per week',
+          isSelected: weeklySelected,
+          onTap: () => setState(() => _selectedId = widget.weeklyId),
         ),
-
         const SizedBox(height: 14),
         _PlanCard(
           title: 'Premium Monthly Subscription',
@@ -503,13 +520,14 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
         ),
         const SizedBox(height: 14),
         _PlanCard(
-          title: 'Premium Weekly Subscription',
-          price: widget.weeklyPlan?.price ?? '—',
-          priceSuffix: 'per week',
-          isSelected: weeklySelected,
-          onTap: () => setState(() => _selectedId = widget.weeklyId),
+          title: 'Premium Yearly Subscription',
+          price: widget.yearlyPlan?.price ?? '—',
+          priceSuffix: 'per year',
+          isSelected: yearlySelected,
+          onTap: () => setState(() => _selectedId = widget.yearlyId),
         ),
-        const SizedBox(height: 40),
+
+        const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
           height: 54,
@@ -623,7 +641,7 @@ class _PlanCard extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.roboto(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
