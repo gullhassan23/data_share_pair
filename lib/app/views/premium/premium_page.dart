@@ -53,6 +53,22 @@ class PremiumPage extends GetView<PremiumController> {
 
           return Scaffold(
             backgroundColor: _bgDark,
+            bottomNavigationBar:
+                isPremium
+                    ? SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                        child: On_BoardingButton(
+                          ontap: () => AppNavigator.toHome(),
+                          height: 45,
+                          width: double.infinity,
+                          text: "Start Transferring",
+                          color: const Color.fromARGB(255, 87, 107, 241),
+                        ),
+                      ),
+                    )
+                    : null,
             body: Container(
               width: double.infinity,
               height: double.infinity,
@@ -186,14 +202,6 @@ class PremiumPage extends GetView<PremiumController> {
                                   icon: Icons.verified_user_rounded,
                                   title: 'Secure Direct Connection',
                                   subtitle: 'Your data moves directly between devices.',
-                                ),
-                                const SizedBox(height: 20),
-                                On_BoardingButton(
-                                  ontap: () => AppNavigator.toHome(),
-                                  height: 45,
-                                  width: double.infinity,
-                                  text: "Start Transferring",
-                                  color: const Color.fromARGB(255, 87, 107, 241),
                                 ),
                               ],
                             ),
