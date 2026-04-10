@@ -21,11 +21,6 @@ class PremiumPage extends GetView<PremiumController> {
   static const Color _purple = Color(0xffa855f7);
 
   static const double _screenPaddingH = 24;
-  static const double _sectionSpacing = 20;
-  static const double _titleBottom = 28;
-  static const double _benefitsBottom = 28;
-  static const double _footerTop = 20;
-  static const double _footerBottom = 32;
   static const double _screenVerticalPadding = 13;
 
   @override
@@ -154,31 +149,11 @@ class PremiumPage extends GetView<PremiumController> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const SizedBox(height: _sectionSpacing),
-                              // Row(
-                              //   mainAxisAlignment: MainAxisAlignment.end,
-                              //   children: [
-                              //     IconButton(
-                              //       onPressed:
-                              //           disableActions
-                              //               ? null
-                              //               : () async {
-                              //                 await AdMobService.instance
-                              //                     .showInterstitial();
-                              //                 AppNavigator.back();
-                              //               },
-                              //       icon: const Icon(
-                              //         Icons.close,
-                              //         color: Colors.white,
-                              //         size: 28,
-                              //       ),
-                              //     ),
-                              //   ],
-                              // ),
-                              _buildTitle(),
-                              const SizedBox(height: 20),
+                              // const SizedBox(height: _sectionSpacing),
+                               _buildTitle(),
+                              const SizedBox(height: 24),
                               _buildBenefits(),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 20),
                               _PremiumPlansSection(
                                 monthlyId: monthlyId,
                                 weeklyId: weeklyId,
@@ -189,7 +164,7 @@ class PremiumPage extends GetView<PremiumController> {
                                 isDisabled: disableActions,
                                 onBuy: controller.buy,
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 24),
                               _buildRestoreLink(
                                 onRestore:
                                     disableActions
@@ -197,7 +172,7 @@ class PremiumPage extends GetView<PremiumController> {
                                         : controller.restorePurchases,
                                 isRestoring: controller.isRestoring.value,
                               ),
-                              const SizedBox(height: 1),
+                              const SizedBox(height: 8),
                               _buildFooter(context),
                               // const SizedBox(height: _footerBottom),
                             ],
@@ -246,21 +221,22 @@ class PremiumPage extends GetView<PremiumController> {
               ).createShader(bounds),
           child: Column(
             children: [
+              SizedBox(height: 20),
               Text(
                 'UNLOCK',
                 style: GoogleFonts.roboto(
-                  fontSize: 23,
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
-                  height: 1.25,
+                  height: 1,
                   color: Colors.white,
                 ),
               ),
               Text(
                 'PRO FILE TRANSFER',
                 style: GoogleFonts.roboto(
-                  fontSize: 23,
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
-                  height: 1.25,
+                  height: 1,
                   color: Colors.white,
                 ),
               ),
@@ -273,10 +249,10 @@ class PremiumPage extends GetView<PremiumController> {
 
   Widget _buildBenefits() {
     const items = [
-      'Share files between iOS and Android devices without limits.',
-      'Connect instantly via QR code and transfer files smoothly over the same Wi-Fi network.',
-      'Enjoy a clean, ad-free experience without interruptions.',
-      'Files are sent directly between your devices with a secure connection.',
+      'Unlimited transfer between iOS and Android.',
+      'Instant connection with QR over Wi-Fi.',
+      'Ad-free experience with zero interruptions.',
+      'Secure direct transfer between devices.',
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,16 +264,15 @@ class PremiumPage extends GetView<PremiumController> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.check_circle, color: _cyan, size: 22),
-                      const SizedBox(width: 14),
+                      const Icon(Icons.check_circle, color: _cyan, size: 24),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           e,
                           style: GoogleFonts.roboto(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w500,
                             color: Colors.white,
-                            height: 1.35,
                           ),
                         ),
                       ),
@@ -348,7 +323,7 @@ class PremiumPage extends GetView<PremiumController> {
                 child: Text(
                   'RESTORE PURCHASES',
                   style: GoogleFonts.roboto(
-                    fontSize: 13,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Colors.white54,
                   ),
@@ -382,7 +357,7 @@ class PremiumPage extends GetView<PremiumController> {
             const SizedBox(width: 6),
             Text(
               'Secured with Apple',
-              style: GoogleFonts.roboto(fontSize: 11, color: Colors.white38),
+              style: GoogleFonts.roboto(fontSize: 12, color: Colors.white38),
             ),
           ],
         ),
@@ -395,7 +370,7 @@ class PremiumPage extends GetView<PremiumController> {
               child: Text(
                 'Privacy Policy',
                 style: GoogleFonts.roboto(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: Colors.white70,
                   decoration: TextDecoration.underline,
                 ),
@@ -403,14 +378,14 @@ class PremiumPage extends GetView<PremiumController> {
             ),
             Text(
               '  |  ',
-              style: GoogleFonts.roboto(fontSize: 11, color: Colors.white38),
+              style: GoogleFonts.roboto(fontSize: 12, color: Colors.white38),
             ),
             InkWell(
               onTap: () => _open(terms),
               child: Text(
                 'Terms of Use',
                 style: GoogleFonts.roboto(
-                  fontSize: 11,
+                  fontSize: 12,
                   color: Colors.white70,
                   decoration: TextDecoration.underline,
                 ),
@@ -451,6 +426,10 @@ class _PremiumPlansSection extends StatefulWidget {
 class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
   late String _selectedId;
 
+  static const String _fallbackWeeklyPrice = '2500';
+  static const String _fallbackMonthlyPrice = '2900';
+  static const String _fallbackYearlyPrice = '9900';
+
   @override
   void initState() {
     super.initState();
@@ -462,37 +441,53 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
     final yearlySelected = _selectedId == widget.yearlyId;
     final weeklySelected = _selectedId == widget.weeklyId;
     final monthlySelected = _selectedId == widget.monthlyId;
+    final weeklyPrice = _effectivePrice(
+      widget.weeklyPlan?.price,
+      _fallbackWeeklyPrice,
+    );
+    final monthlyPrice = _effectivePrice(
+      widget.monthlyPlan?.price,
+      _fallbackMonthlyPrice,
+    );
+    final yearlyPrice = _effectivePrice(
+      widget.yearlyPlan?.price,
+      _fallbackYearlyPrice,
+    );
+    final ctaText =
+        _selectedId == widget.yearlyId ? 'Try for Free' : 'Continue';
 
     return Column(
       children: [
         _PlanCard(
-          title: 'Premium Weekly Subscription',
-          price: widget.weeklyPlan?.price ?? '—',
-          priceSuffix: 'per week',
-          isSelected: weeklySelected,
-          onTap: () => setState(() => _selectedId = widget.weeklyId),
+          title: 'Premium Yearly Subscription',
+          price: yearlyPrice,
+          priceSuffix: 'per year',
+          note: '7 days free trial',
+          badgeText: 'SAVE UP TO 88%',
+          isSelected: yearlySelected,
+          onTap: () => setState(() => _selectedId = widget.yearlyId),
         ),
         const SizedBox(height: 14),
         _PlanCard(
           title: 'Premium Monthly Subscription',
-          price: widget.monthlyPlan?.price ?? '—',
+          price: monthlyPrice,
           priceSuffix: 'per month',
           isSelected: monthlySelected,
           onTap: () => setState(() => _selectedId = widget.monthlyId),
         ),
         const SizedBox(height: 14),
         _PlanCard(
-          title: 'Premium Yearly Subscription',
-          price: widget.yearlyPlan?.price ?? '—',
-          priceSuffix: 'per year',
-          isSelected: yearlySelected,
-          onTap: () => setState(() => _selectedId = widget.yearlyId),
+          title: 'Premium Weekly Subscription',
+          price: weeklyPrice,
+          priceSuffix: 'per week',
+          isSelected: weeklySelected,
+          onTap: () => setState(() => _selectedId = widget.weeklyId),
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 40),
         SizedBox(
           width: double.infinity,
-          height: 54,
+          height: 50,
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
@@ -517,7 +512,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
                 borderRadius: BorderRadius.circular(16),
                 child: Center(
                   child: Text(
-                    widget.isDisabled ? 'Please wait…' : 'Subscribe',
+                    widget.isDisabled ? 'Please wait…' : ctaText,
                     style: GoogleFonts.roboto(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -532,12 +527,21 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
       ],
     );
   }
+
+  String _effectivePrice(String? applePrice, String fallbackPrice) {
+    if (applePrice == null) return fallbackPrice;
+    final normalized = applePrice.trim();
+    if (normalized.isEmpty || normalized == '—') return fallbackPrice;
+    return normalized;
+  }
 }
 
 class _PlanCard extends StatelessWidget {
   final String title;
   final String price;
   final String priceSuffix;
+  final String? note;
+  final String? badgeText;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -545,6 +549,8 @@ class _PlanCard extends StatelessWidget {
     required this.title,
     required this.price,
     required this.priceSuffix,
+    this.note,
+    this.badgeText,
     required this.isSelected,
     required this.onTap,
   });
@@ -594,6 +600,7 @@ class _PlanCard extends StatelessWidget {
                     : null,
           ),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
@@ -603,54 +610,93 @@ class _PlanCard extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.roboto(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '$price . $priceSuffix',
+                      '$price $priceSuffix',
                       style: GoogleFonts.roboto(
-                        fontSize: 13,
+                        fontSize: 14,
                         color:
                             isSelected
                                 ? Colors.white.withOpacity(0.95)
                                 : Colors.white60,
                       ),
                     ),
+                    if (note != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        note!,
+                        style: GoogleFonts.roboto(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              isSelected
+                                  ? Colors.white
+                                  : const Color(0xff86efac),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                width: 50,
-                height: 28,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color:
-                      isSelected
-                          ? Colors.white.withOpacity(0.95)
-                          : Colors.white.withOpacity(0.15),
-                ),
-                alignment: Alignment(isSelected ? 1.0 : -1.0, 0),
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  margin: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (badgeText != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                    ],
+                      decoration: BoxDecoration(
+                        color: const Color(0xffffb020),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        badgeText!,
+                        style: GoogleFonts.roboto(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  if (badgeText != null) const SizedBox(height: 10),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    width: 50,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      color:
+                          isSelected
+                              ? Colors.white.withOpacity(0.95)
+                              : Colors.white.withOpacity(0.15),
+                    ),
+                    alignment: Alignment(isSelected ? 1.0 : -1.0, 0),
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
