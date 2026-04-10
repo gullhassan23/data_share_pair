@@ -52,24 +52,45 @@ class _getStartedScreenState extends State<getStartedScreen>
             return Column(
               children: [
                 /// TOP BAR
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    child: IconButton(
-                      onPressed: () => AppNavigator.toConfiguration(),
-                      icon: const Icon(
-                        Icons.menu,
-                        color: Color(0xff4e66fc),
-                        size: 30,
+                Row(
+                  children: [
+                    Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        child: IconButton(
+                          onPressed: () => AppNavigator.toConfiguration(),
+                          icon: const Icon(
+                            Icons.menu,
+                            color: Color(0xff4e66fc),
+                            size: 30,
+                          ),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
                       ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
                     ),
-                  ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => AppNavigator.toPremium(),
+                      icon: const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
+                      label: Text(
+                        'Premium',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 20),

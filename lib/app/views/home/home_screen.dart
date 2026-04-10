@@ -7,7 +7,6 @@ import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
-import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
@@ -40,11 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: bg_container(
         child: SafeArea(
           child: Obx(() {
-            final showAds =
-                AdUnitIds.kForceFreeUserForAdTesting
-                    ? true
-                    : !(premium.isPremium ||
-                        SubscriptionIAPService().isPremium);
+            final isPremium =
+                premium.isPremium || SubscriptionIAPService().isPremium;
             return Column(
               children: [
                 const SizedBox(height: 19),
@@ -153,28 +149,68 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Expanded(
                               child: InkWell(
-                                onTap: () => Get.toNamed(
-                                  AppRoutes.choosemethodscan,
-                                  arguments: <String, dynamic>{
-                                    'isReceiver': false,
-                                  },
-                                ),
-                                child: Image.asset(
-                                  'assets/icons/send.png',
-                                  height: 130,
-                                  fit: BoxFit.contain,
+                                onTap: () {
+                                  if (!isPremium) {
+                                    AppNavigator.toPremium();
+                                    return;
+                                  }
+                                  Get.toNamed(
+                                    AppRoutes.choosemethodscan,
+                                    arguments: <String, dynamic>{
+                                      'isReceiver': false,
+                                    },
+                                  );
+                                },
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Opacity(
+                                      opacity: isPremium ? 1.0 : 0.55,
+                                      child: Image.asset(
+                                        'assets/icons/send.png',
+                                        height: 130,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                    if (!isPremium)
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.shade700,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black
+                                                    .withOpacity(0.2),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 1),
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(
+                                            Icons.lock,
+                                            size: 22,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: InkWell(
-                                onTap: () => Get.toNamed(
-                                  AppRoutes.choosemethodscan,
-                                  arguments: <String, dynamic>{
-                                    'isReceiver': true,
-                                  },
-                                ),
+                                onTap:
+                                    () => Get.toNamed(
+                                      AppRoutes.choosemethodscan,
+                                      arguments: <String, dynamic>{
+                                        'isReceiver': true,
+                                      },
+                                    ),
                                 child: Image.asset(
                                   'assets/icons/Receive.png',
                                   height: 130,
@@ -182,19 +218,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ),
-
-                            // TransferOptionCard(
-                            //   title: "Send Files",
-                            //   image: ImageRes.sendFiles,
-                            //   // onTap:
-                            //   //     () => AppNavigator.toConnectionMethod(
-                            //   //       isReceiver: false,
-                            //   //     ),
-                            //   onTap:
-                            //       () => Get.to(
-                            //         () => ChooseMethodScan(isReciver: false),
-                            //       ),
-                            // ),
                           ],
                         ),
 
