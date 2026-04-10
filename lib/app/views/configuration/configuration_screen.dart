@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_app_latest/app/views/configuration/how_it_works_screen.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_plus/share_plus.dart';
@@ -319,7 +320,10 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                       label: 'How It Works',
                       onTap:
                           () => Navigator.of(context).push(
-                            MaterialPageRoute(
+                            MaterialPageRoute<void>(
+                              settings: const RouteSettings(
+                                name: AppRoutes.howItWorks,
+                              ),
                               builder: (_) => const HowItWorksScreen(),
                             ),
                           ),

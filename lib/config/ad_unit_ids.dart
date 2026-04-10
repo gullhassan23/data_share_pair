@@ -13,7 +13,6 @@ class AdUnitIds {
   static const String _testBanner = 'ca-app-pub-3940256099942544/6300978111';
   static const String _testInterstitial = 'ca-app-pub-3940256099942544/1033173712';
   static const String _testAppOpen = 'ca-app-pub-3940256099942544/9257395921';
-  static const String _testRewarded = 'ca-app-pub-3940256099942544/5224354917';
 
   // --- Production AdMob unit IDs (live) ---
   // Values are taken from .env when present, otherwise fall back to the
@@ -34,14 +33,9 @@ class AdUnitIds {
     'ADMOB_APPOPEN_ID',
     defaultValue: 'ca-app-pub-3605518487927639/1279703593',
   );
-  static const String _prodRewarded = String.fromEnvironment(
-    'ADMOB_REWARDED_ID',
-    defaultValue: 'ca-app-pub-3605518487927639/9251726211',
-  );
 
   static String get bannerAdUnitId => _useTestAds ? _testBanner : _prodBanner;
   static String get mrecAdUnitId => _useTestAds ? _testBanner : _prodMrec;
   static String get interstitialAdUnitId => _useTestAds ? _testInterstitial : _prodInterstitial;
   static String get appOpenAdUnitId => _useTestAds ? _testAppOpen : _prodAppOpen;
-  static String get rewardedAdUnitId => _useTestAds ? _testRewarded : _prodRewarded;
 }

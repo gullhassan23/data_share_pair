@@ -45,7 +45,6 @@ void main() async {
   await AdMobService.initialize();
   AdMobService.instance.loadAppOpenAd();
   AdMobService.instance.maybePreloadInterstitial();
-  AdMobService.instance.maybePreloadRewarded();
 
   // Restrict to portrait only
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -158,9 +157,6 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
   }
 
   Future<void> _onResumed() async {
-    AdMobService.instance.showAppOpenIfAvailable(
-      minInterval: const Duration(seconds: 45),
-    );
     if (!Get.isRegistered<TransferController>()) return;
     final transfer = Get.find<TransferController>();
     if (transfer.sessionState.value != TransferSessionState.transferring)

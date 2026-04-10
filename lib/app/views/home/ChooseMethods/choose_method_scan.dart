@@ -8,6 +8,7 @@ import 'package:share_app_latest/routes/app_navigator.dart';
 
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 class ChooseMethodScan extends StatefulWidget {
   final bool isReciver;
@@ -41,6 +42,19 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () => AppNavigator.toPremium(),
+                    icon: const Icon(Icons.star, color: Colors.amber, size: 20),
+                    label: Text(
+                      'Premium',
+                      style: GoogleFonts.roboto(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
                 ],
@@ -150,6 +164,12 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                       ),
                     ],
                   ),
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: AdLargeRectWidget(),
                 ),
               ),
             ],

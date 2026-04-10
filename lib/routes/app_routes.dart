@@ -18,4 +18,12 @@ abstract class AppRoutes {
   static const duplicatePreview = '/duplicate-preview';
   static const premium = '/premium';
   static const configuration = '/configuration';
+
+  /// Used with Get.to(..., routeName: ...) so analytics matches named flows.
+  static const bluetoothReceiver = '/bluetooth-receiver';
+  static const bluetoothSender = '/bluetooth-sender';
+  static const selectDevice = '/select-device';
+  static const transferComplete = '/transfer-complete';
+  static const contactsSelection = '/contacts-selection';
+  static const howItWorks = '/how-it-works';
 }

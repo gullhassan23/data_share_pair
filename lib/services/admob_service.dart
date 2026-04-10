@@ -6,7 +6,7 @@ import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
-/// Central AdMob lifecycle: App Open, Banner, Interstitial, Rewarded.
+/// Central AdMob lifecycle: App Open, Banner, Interstitial.
 /// Premium users (SubscriptionIAPService().isPremium) see no ads unless
 /// [AdUnitIds.kForceFreeUserForAdTesting] is true.
 class AdMobService {
@@ -233,114 +233,6 @@ class AdMobService {
     }
     _pendingShowInterstitial = true;
     loadInterstitial(isPremium: false);
-  }
-
-  // ---------- Rewarded ----------
-  RewardedAd? _rewardedAd;
-  bool _isLoadingRewarded = false;
-
-  Future<void> loadRewarded({bool? isPremium}) async {
-    final shouldShow = isPremium ?? _getIsPremium();
-    if (shouldShow) return;
-    if (_isLoadingRewarded || _rewardedAd != null) return;
-    _isLoadingRewarded = true;
-    await RewardedAd.load(
-      adUnitId: AdUnitIds.rewardedAdUnitId,
-      request: const AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          _rewardedAd = ad;
-          _isLoadingRewarded = false;
-          _logAdEvent(
-            name: 'admob_rewarded_loaded',
-            adType: 'rewarded',
-            status: 'loaded',
-          );
-          debugPrint('[AdMob] Rewarded ad loaded');
-        },
-        onAdFailedToLoad: (error) {
-          _isLoadingRewarded = false;
-          _logAdEvent(
-            name: 'admob_rewarded_failed_load',
-            adType: 'rewarded',
-            status: 'load_failed',
-            errorMessage: error.message,
-          );
-          debugPrint('[AdMob] Rewarded failed to load: ${error.message}');
-        },
-      ),
-    );
-  }
-
-  /// Shows rewarded ad. [onEarned] is called when user earns the reward.
-  /// Returns true if ad was shown (or will be shown after load), false if premium or not available.
-  Future<bool> showRewarded({
-    bool? isPremium,
-    required void Function(AdWithoutView ad, RewardItem item) onEarned,
-    VoidCallback? onDismissed,
-  }) async {
-    final shouldShow = isPremium ?? _getIsPremium();
-    if (shouldShow) return false;
-    _logAdEvent(
-      name: 'admob_rewarded_show_requested',
-      adType: 'rewarded',
-      status: 'show_requested',
-    );
-    if (_rewardedAd != null) {
-      _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
-        onAdShowedFullScreenContent: (ad) {
-          _logAdEvent(
-            name: 'admob_rewarded_shown',
-            adType: 'rewarded',
-            status: 'shown',
-          );
-        },
-        onAdDismissedFullScreenContent: (ad) {
-          ad.dispose();
-          _rewardedAd = null;
-          loadRewarded(isPremium: false);
-          _logAdEvent(
-            name: 'admob_rewarded_dismissed',
-            adType: 'rewarded',
-            status: 'dismissed',
-          );
-          onDismissed?.call();
-        },
-        onAdFailedToShowFullScreenContent: (ad, error) {
-          ad.dispose();
-          _rewardedAd = null;
-          _logAdEvent(
-            name: 'admob_rewarded_failed_show',
-            adType: 'rewarded',
-            status: 'show_failed',
-            errorMessage: error.message,
-          );
-          loadRewarded(isPremium: false);
-        },
-      );
-      _rewardedAd!.show(
-        onUserEarnedReward: (ad, item) {
-          _logAdEvent(
-            name: 'admob_rewarded_earned',
-            adType: 'rewarded',
-            status: 'earned',
-          );
-          onEarned(ad, item);
-        },
-      );
-      return true;
-    }
-    loadRewarded(isPremium: false);
-    return false;
-  }
-
-  /// Call when entering a screen where you might show rewarded later (e.g. premium page).
-  void maybePreloadRewarded([bool? isPremium]) {
-    final shouldShow = isPremium ?? _getIsPremium();
-    if (shouldShow) return;
-    if (_rewardedAd == null && !_isLoadingRewarded) {
-      loadRewarded(isPremium: false);
-    }
   }
 
   // ---------- Banner ----------
