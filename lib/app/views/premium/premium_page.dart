@@ -341,42 +341,6 @@ class PremiumPage extends GetView<PremiumController> {
     );
   }
 
-  Widget _buildWatchAdLink(BuildContext context) {
-    return Center(
-      child: TextButton.icon(
-        onPressed: () async {
-          await AdMobService.instance.showRewarded(
-            onEarned: (_, __) async {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Thanks for watching! Wi‑Fi transfer unlocked for 1 use.',
-                    ),
-                    backgroundColor: _cyan,
-                  ),
-                );
-              }
-            },
-          );
-        },
-        icon: const Icon(
-          Icons.play_circle_outline,
-          color: Colors.white54,
-          size: 20,
-        ),
-        label: Text(
-          'Watch a short ad',
-          style: GoogleFonts.roboto(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.white54,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildFooter(BuildContext context) {
     final privacy =
         dotenv.env['PRIVACY_POLICY_URL'] ??

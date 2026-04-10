@@ -9,7 +9,6 @@ import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart'
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/admob_service.dart';
-import 'package:share_app_latest/services/rewarded_access_store.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
@@ -168,23 +167,6 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                     return;
                                   }
 
-                                  // Try to use a rewarded credit first.
-                                  final usedCredit =
-                                      await RewardedAccessStore.consumeCreditIfAvailable();
-                                  if (usedCredit) {
-                                    print(
-                                      '✅ WiFi Direct unlocked via rewarded credit (isReceiver: ${widget.isReceiver})',
-                                    );
-                                    Get.toNamed(
-                                      AppRoutes.choosemethodscan,
-                                      arguments: <String, dynamic>{
-                                        'isReceiver': widget.isReceiver,
-                                      },
-                                    );
-                                    return;
-                                  }
-
-                                  // No credits: offer Premium or Watch Ad.
                                   if (!mounted) return;
                                   await showModalBottomSheet<void>(
                                     context: context,
@@ -215,7 +197,7 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                             ),
                                             const SizedBox(height: 8),
                                             Text(
-                                              'Watch a short ad to unlock one Wi‑Fi transfer, or go Premium for unlimited transfers with no limits.',
+                                              'Wi‑Fi Direct transfer is a Premium feature. Subscribe for unlimited Wi‑Fi transfers and an ad‑free experience.',
                                               style: GoogleFonts.roboto(
                                                 fontSize: 13,
                                                 color: Colors.grey.shade700,
@@ -225,30 +207,9 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                             SizedBox(
                                               width: double.infinity,
                                               child: ElevatedButton(
-                                                onPressed: () async {
+                                                onPressed: () {
                                                   Navigator.of(ctx).pop();
-                                                  final shown = await AdMobService.instance.showRewarded(
-                                                    onEarned: (_, __) async {
-                                                      // Add a credit and immediately
-                                                      // consume it to auto-navigate
-                                                      // to Wi‑Fi flow after ad.
-                                                      await RewardedAccessStore.addCredit();
-                                                      final used =
-                                                          await RewardedAccessStore.consumeCreditIfAvailable();
-                                                      if (used && mounted) {
-                                                        Get.toNamed(
-                                                          AppRoutes
-                                                              .choosemethodscan,
-                                                          arguments: <String,
-                                                              dynamic>{
-                                                            'isReceiver': widget
-                                                                .isReceiver,
-                                                          },
-                                                        );
-                                                      }
-                                                    },
-                                                  );
-                                                  if (!shown) return;
+                                                  AppNavigator.toPremium();
                                                 },
                                                 style: ElevatedButton.styleFrom(
                                                   backgroundColor:
@@ -268,7 +229,7 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                                     horizontal: 4,
                                                   ),
                                                   child: Text(
-                                                    'Watch ad to unlock Wi‑Fi',
+                                                    'Go Premium',
                                                     textAlign: TextAlign.center,
                                                     maxLines: 2,
                                                     softWrap: true,
@@ -279,27 +240,6 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                                           FontWeight.w600,
                                                     ),
                                                   ),
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            SizedBox(
-                                              width: double.infinity,
-                                              child: OutlinedButton(
-                                                onPressed: () {
-                                                  Navigator.of(ctx).pop();
-                                                  AppNavigator.toPremium();
-                                                },
-                                                style: OutlinedButton.styleFrom(
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                ),
-                                                child: const Text(
-                                                  'Go Premium (unlimited)',
                                                 ),
                                               ),
                                             ),
