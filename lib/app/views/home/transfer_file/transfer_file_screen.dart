@@ -23,8 +23,8 @@ import '../../../controllers/QR_controller.dart';
 import '../../../models/device_info.dart';
 import '../../../models/file_meta.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/admob_service.dart';
-import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 
 class TransferFileScreen extends StatefulWidget {
   const TransferFileScreen({super.key});
@@ -65,7 +65,6 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
   @override
   void initState() {
     super.initState();
-    AnalyticsScreenTracker.trackScreen('transfer_file_screen');
 
     final dynamic args = Get.arguments;
     if (args == null) {
@@ -341,6 +340,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       }
       final path = await Get.to<String?>(
         () => _ContactsSelectionPage(contacts: contacts),
+        routeName: AppRoutes.contactsSelection,
         fullscreenDialog: true,
       );
       if (path != null && mounted) {
@@ -1000,12 +1000,6 @@ class _ContactsSelectionPage extends StatefulWidget {
 
 class _ContactsSelectionPageState extends State<_ContactsSelectionPage> {
   final Set<int> _selectedIndices = {};
-
-  @override
-  void initState() {
-    super.initState();
-    AnalyticsScreenTracker.trackScreen('contacts_selection_screen');
-  }
 
   Future<void> _exportAndSend() async {
     if (_selectedIndices.isEmpty) {

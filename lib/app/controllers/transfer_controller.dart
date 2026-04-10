@@ -17,6 +17,7 @@ import 'package:share_app_latest/services/transfer_foreground_service.dart';
 import 'package:share_app_latest/services/transfer_state_persistence.dart';
 import 'package:share_app_latest/services/transfer_temp_manager.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/app/views/home/transfer_file/transfer_complete_screen.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
@@ -67,11 +68,13 @@ class TransferController extends GetxController {
       print('✅ File successfully sent to receiver!');
       Get.off(
         () => const TransferCompleteScreen(isSender: true),
+        routeName: AppRoutes.transferComplete,
       );
     } else if (status == 'received') {
       print('✅ File successfully received from sender!');
       Get.off(
         () => const TransferCompleteScreen(isSender: false),
+        routeName: AppRoutes.transferComplete,
       );
     }
   }

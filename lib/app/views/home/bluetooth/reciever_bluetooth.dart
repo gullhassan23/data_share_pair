@@ -8,7 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/components/app_dialog.dart';
 import 'package:share_app_latest/app/controllers/transfer_controller.dart';
-import 'package:share_app_latest/app/views/home/received_files_screen.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -66,7 +66,7 @@ class _BluetoothReceiverScreenState extends State<BluetoothReceiverScreen> {
           backgroundColor: Colors.green,
           colorText: Colors.white,
         );
-        Get.to(() => const ReceivedFilesScreen());
+        Get.toNamed(AppRoutes.receivedFiles);
       }
       if (state == TransferSessionState.error && mounted) {
         Get.snackbar(

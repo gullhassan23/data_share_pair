@@ -6,6 +6,7 @@ import 'package:lottie/lottie.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 
 import 'package:share_app_latest/components/select_device_name.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
 import 'package:permission_handler/permission_handler.dart';
@@ -36,7 +37,10 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
     _navigated = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Get.to(() => SelectDeviceScreen(devices: const [], isBluetooth: true));
+      Get.to(
+        () => SelectDeviceScreen(devices: const [], isBluetooth: true),
+        routeName: AppRoutes.selectDevice,
+      );
     });
   }
 

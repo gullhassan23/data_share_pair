@@ -7,6 +7,7 @@ import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan
 import 'package:share_app_latest/app/views/home/bluetooth/reciever_bluetooth.dart';
 import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/services/rewarded_access_store.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -135,9 +136,15 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                   '✅ Connection method chosen: Bluetooth (isReceiver: ${widget.isReceiver})',
                                 );
                                 if (widget.isReceiver) {
-                                  Get.to(() => const BluetoothReceiverScreen());
+                                  Get.to(
+                                    () => const BluetoothReceiverScreen(),
+                                    routeName: AppRoutes.bluetoothReceiver,
+                                  );
                                 } else {
-                                  Get.to(() => const BluetoothSenderScreen());
+                                  Get.to(
+                                    () => const BluetoothSenderScreen(),
+                                    routeName: AppRoutes.bluetoothSender,
+                                  );
                                 }
                               },
                             ),
@@ -152,10 +159,11 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                     print(
                                       '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
                                     );
-                                    Get.to(
-                                      () => ChooseMethodScan(
-                                        isReciver: widget.isReceiver,
-                                      ),
+                                    Get.toNamed(
+                                      AppRoutes.choosemethodscan,
+                                      arguments: <String, dynamic>{
+                                        'isReceiver': widget.isReceiver,
+                                      },
                                     );
                                     return;
                                   }
@@ -167,10 +175,11 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                     print(
                                       '✅ WiFi Direct unlocked via rewarded credit (isReceiver: ${widget.isReceiver})',
                                     );
-                                    Get.to(
-                                      () => ChooseMethodScan(
-                                        isReciver: widget.isReceiver,
-                                      ),
+                                    Get.toNamed(
+                                      AppRoutes.choosemethodscan,
+                                      arguments: <String, dynamic>{
+                                        'isReceiver': widget.isReceiver,
+                                      },
                                     );
                                     return;
                                   }
@@ -227,12 +236,14 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                                       final used =
                                                           await RewardedAccessStore.consumeCreditIfAvailable();
                                                       if (used && mounted) {
-                                                        Get.to(
-                                                          () => ChooseMethodScan(
-                                                            isReciver:
-                                                                widget
-                                                                    .isReceiver,
-                                                          ),
+                                                        Get.toNamed(
+                                                          AppRoutes
+                                                              .choosemethodscan,
+                                                          arguments: <String,
+                                                              dynamic>{
+                                                            'isReceiver': widget
+                                                                .isReceiver,
+                                                          },
                                                         );
                                                       }
                                                     },

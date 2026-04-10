@@ -3,9 +3,9 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
-import 'package:share_app_latest/app/views/home/ChooseMethods/choose_method_scan.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -153,10 +153,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Expanded(
                               child: InkWell(
-                                onTap:
-                                    () => Get.to(
-                                      () => ChooseMethodScan(isReciver: false),
-                                    ),
+                                onTap: () => Get.toNamed(
+                                  AppRoutes.choosemethodscan,
+                                  arguments: <String, dynamic>{
+                                    'isReceiver': false,
+                                  },
+                                ),
                                 child: Image.asset(
                                   'assets/icons/send.png',
                                   height: 130,
@@ -167,10 +169,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: InkWell(
-                                onTap:
-                                    () => Get.to(
-                                      () => ChooseMethodScan(isReciver: true),
-                                    ),
+                                onTap: () => Get.toNamed(
+                                  AppRoutes.choosemethodscan,
+                                  arguments: <String, dynamic>{
+                                    'isReceiver': true,
+                                  },
+                                ),
                                 child: Image.asset(
                                   'assets/icons/Receive.png',
                                   height: 130,
