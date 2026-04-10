@@ -603,7 +603,8 @@ class _PremiumPlansSection extends StatefulWidget {
   State<_PremiumPlansSection> createState() => _PremiumPlansSectionState();
 }
 
-class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
+class _PremiumPlansSectionState extends State<_PremiumPlansSection>
+    with WidgetsBindingObserver {
   late String _selectedId;
   bool _isFreeSendUsed = true;
 
@@ -614,8 +615,22 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _selectedId = widget.yearlyId;
     _loadFreeSendStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadFreeSendStatus();
+    }
   }
 
   Future<void> _loadFreeSendStatus() async {
@@ -684,7 +699,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
                       Get.toNamed(
                         AppRoutes.choosemethodscan,
                         arguments: <String, dynamic>{'isReceiver': false},
-                      );
+                      )?.then((_) => _loadFreeSendStatus());
                     },
             child: Text(
               'Continue without subscription (1 free send)',

@@ -14,6 +14,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:share_app_latest/app/controllers/pairing_controller.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
+import 'package:share_app_latest/services/one_time_free_send_store.dart';
 import 'package:share_app_latest/services/transfer_state_persistence.dart';
 import 'package:share_app_latest/services/transfer_temp_manager.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
@@ -68,6 +69,8 @@ class TransferController extends GetxController {
 
     if (status == 'sent') {
       print('✅ File successfully sent to receiver!');
+      // Consume one-time free send exactly at successful sender completion.
+      unawaited(OneTimeFreeSendStore.markUsed());
       Get.off(
         () => const TransferCompleteScreen(isSender: true),
         routeName: AppRoutes.transferComplete,

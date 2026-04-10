@@ -33,12 +33,15 @@ class OneTimeFreeSendStore {
   static Future<void> markUsed() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_localKeyFreeSendUsed, true);
-
-    final userId = await getOrCreateUserId();
-    await FirebaseFirestore.instance.collection(_usersCollection).doc(userId).set({
-      _fieldFreeSendUsed: true,
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    try {
+      final userId = await getOrCreateUserId();
+      await FirebaseFirestore.instance.collection(_usersCollection).doc(userId).set({
+        _fieldFreeSendUsed: true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (_) {
+      // Local write is already done; Firebase sync can retry later via hasUsed read.
+    }
   }
 }
 
