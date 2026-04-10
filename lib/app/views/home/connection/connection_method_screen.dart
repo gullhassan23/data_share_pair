@@ -51,7 +51,11 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                     onPressed: () {
                       Get.back();
                     },
-                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
+                    icon: Icon(
+                      Icons.adaptive.arrow_back,
+                      color: Colors.black,
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(

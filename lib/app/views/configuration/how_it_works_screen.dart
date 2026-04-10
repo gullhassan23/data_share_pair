@@ -78,7 +78,7 @@ class _HowItWorksScreenState extends State<HowItWorksScreen> {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () => AppNavigator.back(),
-              icon: Icon(Icons.arrow_back),
+              icon: Icon(Icons.adaptive.arrow_back),
               label: Text(
                 'Back',
                 style: GoogleFonts.roboto(

@@ -356,7 +356,10 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                   children: [
                     IconButton(
                       onPressed: () => Get.back(),
-                      icon: const Icon(Icons.arrow_back, color: Colors.black),
+                      icon: Icon(
+                        Icons.adaptive.arrow_back,
+                        color: Colors.black,
+                      ),
                     ),
                     Text(
                       'Receive Files',

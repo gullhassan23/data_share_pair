@@ -272,7 +272,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                   children: [
                     IconButton(
                       onPressed: () => Get.back(),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(Icons.adaptive.arrow_back),
                     ),
                     Text(
                       "Back",
@@ -524,7 +524,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                       children: [
                         IconButton(
                           onPressed: () => AppNavigator.toSendReceive(),
-                          icon: const Icon(Icons.arrow_back),
+                          icon: Icon(Icons.adaptive.arrow_back),
                         ),
                         Text(
                           "Back",

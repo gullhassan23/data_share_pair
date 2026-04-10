@@ -115,7 +115,7 @@ class _BluetoothSenderScreenState extends State<BluetoothSenderScreen> {
                     onPressed: () {
                       Get.back();
                     },
-                    icon: Icon(Icons.arrow_back),
+                    icon: Icon(Icons.adaptive.arrow_back),
                   ),
                   SizedBox(width: 5),
                   Text(

@@ -55,7 +55,7 @@ class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
                     children: [
                       IconButton(
                         onPressed: () => _goNext(),
-                        icon: const Icon(Icons.arrow_back),
+                        icon: Icon(Icons.adaptive.arrow_back),
                       ),
                       Text(
                         "Back",

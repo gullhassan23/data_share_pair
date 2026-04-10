@@ -368,7 +368,7 @@ class _PairingScreenState extends State<PairingScreen>
                   children: [
                     IconButton(
                       onPressed: () => Get.back(),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(Icons.adaptive.arrow_back),
                     ),
                     Text(
                       "Back",

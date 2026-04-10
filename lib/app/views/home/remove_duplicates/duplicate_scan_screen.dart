@@ -73,7 +73,11 @@ class _DuplicateScanScreenState extends State<DuplicateScanScreen> {
                       Get.delete<DuplicateController>(force: true);
                       Get.offAllNamed(AppRoutes.home);
                     },
-                    icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
+                    icon: Icon(
+                      Icons.adaptive.arrow_back,
+                      color: Colors.black,
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(

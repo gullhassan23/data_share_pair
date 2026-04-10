@@ -59,7 +59,7 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                         AppNavigator.toHome();
                       },
                       icon: Icon(
-                        Icons.arrow_back,
+                        Icons.adaptive.arrow_back,
                         color: Colors.black,
                         size: 28,
                       ),

@@ -38,8 +38,8 @@ class DuplicatePreviewScreen extends StatelessWidget {
                       Get.delete<DuplicateController>(force: true);
                       Get.offAllNamed(AppRoutes.home);
                     },
-                    icon: const Icon(
-                      Icons.arrow_back,
+                    icon: Icon(
+                      Icons.adaptive.arrow_back,
                       color: Colors.black,
                       size: 28,
                     ),

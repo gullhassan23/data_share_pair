@@ -193,7 +193,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                                     size: 39,
                                     color:
                                         filled
-                                            ? _primaryBlue
+                                            ? Colors.blue
                                             : Colors.grey.shade400,
                                   ),
                                 );
@@ -378,7 +378,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
               onPressed: () => AppNavigator.back(),
-              icon: Icon(Icons.arrow_back),
+              icon: Icon(Icons.adaptive.arrow_back),
               label: Text(
                 'Back',
                 style: GoogleFonts.roboto(

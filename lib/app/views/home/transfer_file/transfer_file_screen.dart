@@ -809,8 +809,8 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                   children: [
                     IconButton(
                       onPressed: () => Get.back(),
-                      icon: const Icon(
-                        Icons.arrow_back,
+                      icon: Icon(
+                        Icons.adaptive.arrow_back,
                         color: Colors.black,
                         size: 28,
                       ),

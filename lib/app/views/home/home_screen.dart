@@ -53,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         AppNavigator.toOnboarding();
                       },
                       icon: Icon(
-                        Icons.arrow_back,
+                        Icons.adaptive.arrow_back,
                         color: Colors.black,
                         size: 28,
                       ),
