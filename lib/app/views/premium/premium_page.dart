@@ -692,6 +692,8 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
           title: 'Monthly Plan',
           price: monthlyPrice,
           priceSuffix: 'per month',
+          // note: '3 DAYS FREE',
+          badgeText: '3 DAYS TRIAL',
           isSelected: monthlySelected,
           onTap: () => setState(() => _selectedId = widget.monthlyId),
         ),
