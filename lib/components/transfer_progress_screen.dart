@@ -11,7 +11,6 @@ import 'package:share_app_latest/components/custom_upload_bar.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
 import 'package:share_app_latest/routes/app_navigator.dart';
-import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/components/app_dialog.dart';
 
@@ -600,8 +599,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () async {
-              await AdMobService.instance.showInterstitial();
+            onPressed: () {
               AppNavigator.toSendReceive();
             },
             icon: const Icon(Icons.refresh),

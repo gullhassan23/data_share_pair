@@ -5,7 +5,6 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
-import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Premium subscription screen – dark theme, gradient accents, file-transfer focused content.
@@ -163,9 +162,7 @@ class PremiumPage extends GetView<PremiumController> {
                                     onPressed:
                                         disableActions
                                             ? null
-                                            : () async {
-                                              await AdMobService.instance
-                                                  .showInterstitial();
+                                            : () {
                                               AppNavigator.back();
                                             },
                                     icon: const Icon(
@@ -223,8 +220,7 @@ class PremiumPage extends GetView<PremiumController> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           IconButton(
-            onPressed: () async {
-              await AdMobService.instance.showInterstitial();
+            onPressed: () {
               AppNavigator.back();
             },
             icon: const Icon(Icons.close, color: Colors.white, size: 28),
