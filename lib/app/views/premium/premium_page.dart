@@ -208,43 +208,7 @@ class PremiumPage extends GetView<PremiumController> {
   }
 
   Widget _buildTitle() {
-    return Column(
-      children: [
-        Image.asset("assets/icons/crown.png", height: 48),
-        ShaderMask(
-          blendMode: BlendMode.srcIn,
-          shaderCallback:
-              (bounds) => const LinearGradient(
-                colors: [_cyan, _purple],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ).createShader(bounds),
-          child: Column(
-            children: [
-              SizedBox(height: 20),
-              Text(
-                'UNLOCK',
-                style: GoogleFonts.roboto(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  height: 1,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                'PRO FILE TRANSFER',
-                style: GoogleFonts.roboto(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  height: 1,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+    return const _AnimatedPremiumTitle();
   }
 
   Widget _buildBenefits() {
@@ -398,6 +362,105 @@ class PremiumPage extends GetView<PremiumController> {
   }
 }
 
+class _AnimatedPremiumTitle extends StatefulWidget {
+  const _AnimatedPremiumTitle();
+
+  @override
+  State<_AnimatedPremiumTitle> createState() => _AnimatedPremiumTitleState();
+}
+
+class _AnimatedPremiumTitleState extends State<_AnimatedPremiumTitle>
+    with TickerProviderStateMixin {
+  late final AnimationController _crownController;
+  late final AnimationController _shimmerController;
+
+  @override
+  void initState() {
+    super.initState();
+    _crownController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 720),
+    )..repeat();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _crownController.dispose();
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = GoogleFonts.roboto(
+      fontSize: 30,
+      fontWeight: FontWeight.bold,
+      height: 1,
+      color: Colors.white,
+      letterSpacing: 0.4,
+    );
+
+    return Column(
+      children: [
+        AnimatedBuilder(
+          animation: _crownController,
+          builder: (context, child) {
+            final t = _crownController.value;
+            final step = (t * 10).floor();
+            final offsetX = step.isEven ? -1.0 : 1.0;
+            final offsetY = -1.5 * (0.5 - (t - 0.5).abs()) * 2;
+            return Transform.translate(
+              offset: Offset(offsetX, offsetY),
+              child: child,
+            );
+          },
+          child: Image.asset('assets/icons/crown.png', height: 48),
+        ),
+        const SizedBox(height: 14),
+        AnimatedBuilder(
+          animation: _shimmerController,
+          builder: (context, _) {
+            final shimmerX = (_shimmerController.value * 2) - 1.0;
+            return Column(
+              children: [
+                ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback:
+                      (bounds) => const LinearGradient(
+                        colors: [PremiumPage._cyan, PremiumPage._purple],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ).createShader(bounds),
+                  child: Text('UNLOCK', style: titleStyle),
+                ),
+                ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback:
+                      (bounds) => LinearGradient(
+                        colors: const [
+                          PremiumPage._cyan,
+                          Colors.white,
+                          PremiumPage._purple,
+                        ],
+                        stops: const [0.2, 0.5, 0.8],
+                        begin: Alignment(shimmerX, 0),
+                        end: Alignment(shimmerX + 1.8, 0),
+                      ).createShader(bounds),
+                  child: Text('PRO FILE TRANSFER', style: titleStyle),
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
 class _PremiumPlansSection extends StatefulWidget {
   final String monthlyId;
   final String weeklyId;
@@ -459,17 +522,17 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
     return Column(
       children: [
         _PlanCard(
-          title: 'Premium Yearly Subscription',
+          title: 'Yearly Plan',
           price: yearlyPrice,
           priceSuffix: 'per year',
-          note: '7 days free trial',
+          note: '7 DAYS FREE',
           badgeText: 'SAVE UP TO 88%',
           isSelected: yearlySelected,
           onTap: () => setState(() => _selectedId = widget.yearlyId),
         ),
         const SizedBox(height: 14),
         _PlanCard(
-          title: 'Premium Monthly Subscription',
+          title: 'Monthly Plan',
           price: monthlyPrice,
           priceSuffix: 'per month',
           isSelected: monthlySelected,
@@ -477,7 +540,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
         ),
         const SizedBox(height: 14),
         _PlanCard(
-          title: 'Premium Weekly Subscription',
+          title: 'Weekly Plan',
           price: weeklyPrice,
           priceSuffix: 'per week',
           isSelected: weeklySelected,
@@ -529,10 +592,24 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
   }
 
   String _effectivePrice(String? applePrice, String fallbackPrice) {
-    if (applePrice == null) return fallbackPrice;
+    if (applePrice == null) return _ensureTwoDecimals(fallbackPrice);
     final normalized = applePrice.trim();
-    if (normalized.isEmpty || normalized == '—') return fallbackPrice;
-    return normalized;
+    if (normalized.isEmpty || normalized == '—') {
+      return _ensureTwoDecimals(fallbackPrice);
+    }
+    return _ensureTwoDecimals(normalized);
+  }
+
+  String _ensureTwoDecimals(String value) {
+    if (!value.contains('.')) return '$value.00';
+
+    final parts = value.split('.');
+    if (parts.length < 2) return '$value.00';
+
+    final decimals = parts.last;
+    if (decimals.length >= 2) return value;
+    if (decimals.length == 1) return '${parts.first}.${decimals}0';
+    return '${parts.first}.00';
   }
 }
 
@@ -564,7 +641,7 @@ class _PlanCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient:
@@ -610,16 +687,16 @@ class _PlanCard extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.roboto(
-                        fontSize: 14,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    // const SizedBox(height: 6),
                     Text(
                       '$price $priceSuffix',
                       style: GoogleFonts.roboto(
-                        fontSize: 14,
+                        fontSize: 16,
                         color:
                             isSelected
                                 ? Colors.white.withOpacity(0.95)
@@ -627,11 +704,11 @@ class _PlanCard extends StatelessWidget {
                       ),
                     ),
                     if (note != null) ...[
-                      const SizedBox(height: 4),
+                      // const SizedBox(height: 4),
                       Text(
                         note!,
                         style: GoogleFonts.roboto(
-                          fontSize: 12,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                           color:
                               isSelected
