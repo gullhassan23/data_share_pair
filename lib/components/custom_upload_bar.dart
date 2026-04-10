@@ -179,84 +179,84 @@ class CustomUploadProgress extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                const Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        "Videos",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(
-                          color: Color(0xFF303030),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        "Images",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF303030),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        "Contacts",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF303030),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        "Calendar",
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: Color(0xFF303030),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                // const SizedBox(height: 8),
+                // const Row(
+                //   children: [
+                //     Expanded(
+                //       child: Text(
+                //         "Videos",
+                //         textAlign: TextAlign.left,
+                //         style: TextStyle(
+                //           color: Color(0xFF303030),
+                //           fontSize: 13,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ),
+                //     Expanded(
+                //       child: Text(
+                //         "Images",
+                //         textAlign: TextAlign.center,
+                //         style: TextStyle(
+                //           color: Color(0xFF303030),
+                //           fontSize: 13,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ),
+                //     Expanded(
+                //       child: Text(
+                //         "Contacts",
+                //         textAlign: TextAlign.center,
+                //         style: TextStyle(
+                //           color: Color(0xFF303030),
+                //           fontSize: 13,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ),
+                //     Expanded(
+                //       child: Text(
+                //         "Calendar",
+                //         textAlign: TextAlign.right,
+                //         style: TextStyle(
+                //           color: Color(0xFF303030),
+                //           fontSize: 13,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ),
+                //   ],
+                // ),
                 const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        height: 9,
-                        color: const Color(0xFFE24A35),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 9,
-                        color: const Color(0xFF20D56B),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 9,
-                        color: const Color(0xFFEAB525),
-                      ),
-                    ),
-                    Expanded(
-                      child: Container(
-                        height: 9,
-                        color: const Color(0xFF4E62DF),
-                      ),
-                    ),
-                  ],
-                ),
+                // Row(
+                //   children: [
+                //     Expanded(
+                //       child: Container(
+                //         height: 9,
+                //         color: const Color(0xFFE24A35),
+                //       ),
+                //     ),
+                //     Expanded(
+                //       child: Container(
+                //         height: 9,
+                //         color: const Color(0xFF20D56B),
+                //       ),
+                //     ),
+                //     Expanded(
+                //       child: Container(
+                //         height: 9,
+                //         color: const Color(0xFFEAB525),
+                //       ),
+                //     ),
+                //     Expanded(
+                //       child: Container(
+                //         height: 9,
+                //         color: const Color(0xFF4E62DF),
+                //       ),
+                //     ),
+                //   ],
+                // ),
               ],
             ),
           ),
