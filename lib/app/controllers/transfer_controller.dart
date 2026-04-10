@@ -1171,11 +1171,13 @@ class TransferController extends GetxController {
 
       // Wait for acknowledgment from receiver (with timeout)
       final ackCompleter = Completer<void>();
+      bool ackReceived = false;
+      final ackBuffer = StringBuffer();
 
       // Set up a timeout for acknowledgment
-      final timeout = Timer(const Duration(seconds: 5), () {
+      final timeout = Timer(const Duration(seconds: 20), () {
         if (!ackCompleter.isCompleted) {
-          print('⚠️ ACK timeout, closing socket anyway');
+          print('⚠️ ACK timeout from receiver');
           ackCompleter.complete();
         }
       });
@@ -1183,9 +1185,12 @@ class TransferController extends GetxController {
       // Listen for ACK response
       final ackSubscription = socket.listen(
         (data) {
-          final response = utf8.decode(data).trim();
-          if (response == '__ACK__') {
+          // ACK can arrive in partial TCP frames; accumulate and detect token.
+          ackBuffer.write(utf8.decode(data, allowMalformed: true));
+          final response = ackBuffer.toString();
+          if (response.contains('__ACK__')) {
             print('✅ Received ACK from receiver');
+            ackReceived = true;
             timeout.cancel();
             if (!ackCompleter.isCompleted) {
               ackCompleter.complete();
@@ -1211,6 +1216,12 @@ class TransferController extends GetxController {
       // Wait for acknowledgment or timeout
       await ackCompleter.future;
       await ackSubscription.cancel();
+
+      if (!ackReceived) {
+        throw Exception(
+          'Receiver confirmation not received. Check connection and received files, then retry.',
+        );
+      }
 
       // Now safely close the socket
       socket.destroy();
