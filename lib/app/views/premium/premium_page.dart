@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/routes/app_routes.dart';
+import 'package:share_app_latest/services/one_time_free_send_store.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Premium subscription screen – dark theme, gradient accents, file-transfer focused content.
@@ -15,8 +17,8 @@ class PremiumPage extends GetView<PremiumController> {
   @override
   String? get tag => null;
 
-  static const Color _bgDark = Color(0xff12121a);
-  static const Color _cardUnselected = Color(0xff1a1a24);
+  static const Color _bgDark = Colors.white;
+  static const Color _cardUnselected = Colors.white;
   static const Color _cyan = Color(0xff22d3ee);
   static const Color _purple = Color(0xffa855f7);
 
@@ -55,130 +57,129 @@ class PremiumPage extends GetView<PremiumController> {
               height: double.infinity,
               decoration: const BoxDecoration(color: _bgDark),
               child: SafeArea(
-                child: Column(
+                child: Stack(
                   children: [
-                    _buildHeader(
-                      context,
-                      showCloseInHeader:
-                          !iapService.isAvailable || isLoading || isPremium,
-                    ),
-                    if (!iapService.isAvailable) ...[
-                      if (isLoading)
-                        const Expanded(
-                          child: Center(
-                            child: CircularProgressIndicator(color: _cyan),
-                          ),
-                        )
-                      else
-                        const Expanded(
-                          child: Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(24.0),
-                              child: Text(
-                                'In-App Purchases are not available on this device.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white70),
+                    Column(
+                      children: [
+                        if (!iapService.isAvailable) ...[
+                          if (isLoading)
+                            const Expanded(
+                              child: Center(
+                                child: CircularProgressIndicator(color: _cyan),
+                              ),
+                            )
+                          else
+                            const Expanded(
+                              child: Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(24.0),
+                                  child: Text(
+                                    'In-App Purchases are not available on this device.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                    ] else if (isLoading)
-                      const Expanded(
-                        child: Center(
-                          child: CircularProgressIndicator(color: _cyan),
-                        ),
-                      )
-                    else if (isPremium)
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _screenPaddingH,
-                            vertical: _screenVerticalPadding,
-                          ),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              minHeight:
-                                  MediaQuery.of(context).size.height * 0.6,
-                            ),
+                        ] else if (isLoading)
+                          const Expanded(
                             child: Center(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.workspace_premium,
-                                    color: _cyan,
-                                    size: 72,
+                              child: CircularProgressIndicator(color: _cyan),
+                            ),
+                          )
+                        else if (isPremium)
+                          Expanded(
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(
+                                parent: AlwaysScrollableScrollPhysics(),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: _screenPaddingH,
+                                vertical: _screenVerticalPadding,
+                              ),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(
+                                  minHeight:
+                                      MediaQuery.of(context).size.height * 0.6,
+                                ),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.workspace_premium,
+                                        color: _cyan,
+                                        size: 72,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'You are Premium!',
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Wi‑Fi transfer, no ads & all Pro features unlocked.',
+                                        style: GoogleFonts.roboto(
+                                          fontSize: 14,
+                                          color: Colors.black54,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'You are Premium!',
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Expanded(
+                            child: SingleChildScrollView(
+                              physics: const BouncingScrollPhysics(
+                                parent: AlwaysScrollableScrollPhysics(),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: _screenPaddingH,
+                                vertical: _screenVerticalPadding,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  const SizedBox(height: 10),
+                                  _buildTitle(),
+                                  const SizedBox(height: 24),
+                                  _buildBenefits(),
+                                  const SizedBox(height: 20),
+                                  _PremiumPlansSection(
+                                    monthlyId: monthlyId,
+                                    weeklyId: weeklyId,
+                                    yearlyId: yearlyId,
+                                    monthlyPlan: monthlyPlan,
+                                    weeklyPlan: weeklyPlan,
+                                    yearlyPlan: yearlyPlan,
+                                    isDisabled: disableActions,
+                                    onBuy: controller.buy,
+                                  ),
+                                  const SizedBox(height: 24),
+                                  _buildRestoreLink(
+                                    onRestore:
+                                        disableActions
+                                            ? () {}
+                                            : controller.restorePurchases,
+                                    isRestoring: controller.isRestoring.value,
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(
-                                    'Wi‑Fi transfer, no ads & all Pro features unlocked.',
-                                    style: GoogleFonts.roboto(
-                                      fontSize: 14,
-                                      color: Colors.white70,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
+                                  _buildFooter(context),
                                 ],
                               ),
                             ),
                           ),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: SingleChildScrollView(
-                          physics: const BouncingScrollPhysics(
-                            parent: AlwaysScrollableScrollPhysics(),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: _screenPaddingH,
-                            vertical: _screenVerticalPadding,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // const SizedBox(height: _sectionSpacing),
-                               _buildTitle(),
-                              const SizedBox(height: 24),
-                              _buildBenefits(),
-                              const SizedBox(height: 20),
-                              _PremiumPlansSection(
-                                monthlyId: monthlyId,
-                                weeklyId: weeklyId,
-                                yearlyId: yearlyId,
-                                monthlyPlan: monthlyPlan,
-                                weeklyPlan: weeklyPlan,
-                                yearlyPlan: yearlyPlan,
-                                isDisabled: disableActions,
-                                onBuy: controller.buy,
-                              ),
-                              const SizedBox(height: 24),
-                              _buildRestoreLink(
-                                onRestore:
-                                    disableActions
-                                        ? () {}
-                                        : controller.restorePurchases,
-                                isRestoring: controller.isRestoring.value,
-                              ),
-                              const SizedBox(height: 8),
-                              _buildFooter(context),
-                              // const SizedBox(height: _footerBottom),
-                            ],
-                          ),
-                        ),
-                      ),
+                      ],
+                    ),
+                    _buildHeader(context, showCloseInHeader: true),
                   ],
                 ),
               ),
@@ -191,18 +192,14 @@ class PremiumPage extends GetView<PremiumController> {
 
   Widget _buildHeader(BuildContext context, {required bool showCloseInHeader}) {
     if (!showCloseInHeader) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          IconButton(
-            onPressed: () {
-              AppNavigator.back();
-            },
-            icon: const Icon(Icons.close, color: Colors.white, size: 28),
-          ),
-        ],
+    return Positioned(
+      top: 4,
+      left: 4,
+      child: IconButton(
+        onPressed: () {
+          AppNavigator.back();
+        },
+        icon: const Icon(Icons.close, color: Colors.black87, size: 28),
       ),
     );
   }
@@ -236,7 +233,7 @@ class PremiumPage extends GetView<PremiumController> {
                           style: GoogleFonts.roboto(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: Colors.white,
+                            color: Colors.black87,
                           ),
                         ),
                       ),
@@ -276,7 +273,7 @@ class PremiumPage extends GetView<PremiumController> {
                       style: GoogleFonts.roboto(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Colors.white70,
+                        color: Colors.black54,
                       ),
                     ),
                   ],
@@ -289,7 +286,7 @@ class PremiumPage extends GetView<PremiumController> {
                   style: GoogleFonts.roboto(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white54,
+                    color: Colors.black54,
                   ),
                 ),
               ),
@@ -317,11 +314,11 @@ class PremiumPage extends GetView<PremiumController> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.verified_user, size: 16, color: Colors.white38),
+            Icon(Icons.verified_user, size: 16, color: Colors.black38),
             const SizedBox(width: 6),
             Text(
               'Secured with Apple',
-              style: GoogleFonts.roboto(fontSize: 12, color: Colors.white38),
+              style: GoogleFonts.roboto(fontSize: 12, color: Colors.black38),
             ),
           ],
         ),
@@ -335,14 +332,14 @@ class PremiumPage extends GetView<PremiumController> {
                 'Privacy Policy',
                 style: GoogleFonts.roboto(
                   fontSize: 12,
-                  color: Colors.white70,
+                  color: Colors.black54,
                   decoration: TextDecoration.underline,
                 ),
               ),
             ),
             Text(
               '  |  ',
-              style: GoogleFonts.roboto(fontSize: 12, color: Colors.white38),
+              style: GoogleFonts.roboto(fontSize: 12, color: Colors.black38),
             ),
             InkWell(
               onTap: () => _open(terms),
@@ -350,7 +347,7 @@ class PremiumPage extends GetView<PremiumController> {
                 'Terms of Use',
                 style: GoogleFonts.roboto(
                   fontSize: 12,
-                  color: Colors.white70,
+                  color: Colors.black54,
                   decoration: TextDecoration.underline,
                 ),
               ),
@@ -488,6 +485,7 @@ class _PremiumPlansSection extends StatefulWidget {
 
 class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
   late String _selectedId;
+  bool _isFreeSendUsed = true;
 
   static const String _fallbackWeeklyPrice = '2500';
   static const String _fallbackMonthlyPrice = '2900';
@@ -497,6 +495,15 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
   void initState() {
     super.initState();
     _selectedId = widget.yearlyId;
+    _loadFreeSendStatus();
+  }
+
+  Future<void> _loadFreeSendStatus() async {
+    final used = await OneTimeFreeSendStore.hasUsed();
+    if (!mounted) return;
+    setState(() {
+      _isFreeSendUsed = used;
+    });
   }
 
   @override
@@ -547,6 +554,29 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
           onTap: () => setState(() => _selectedId = widget.weeklyId),
         ),
 
+        if (!_isFreeSendUsed) ...[
+          const SizedBox(height: 16),
+          InkWell(
+            onTap:
+                widget.isDisabled
+                    ? null
+                    : () {
+                      Get.toNamed(
+                        AppRoutes.choosemethodscan,
+                        arguments: <String, dynamic>{'isReceiver': false},
+                      );
+                    },
+            child: Text(
+              'Continue without subscription (1 free send)',
+              style: GoogleFonts.roboto(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 40),
         SizedBox(
           width: double.infinity,
@@ -657,7 +687,7 @@ class _PlanCard extends StatelessWidget {
               color:
                   isSelected
                       ? PremiumPage._cyan.withOpacity(0.6)
-                      : Colors.white.withOpacity(0.08),
+                      : Colors.black.withOpacity(0.10),
               width: isSelected ? 1.5 : 1,
             ),
             boxShadow:
@@ -689,7 +719,7 @@ class _PlanCard extends StatelessWidget {
                       style: GoogleFonts.roboto(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: isSelected ? Colors.white : Colors.black87,
                       ),
                     ),
                     // const SizedBox(height: 6),
@@ -700,7 +730,7 @@ class _PlanCard extends StatelessWidget {
                         color:
                             isSelected
                                 ? Colors.white.withOpacity(0.95)
-                                : Colors.white60,
+                                : Colors.black54,
                       ),
                     ),
                     if (note != null) ...[
@@ -713,7 +743,7 @@ class _PlanCard extends StatelessWidget {
                           color:
                               isSelected
                                   ? Colors.white
-                                  : const Color(0xff86efac),
+                                  : const Color(0xff0f766e),
                         ),
                       ),
                     ],
@@ -753,7 +783,7 @@ class _PlanCard extends StatelessWidget {
                       color:
                           isSelected
                               ? Colors.white.withOpacity(0.95)
-                              : Colors.white.withOpacity(0.15),
+                              : const Color(0xffe5e7eb),
                     ),
                     alignment: Alignment(isSelected ? 1.0 : -1.0, 0),
                     child: Container(

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/services/admob_service.dart';
+import 'package:share_app_latest/services/one_time_free_send_store.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
@@ -19,6 +20,10 @@ class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.isSender) {
+      // One-time free send is consumed after first successful sender transfer.
+      OneTimeFreeSendStore.markUsed();
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       AdMobService.instance.showInterstitial();
