@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 
 import 'package:share_app_latest/routes/app_navigator.dart';
 
+import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
@@ -21,44 +23,48 @@ class ChooseMethodScan extends StatefulWidget {
 class _ChooseMethodScanState extends State<ChooseMethodScan> {
   @override
   Widget build(BuildContext context) {
+    final premium = Get.find<PremiumController>();
     return Scaffold(
       body: bg_container(
         child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 19),
-              Row(
-                children: [
-                  IconButton(
-                    onPressed: () {
-                      Get.back();
-                    },
-                    icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    "Back",
-                    style: GoogleFonts.roboto(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
+          child: Obx(() {
+            final isPremium =
+                premium.isPremium || SubscriptionIAPService().isPremium;
+            return Column(
+              children: [
+                const SizedBox(height: 19),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        Get.back();
+                      },
+                      icon: Icon(Icons.arrow_back, color: Colors.black, size: 28),
                     ),
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => AppNavigator.toPremium(),
-                    icon: const Icon(Icons.star, color: Colors.amber, size: 20),
-                    label: Text(
-                      'Premium',
+                    const SizedBox(width: 12),
+                    Text(
+                      "Back",
                       style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                  ),
-                ],
-              ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => AppNavigator.toPremium(),
+                      icon: const Icon(Icons.star, color: Colors.amber, size: 20),
+                      label: Text(
+                        isPremium ? 'Premium' : 'Free Plan',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
               /// Back Row
 
@@ -166,14 +172,15 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                   ),
                 ),
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: AdLargeRectWidget(),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: AdLargeRectWidget(),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+          }),
         ),
       ),
     );

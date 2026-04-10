@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         size: 20,
                       ),
                       label: Text(
-                        'Premium',
+                        isPremium ? 'Premium' : 'Free Plan',
                         style: GoogleFonts.roboto(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,

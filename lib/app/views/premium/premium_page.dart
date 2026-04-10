@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
+import 'package:share_app_latest/components/on_boardingbutton.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/one_time_free_send_store.dart';
@@ -102,27 +103,57 @@ class PremiumPage extends GetView<PremiumController> {
                                   minHeight:
                                       MediaQuery.of(context).size.height * 0.6,
                                 ),
-                                child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFEFF6FF), Color(0xFFEDE9FE)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    border: Border.all(
+                                      color: Colors.black.withOpacity(0.06),
+                                    ),
+                                  ),
                                   child: Column(
-                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      const Icon(
-                                        Icons.workspace_premium,
-                                        color: _cyan,
-                                        size: 72,
+                                      Container(
+                                        width: 70,
+                                        height: 70,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.white,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(0.08),
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.workspace_premium,
+                                          color: _cyan,
+                                          size: 38,
+                                        ),
                                       ),
-                                      const SizedBox(height: 16),
+                                      const SizedBox(height: 14),
                                       Text(
-                                        'You are Premium!',
+                                        'You are Premium',
                                         style: GoogleFonts.roboto(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.w800,
                                           color: Colors.black87,
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 6),
                                       Text(
-                                        'Wi‑Fi transfer, no ads & all Pro features unlocked.',
+                                        'All Pro features are unlocked on your account.',
                                         style: GoogleFonts.roboto(
                                           fontSize: 14,
                                           color: Colors.black54,
@@ -132,6 +163,40 @@ class PremiumPage extends GetView<PremiumController> {
                                     ],
                                   ),
                                 ),
+                                const SizedBox(height: 18),
+                                _PremiumFeatureTile(
+                                  icon: Icons.wifi_tethering_rounded,
+                                  title: 'Unlimited Wi-Fi Transfer',
+                                  subtitle: 'Send any number of files without limits.',
+                                ),
+                                const SizedBox(height: 10),
+                                _PremiumFeatureTile(
+                                  icon: Icons.speed_rounded,
+                                  title: 'Faster Sharing',
+                                  subtitle: 'Quick pairing and smooth transfer speed.',
+                                ),
+                                const SizedBox(height: 10),
+                                _PremiumFeatureTile(
+                                  icon: Icons.ads_click_rounded,
+                                  title: 'No Ads Experience',
+                                  subtitle: 'Enjoy a clean interface without interruptions.',
+                                ),
+                                const SizedBox(height: 10),
+                                _PremiumFeatureTile(
+                                  icon: Icons.verified_user_rounded,
+                                  title: 'Secure Direct Connection',
+                                  subtitle: 'Your data moves directly between devices.',
+                                ),
+                                const SizedBox(height: 20),
+                                On_BoardingButton(
+                                  ontap: () => AppNavigator.toHome(),
+                                  height: 45,
+                                  width: double.infinity,
+                                  text: "Start Transferring",
+                                  color: const Color.fromARGB(255, 87, 107, 241),
+                                ),
+                              ],
+                            ),
                               ),
                             ),
                           )
@@ -179,7 +244,6 @@ class PremiumPage extends GetView<PremiumController> {
                           ),
                       ],
                     ),
-                    _buildHeader(context, showCloseInHeader: true),
                   ],
                 ),
               ),
@@ -188,20 +252,6 @@ class PremiumPage extends GetView<PremiumController> {
         },
       );
     });
-  }
-
-  Widget _buildHeader(BuildContext context, {required bool showCloseInHeader}) {
-    if (!showCloseInHeader) return const SizedBox.shrink();
-    return Positioned(
-      top: 4,
-      left: 4,
-      child: IconButton(
-        onPressed: () {
-          AppNavigator.back();
-        },
-        icon: const Icon(Icons.close, color: Colors.black87, size: 28),
-      ),
-    );
   }
 
   Widget _buildTitle() {
@@ -454,6 +504,68 @@ class _AnimatedPremiumTitleState extends State<_AnimatedPremiumTitle>
           },
         ),
       ],
+    );
+  }
+}
+
+class _PremiumFeatureTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _PremiumFeatureTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withOpacity(0.06)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFF6FF),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: PremiumPage._cyan, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.roboto(
+                    fontSize: 12,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

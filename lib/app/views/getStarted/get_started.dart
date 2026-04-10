@@ -82,7 +82,7 @@ class _getStartedScreenState extends State<getStartedScreen>
                         size: 20,
                       ),
                       label: Text(
-                        'Premium',
+                        showAds ? 'Free Plan' : 'Premium',
                         style: GoogleFonts.roboto(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
