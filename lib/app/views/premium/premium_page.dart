@@ -252,20 +252,21 @@ class PremiumPage extends GetView<PremiumController> {
                           ),
                       ],
                     ),
-                    Positioned(
-                      top: 4,
-                      left: 4,
-                      child: IconButton(
-                        onPressed: () {
-                          AppNavigator.back();
-                        },
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.black87,
-                          size: 28,
+                    if (!isPremium)
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: IconButton(
+                          onPressed: () {
+                            AppNavigator.back();
+                          },
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.black87,
+                            size: 28,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
