@@ -262,8 +262,8 @@ class PremiumPage extends GetView<PremiumController> {
                           },
                           icon: const Icon(
                             Icons.close,
-                            color: Colors.black87,
-                            size: 28,
+                            color: Color.fromARGB(30, 0, 0, 0),
+                            size: 22,
                           ),
                         ),
                       ),
@@ -649,7 +649,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
   }
 
   Future<void> _loadFreeSendStatus() async {
-    final used = await OneTimeFreeSendStore.hasUsed();
+    final used = await OneTimeFreeSendStore.hasUsedLocalThenRemote();
     if (!mounted) return;
     setState(() {
       _isFreeSendUsed = used;

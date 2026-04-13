@@ -43,5 +43,14 @@ class OneTimeFreeSendStore {
       // Local write is already done; Firebase sync can retry later via hasUsed read.
     }
   }
+
+  /// Local-first check with a best-effort remote sync pass.
+  /// Returns true immediately when local says already used.
+  static Future<bool> hasUsedLocalThenRemote() async {
+    final prefs = await SharedPreferences.getInstance();
+    final localUsed = prefs.getBool(_localKeyFreeSendUsed) ?? false;
+    if (localUsed) return true;
+    return hasUsed();
+  }
 }
 

@@ -62,6 +62,10 @@ class TransferController extends GetxController {
   /// Handles transfer completion (sent/received) from a long-lived controller so completion
   /// runs even when TransferProgressScreen is disposed (e.g. app backgrounded).
   void _onTransferStatusChanged(String status) {
+    unawaited(_handleTransferStatusChanged(status));
+  }
+
+  Future<void> _handleTransferStatusChanged(String status) async {
     if (suppressCompletionRouting) return;
     final isSuccess = status == 'sent' || status == 'received';
     final hasError = progress.error.value.isNotEmpty;
@@ -70,7 +74,7 @@ class TransferController extends GetxController {
     if (status == 'sent') {
       print('✅ File successfully sent to receiver!');
       // Consume one-time free send exactly at successful sender completion.
-      unawaited(OneTimeFreeSendStore.markUsed());
+      await OneTimeFreeSendStore.markUsed();
       Get.off(
         () => const TransferCompleteScreen(isSender: true),
         routeName: AppRoutes.transferComplete,

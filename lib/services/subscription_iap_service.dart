@@ -309,6 +309,7 @@ class SubscriptionIAPService {
           );
           isLoading.value = false;
           break;
+        // ignore: unreachable_switch_default
         default:
           debugPrint(
             '[SubscriptionIAP] _onPurchaseUpdated: status=OTHER (${purchaseDetails.status})',
