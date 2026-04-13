@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDuXZ1QsfF1pFUKF5laUOhHosR2Fkx-1oo',
-    appId: '1:920008060842:android:a6f8ebb48e8e0fa5ec85d3',
+    appId: '1:920008060842:android:5bd241743d1747c6ec85d3',
     messagingSenderId: '920008060842',
     projectId: 'share-all-file-transfer-bc425',
     storageBucket: 'share-all-file-transfer-bc425.firebasestorage.app',

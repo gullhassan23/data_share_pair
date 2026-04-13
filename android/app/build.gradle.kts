@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "com.share.transfer.file.all.data.app"
+    namespace = "com.FutureDialLabs.copymydata.transfer.file.all.data.app"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
 
@@ -23,7 +23,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.share.transfer.file.all.data.app"
+        applicationId = "com.FutureDialLabs.copymydata.transfer.file.all.data.app"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = 1

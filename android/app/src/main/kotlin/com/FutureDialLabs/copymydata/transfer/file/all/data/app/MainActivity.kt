@@ -1,4 +1,4 @@
-package com.share.transfer.file.all.data.app
+package com.FutureDialLabs.copymydata.transfer.file.all.data.app
 
 import android.content.Context
 import android.content.Intent

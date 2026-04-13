@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:920008060842:android:5bd241743d1747c6ec85d3",
+        "android_client_info": {
+          "package_name": "com.FutureDialLabs.copymydata.transfer.file.all.data.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuXZ1QsfF1pFUKF5laUOhHosR2Fkx-1oo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:920008060842:android:a6f8ebb48e8e0fa5ec85d3",
         "android_client_info": {
           "package_name": "com.share.transfer.file.all.data.app"
