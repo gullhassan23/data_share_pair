@@ -301,6 +301,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     return Scaffold(
       body: bg_container(
         child: SafeArea(
@@ -313,8 +314,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 18),
                   children: [
                     const SizedBox(height: 8),
-                    _buildGoProBanner(),
-                    const SizedBox(height: 18),
+                    if (!isAndroid) _buildGoProBanner(),
+                    if (!isAndroid) const SizedBox(height: 18),
                     _buildMenuTile(
                       icon: "assets/icons/How to works.png",
                       label: 'How It Works',

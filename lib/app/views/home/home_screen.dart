@@ -39,8 +39,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: bg_container(
         child: SafeArea(
           child: Obx(() {
+            final isAndroid = GetPlatform.isAndroid;
             final isPremium =
                 premium.isPremium || SubscriptionIAPService().isPremium;
+            final canUsePremiumFeatures = isAndroid || isPremium;
             return Column(
               children: [
                 const SizedBox(height: 19),
@@ -68,22 +70,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const Spacer(),
-                    TextButton.icon(
-                      onPressed: () => AppNavigator.toPremium(),
-                      icon: const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                        size: 20,
-                      ),
-                      label: Text(
-                        isPremium ? 'Premium' : 'Free Plan',
-                        style: GoogleFonts.roboto(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                    if (!isAndroid)
+                      TextButton.icon(
+                        onPressed: () => AppNavigator.toPremium(),
+                        icon: const Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 20,
+                        ),
+                        label: Text(
+                          isPremium ? 'Premium' : 'Free Plan',
+                          style: GoogleFonts.roboto(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 19),
@@ -150,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Expanded(
                               child: InkWell(
                                 onTap: () {
-                                  if (!isPremium) {
+                                  if (!canUsePremiumFeatures) {
                                     AppNavigator.toPremium();
                                     return;
                                   }
@@ -165,14 +168,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                   alignment: Alignment.center,
                                   children: [
                                     Opacity(
-                                      opacity: isPremium ? 1.0 : 0.55,
+                                      opacity: canUsePremiumFeatures ? 1.0 : 0.55,
                                       child: Image.asset(
                                         'assets/icons/send.png',
                                         height: 130,
                                         fit: BoxFit.contain,
                                       ),
                                     ),
-                                    if (!isPremium)
+                                    if (!canUsePremiumFeatures)
                                       Positioned(
                                         top: 4,
                                         right: 4,

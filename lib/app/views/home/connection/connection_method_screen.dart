@@ -150,13 +150,15 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                               },
                             ),
                             Obx(() {
+                              final isAndroid = GetPlatform.isAndroid;
                               final isPremium = premium.isPremium;
+                              final canUseWifi = isAndroid || isPremium;
                               return TransferOptionIconCard(
                                 title: "WiFi",
                                 icon: Icons.wifi,
-                                showLock: !isPremium,
+                                showLock: !canUseWifi,
                                 onTap: () async {
-                                  if (isPremium) {
+                                  if (canUseWifi) {
                                     print(
                                       '✅ Connection method chosen: WiFi Direct (isReceiver: ${widget.isReceiver})',
                                     );
@@ -169,6 +171,7 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                                     return;
                                   }
 
+                                  // iOS only: keep paywall prompt when not premium.
                                   if (!mounted) return;
                                   await showModalBottomSheet<void>(
                                     context: context,
