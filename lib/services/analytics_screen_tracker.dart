@@ -1,4 +1,5 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 
 class AnalyticsScreenTracker {
   AnalyticsScreenTracker._();
@@ -8,24 +9,16 @@ class AnalyticsScreenTracker {
   static DateTime? _screenEnterTime;
 
   static const Map<String, String> _routeToScreenName = <String, String>{
-    '/splash': 'splash_screen',
-    '/onboaring': 'onboarding_screen',
-    '/home': 'home_screen',
-    '/connection-method': 'connection_method_screen',
-    '/choose-method-scan': 'choose_method_scan_screen',
-    '/pairing': 'pairing_screen',
-    '/transfer-file': 'transfer_file_screen',
-    '/transfer-progress': 'transfer_progress_screen',
-    '/received-files': 'received_files_screen',
-    '/receive-show-qr': 'qr_receiver_screen',
-    '/send-scan-qr': 'qr_sender_screen',
-    '/premium': 'premium_screen',
-    '/configuration': 'configuration_screen',
-    '/choose-method': 'choose_method_screen',
-    '/select-device': 'select_device_screen',
-    '/transfer-complete': 'transfer_complete_screen',
-    '/contacts-selection': 'contacts_selection_screen',
-    '/how-it-works': 'how_it_works_screen',
+    '/premium': 'premium_splash',
+    '/onboaring': 'home_screen',
+    '/home': 'Transfer_Menu',
+    '/choose-method-scan': 'Sender_via_menu',
+    '/pairing': 'Wifi_sender',
+    '/select-device': 'Send_device_Menu',
+    '/send-scan-qr': 'QR_sender',
+    '/receive-show-qr': 'Recive_QR',
+    '/transfer-file': 'select_file_Button',
+    '/transfer-complete': 'complete_menu',
   };
 
   /// Routes that resolve to these screen ids are not logged to analytics.
@@ -57,7 +50,9 @@ class AnalyticsScreenTracker {
     if (upper.startsWith('DIALOG')) return;
     if (upper.startsWith('BOTTOMSHEET')) return;
 
-    final screenName = _resolveScreenNameFromRoute(trimmed);
+    final screenName = _analyticsSafeScreenName(
+      _resolveScreenNameFromRoute(trimmed),
+    );
     if (_excludedScreenIds.contains(screenName)) {
       await _flushCurrentScreenDuration(nextScreen: 'analytics_excluded');
       _currentScreen = null;
@@ -65,7 +60,9 @@ class AnalyticsScreenTracker {
       return;
     }
 
-    String? previousScreenName = _resolveScreenNameFromRoute(previousRouteName);
+    String? previousScreenName = _analyticsSafeScreenName(
+      _resolveScreenNameFromRoute(previousRouteName),
+    );
     if (_excludedScreenIds.contains(previousScreenName)) {
       previousScreenName = null;
     }
@@ -79,7 +76,7 @@ class AnalyticsScreenTracker {
     if (screenName.isEmpty) return;
     if (_currentScreen == screenName) return;
 
-    final fromScreen = previousScreen ?? _currentScreen;
+    final fromScreen = _analyticsSafeScreenName(previousScreen ?? _currentScreen);
     await _flushCurrentScreenDuration(nextScreen: screenName);
 
     _currentScreen = screenName;
@@ -107,7 +104,12 @@ class AnalyticsScreenTracker {
           },
         );
       }
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('AnalyticsScreenTracker.trackScreen failed: $e');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
   }
 
   static Future<void> onAppBackground() async {
@@ -118,6 +120,8 @@ class AnalyticsScreenTracker {
     if (routeName == null || routeName.isEmpty) return 'unknown_screen';
     var key = routeName.trim();
     if (key.isEmpty) return 'unknown_screen';
+    key = key.split('?').first.split('#').first.trim();
+    if (key.isEmpty) return 'unknown_screen';
 
     final mapped = _routeToScreenName[key];
     if (mapped != null) return mapped;
@@ -126,44 +130,20 @@ class AnalyticsScreenTracker {
     final mappedLower = _routeToScreenName[lowerKey];
     if (mappedLower != null) return mappedLower;
 
-    var normalized = key;
-    if (normalized.startsWith('/')) {
-      normalized = normalized.substring(1);
-    }
-    if (normalized.isEmpty) return 'unknown_screen';
-
-    if (RegExp(r'[A-Z]').hasMatch(normalized)) {
-      normalized = _pascalCaseToSnake(normalized);
-    } else {
-      normalized = normalized
-          .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-          .replaceAll(RegExp(r'_+'), '_')
-          .replaceAll(RegExp(r'^_|_$'), '');
-    }
-
-    if (normalized.isEmpty) return 'unknown_screen';
-    if (!normalized.endsWith('_screen')) normalized = '${normalized}_screen';
-    return normalized;
+    return 'unknown_screen';
   }
 
-  /// Converts `ChooseMethodScan` / `TransferCompleteScreen` → `choose_method_scan` / `transfer_complete_screen`.
-  static String _pascalCaseToSnake(String input) {
-    final buf = StringBuffer();
-    for (var i = 0; i < input.length; i++) {
-      final c = input[i];
-      if (i > 0 &&
-          c == c.toUpperCase() &&
-          c != c.toLowerCase() &&
-          input[i - 1] != '_') {
-        buf.write('_');
-      }
-      buf.write(c.toLowerCase());
-    }
-    return buf
-        .toString()
-        .replaceAll(RegExp(r'[^a-z0-9_]+'), '_')
+  // Keep custom names while preventing obviously invalid characters.
+  static String _analyticsSafeScreenName(String? input) {
+    if (input == null || input.isEmpty) return 'unknown_screen';
+    var value = input
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_')
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
+    if (value.isEmpty) return 'unknown_screen';
+    return value;
   }
 
   static Future<void> _flushCurrentScreenDuration({
@@ -186,6 +166,14 @@ class AnalyticsScreenTracker {
           'duration_sec': millis ~/ 1000,
         },
       );
-    } catch (_) {}
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('AnalyticsScreenTracker._flushCurrentScreenDuration failed: $e');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
   }
 }
+
+
+

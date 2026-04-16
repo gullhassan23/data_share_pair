@@ -4,15 +4,18 @@ import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 
 void main() {
   group('AnalyticsScreenTracker.screenNameForRoute', () {
-    test('maps declared AppRoutes to stable screen ids', () {
-      expect(AnalyticsScreenTracker.screenNameForRoute(AppRoutes.home), 'home_screen');
+    test('maps only configured routes to requested screen ids', () {
       expect(
-        AnalyticsScreenTracker.screenNameForRoute(AppRoutes.choosemethodscan),
-        'choose_method_scan_screen',
+        AnalyticsScreenTracker.screenNameForRoute(AppRoutes.home),
+        'Transfer_Menu',
       );
       expect(
-        AnalyticsScreenTracker.screenNameForRoute(AppRoutes.howItWorks),
-        'how_it_works_screen',
+        AnalyticsScreenTracker.screenNameForRoute(AppRoutes.choosemethodscan),
+        'Sender_via_menu',
+      );
+      expect(
+        AnalyticsScreenTracker.screenNameForRoute(AppRoutes.transferFile),
+        'select_file_Button',
       );
     });
 
@@ -31,14 +34,14 @@ void main() {
       );
     });
 
-    test('normalizes PascalCase paths from anonymous Get.to routes', () {
+    test('unmapped routes report as unknown_screen', () {
       expect(
-        AnalyticsScreenTracker.screenNameForRoute('/ChooseMethodScan'),
-        'choose_method_scan_screen',
+        AnalyticsScreenTracker.screenNameForRoute(AppRoutes.howItWorks),
+        'unknown_screen',
       );
       expect(
-        AnalyticsScreenTracker.screenNameForRoute('/TransferCompleteScreen'),
-        'transfer_complete_screen',
+        AnalyticsScreenTracker.screenNameForRoute('/ChooseMethodScan'),
+        'unknown_screen',
       );
     });
 

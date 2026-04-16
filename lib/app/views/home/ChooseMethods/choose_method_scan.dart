@@ -6,6 +6,7 @@ import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -21,6 +22,16 @@ class ChooseMethodScan extends StatefulWidget {
 }
 
 class _ChooseMethodScanState extends State<ChooseMethodScan> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AnalyticsScreenTracker.trackScreen(
+        widget.isReciver ? 'Recive_via_menu' : 'Sender_via_menu',
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final premium = Get.find<PremiumController>();

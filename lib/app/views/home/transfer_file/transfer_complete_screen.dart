@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
@@ -26,6 +27,7 @@ class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
   }
 
   void _goNext() {
+    AnalyticsScreenTracker.trackScreen('Done_Button');
     if (widget.isSender) {
       AppNavigator.toHome();
     } else {

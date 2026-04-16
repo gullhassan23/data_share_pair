@@ -32,6 +32,7 @@ void main() async {
   } catch (_) {}
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
   await initializeFcmAndUploadToken();
 
   // Load cached premium status (if any) so ads respect Pro immediately.

@@ -12,6 +12,7 @@ import 'package:share_app_latest/components/app_dialog.dart';
 import 'package:share_app_latest/components/select_device_name.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 
@@ -77,6 +78,11 @@ class _PairingScreenState extends State<PairingScreen>
 
     final args = Get.arguments as Map<String, dynamic>?;
     _isReceiver = args?['isReceiver'] as bool? ?? false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      AnalyticsScreenTracker.trackScreen(
+        _isReceiver ? 'Recive_wifi' : 'Wifi_sender',
+      );
+    });
 
     _radarCtrl = AnimationController(
       vsync: this,

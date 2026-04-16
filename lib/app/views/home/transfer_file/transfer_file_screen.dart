@@ -24,6 +24,7 @@ import '../../../models/device_info.dart';
 import '../../../models/file_meta.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 
 class TransferFileScreen extends StatefulWidget {
   const TransferFileScreen({super.key});
@@ -769,6 +770,7 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       );
       return;
     }
+    await AnalyticsScreenTracker.trackScreen('after_Select_file_continue');
     await _sendSelectedFile(_selectedFilePaths.first);
   }
 
