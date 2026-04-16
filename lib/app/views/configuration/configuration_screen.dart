@@ -27,6 +27,12 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   static const String _supportEmail = 'admin@maxgamesproduction.com';
   static const String _iosAppStoreId = '6759640831';
+  static const String _androidPackageId =
+      'com.FutureDialLabs.copymydata.transfer.file.all.data.app';
+  static const String _iosStoreUrl =
+      'https://apps.apple.com/us/app/share-all-file-transfer-app/id6759640831';
+  static const String _androidStoreUrlFallback =
+      'https://play.google.com/store/apps/details?id=$_androidPackageId';
 
   String _envUrl(List<String> keys, String fallback) {
     for (final key in keys) {
@@ -80,8 +86,9 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   Future<void> _shareAppLink(BuildContext context) async {
     final info = await PackageInfo.fromPlatform();
-    final url =
-        'https://apps.apple.com/us/app/share-all-file-transfer-app/id6759640831';
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+    final androidStoreUrl = _envUrl(['ANDROID_STORE_URL'], _androidStoreUrlFallback);
+    final url = isAndroid ? androidStoreUrl : _iosStoreUrl;
     final text = '${info.appName}\n$url';
     final box = context.findRenderObject() as RenderBox?;
     final Rect? origin =
@@ -253,19 +260,27 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   Future<void> _openNativeReviewOrStore(BuildContext context) async {
     final InAppReview inAppReview = InAppReview.instance;
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
+    final androidStoreUrl = _envUrl(['ANDROID_STORE_URL'], _androidStoreUrlFallback);
     try {
       if (await inAppReview.isAvailable()) {
         await inAppReview.requestReview();
         return;
       }
-      await inAppReview.openStoreListing(appStoreId: _iosAppStoreId);
+      if (isAndroid) {
+        await inAppReview.openStoreListing();
+      } else {
+        await inAppReview.openStoreListing(appStoreId: _iosAppStoreId);
+      }
       return;
     } catch (_) {
-      final Uri appStoreUri = Uri.parse(
-        'https://apps.apple.com/us/app/share-all-file-transfer-app/id$_iosAppStoreId',
+      final Uri storeUri = Uri.parse(
+        isAndroid
+            ? androidStoreUrl
+            : 'https://apps.apple.com/us/app/share-all-file-transfer-app/id$_iosAppStoreId',
       );
-      if (await canLaunchUrl(appStoreUri)) {
-        await launchUrl(appStoreUri, mode: LaunchMode.externalApplication);
+      if (await canLaunchUrl(storeUri)) {
+        await launchUrl(storeUri, mode: LaunchMode.externalApplication);
         return;
       }
       if (context.mounted) {
