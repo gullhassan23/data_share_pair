@@ -68,7 +68,9 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   }
 
   Future<void> _openPrivacyPolicy(BuildContext context) async {
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     final privacyUrl = _envUrl([
+      if (isAndroid) 'ANDROID_PRIVACY_POLICY_URL',
       'PRIVACY_POLICY_URL',
       'PRIVACY_AND_POLICY_URL',
     ], 'https://maxgamesproduction.blogspot.com/2023/01/privacy-policy.html');
@@ -76,7 +78,9 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   }
 
   Future<void> _openTermsAndConditions(BuildContext context) async {
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     final termsUrl = _envUrl([
+      if (isAndroid) 'ANDROID_TERMS_AND_CONDITIONS_URL',
       'TERMS_OF_CONDITIONS_URL',
       'TERMS_AND_CONDITIONS_URL',
       'TERMS_OF_USE_URL',
