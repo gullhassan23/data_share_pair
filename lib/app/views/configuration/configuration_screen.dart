@@ -33,6 +33,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       'https://apps.apple.com/us/app/share-all-file-transfer-app/id6759640831';
   static const String _androidStoreUrlFallback =
       'https://play.google.com/store/apps/details?id=$_androidPackageId';
+  static const String _androidStoreDeepLink =
+      'market://details?id=$_androidPackageId';
 
   String _envUrl(List<String> keys, String fallback) {
     for (final key in keys) {
@@ -154,7 +156,13 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                         // Copy changes live as soon as user taps a star.
                         ...(() {
                           final content = _ratingContent(selectedStars);
-                          const rateCta = 'RATE ON APP STORE';
+                          final bool isAndroid =
+                              Theme.of(dialogContext).platform ==
+                              TargetPlatform.android;
+                          final rateCta =
+                              isAndroid
+                                  ? 'RATE ON PLAY STORE'
+                                  : 'RATE ON APP STORE';
                           return [
                             Text(
                               content.emoji,
@@ -266,23 +274,37 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     final InAppReview inAppReview = InAppReview.instance;
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     final androidStoreUrl = _envUrl(['ANDROID_STORE_URL'], _androidStoreUrlFallback);
+    final Uri androidStoreDeepLinkUri = Uri.parse(_androidStoreDeepLink);
+    final Uri androidStoreWebUri = Uri.parse(androidStoreUrl);
+    final Uri iosStoreUri = Uri.parse(
+      'https://apps.apple.com/us/app/share-all-file-transfer-app/id$_iosAppStoreId',
+    );
     try {
-      if (await inAppReview.isAvailable()) {
+      if (!isAndroid && await inAppReview.isAvailable()) {
         await inAppReview.requestReview();
         return;
       }
       if (isAndroid) {
+        // In-app review on Android is quota-limited and may not allow submission
+        // during testing, so always route to Play Store listing for reliability.
+        if (await canLaunchUrl(androidStoreDeepLinkUri)) {
+          await launchUrl(
+            androidStoreDeepLinkUri,
+            mode: LaunchMode.externalApplication,
+          );
+          return;
+        }
+        if (await canLaunchUrl(androidStoreWebUri)) {
+          await launchUrl(androidStoreWebUri, mode: LaunchMode.externalApplication);
+          return;
+        }
         await inAppReview.openStoreListing();
       } else {
         await inAppReview.openStoreListing(appStoreId: _iosAppStoreId);
       }
       return;
     } catch (_) {
-      final Uri storeUri = Uri.parse(
-        isAndroid
-            ? androidStoreUrl
-            : 'https://apps.apple.com/us/app/share-all-file-transfer-app/id$_iosAppStoreId',
-      );
+      final Uri storeUri = isAndroid ? androidStoreWebUri : iosStoreUri;
       if (await canLaunchUrl(storeUri)) {
         await launchUrl(storeUri, mode: LaunchMode.externalApplication);
         return;
