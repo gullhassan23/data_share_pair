@@ -128,7 +128,6 @@ class AppNavigator {
   }
 
   static void toPremium() {
-    if (GetPlatform.isAndroid) return;
     Get.toNamed(AppRoutes.premium);
   }
 

@@ -39,10 +39,9 @@ class _HomeScreenState extends State<HomeScreen> {
       body: bg_container(
         child: SafeArea(
           child: Obx(() {
-            final isAndroid = GetPlatform.isAndroid;
             final isPremium =
                 premium.isPremium || SubscriptionIAPService().isPremium;
-            final canUsePremiumFeatures = isAndroid || isPremium;
+            final canUsePremiumFeatures = isPremium;
             return Column(
               children: [
                 const SizedBox(height: 19),
@@ -70,23 +69,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const Spacer(),
-                    if (!isAndroid)
-                      TextButton.icon(
-                        onPressed: () => AppNavigator.toPremium(),
-                        icon: const Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        label: Text(
-                          isPremium ? 'Premium' : 'Free Plan',
-                          style: GoogleFonts.roboto(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                    TextButton.icon(
+                      onPressed: () => AppNavigator.toPremium(),
+                      icon: const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
+                      label: Text(
+                        isPremium ? 'Premium' : 'Free Plan',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 19),

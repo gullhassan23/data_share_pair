@@ -12,21 +12,40 @@ import 'package:share_app_latest/utils/user_id.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
 
 Set<String> get kPremiumProductIds {
-  final monthly = dotenv.env['IAP_PRODUCT_MONTHLY'];
-  final yearly = dotenv.env['IAP_PRODUCT_YEARLY'];
-  final weekly = dotenv.env['IAP_PRODUCT_WEEKLY'];
+  final isAndroid = Platform.isAndroid;
+  final weekly =
+      isAndroid
+          ? dotenv.env['IAP_ANDROID_PRODUCT_WEEKLY']
+          : dotenv.env['IAP_PRODUCT_WEEKLY'];
+  final monthly =
+      isAndroid
+          ? dotenv.env['IAP_ANDROID_PRODUCT_MONTHLY']
+          : dotenv.env['IAP_PRODUCT_MONTHLY'];
+  final yearly =
+      isAndroid
+          ? dotenv.env['IAP_ANDROID_PRODUCT_YEARLY']
+          : dotenv.env['IAP_PRODUCT_YEARLY'];
 
   final ids = <String>{};
-  if (monthly != null && monthly.isNotEmpty) ids.add(monthly);
+
   if (yearly != null && yearly.isNotEmpty) ids.add(yearly);
+  if (monthly != null && monthly.isNotEmpty) ids.add(monthly);
   if (weekly != null && weekly.isNotEmpty) ids.add(weekly);
 
   if (ids.isEmpty) {
-    ids.addAll({
-      'com.share.transfer.file.all.data.app.premium.monthly',
-      'com.share.transfer.file.all.data.app.premium.yearly',
-      'com.share.transfer.file.all.data.app.premium.weekly',
-    });
+    if (isAndroid) {
+      ids.addAll({
+        'transfer.file.data.app.premium.yearly',
+        'transfer.file.data.app.premium.monthly',
+        'transfer.file.data.app.premium.weekly',
+      });
+    } else {
+      ids.addAll({
+        'com.share.transfer.file.all.data.app.premium.yearly',
+        'com.share.transfer.file.all.data.app.premium.monthly',
+        'com.share.transfer.file.all.data.app.premium.weekly',
+      });
+    }
   }
 
   return ids;

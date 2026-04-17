@@ -33,15 +33,26 @@ class PremiumPage extends GetView<PremiumController> {
       final iapService = controller.iapService;
       final isPremium = controller.isPremium || iapService.isPremium;
 
-      final monthlyId =
-          dotenv.env['IAP_PRODUCT_MONTHLY'] ??
-          'com.share.transfer.file.all.data.app.premium.monthly';
+      final isAndroid = GetPlatform.isAndroid;
       final weeklyId =
-          dotenv.env['IAP_PRODUCT_WEEKLY'] ??
-          'com.share.transfer.file.all.data.app.premium.weekly';
+          isAndroid
+              ? (dotenv.env['IAP_ANDROID_PRODUCT_WEEKLY'] ??
+                  'transfer.file.data.app.premium.weekly')
+              : (dotenv.env['IAP_PRODUCT_WEEKLY'] ??
+                  'com.share.transfer.file.all.data.app.premium.weekly');
+      final monthlyId =
+          isAndroid
+              ? (dotenv.env['IAP_ANDROID_PRODUCT_MONTHLY'] ??
+                  'transfer.file.data.app.premium.monthly')
+              : (dotenv.env['IAP_PRODUCT_MONTHLY'] ??
+                  'com.share.transfer.file.all.data.app.premium.monthly');
+
       final yearlyId =
-          dotenv.env['IAP_PRODUCT_YEARLY'] ??
-          'com.share.transfer.file.all.data.app.premium.yearly';
+          isAndroid
+              ? (dotenv.env['IAP_ANDROID_PRODUCT_YEARLY'] ??
+                  'transfer.file.data.app.premium.yearly')
+              : (dotenv.env['IAP_PRODUCT_YEARLY'] ??
+                  'com.share.transfer.file.all.data.app.premium.yearly');
       final monthlyPlan = iapService.planForId(monthlyId);
       final weeklyPlan = iapService.planForId(weeklyId);
       final yearlyPlan = iapService.planForId(yearlyId);
@@ -119,92 +130,100 @@ class PremiumPage extends GetView<PremiumController> {
                                   minHeight:
                                       MediaQuery.of(context).size.height * 0.6,
                                 ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFFEFF6FF), Color(0xFFEDE9FE)],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    border: Border.all(
-                                      color: Colors.black.withOpacity(0.06),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 70,
-                                        height: 70,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: Colors.white,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(0.08),
-                                              blurRadius: 12,
-                                              offset: const Offset(0, 4),
-                                            ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(20),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(20),
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFEFF6FF),
+                                            Color(0xFFEDE9FE),
                                           ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
                                         ),
-                                        child: const Icon(
-                                          Icons.workspace_premium,
-                                          color: _cyan,
-                                          size: 38,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 14),
-                                      Text(
-                                        'You are Premium',
-                                        style: GoogleFonts.roboto(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.black87,
+                                        border: Border.all(
+                                          color: Colors.black.withOpacity(0.06),
                                         ),
                                       ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        'All Pro features are unlocked on your account.',
-                                        style: GoogleFonts.roboto(
-                                          fontSize: 14,
-                                          color: Colors.black54,
-                                        ),
-                                        textAlign: TextAlign.center,
+                                      child: Column(
+                                        children: [
+                                          Container(
+                                            width: 70,
+                                            height: 70,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.white,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.08),
+                                                  blurRadius: 12,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const Icon(
+                                              Icons.workspace_premium,
+                                              color: _cyan,
+                                              size: 38,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 14),
+                                          Text(
+                                            'You are Premium',
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 24,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'All Pro features are unlocked on your account.',
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 14,
+                                              color: Colors.black54,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(height: 18),
+                                    _PremiumFeatureTile(
+                                      icon: Icons.wifi_tethering_rounded,
+                                      title: 'Unlimited Wi-Fi Transfer',
+                                      subtitle:
+                                          'Send any number of files without limits.',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _PremiumFeatureTile(
+                                      icon: Icons.speed_rounded,
+                                      title: 'Faster Sharing',
+                                      subtitle:
+                                          'Quick pairing and smooth transfer speed.',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _PremiumFeatureTile(
+                                      icon: Icons.ads_click_rounded,
+                                      title: 'No Ads Experience',
+                                      subtitle:
+                                          'Enjoy a clean interface without interruptions.',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _PremiumFeatureTile(
+                                      icon: Icons.verified_user_rounded,
+                                      title: 'Secure Direct Connection',
+                                      subtitle:
+                                          'Your data moves directly between devices.',
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 18),
-                                _PremiumFeatureTile(
-                                  icon: Icons.wifi_tethering_rounded,
-                                  title: 'Unlimited Wi-Fi Transfer',
-                                  subtitle: 'Send any number of files without limits.',
-                                ),
-                                const SizedBox(height: 10),
-                                _PremiumFeatureTile(
-                                  icon: Icons.speed_rounded,
-                                  title: 'Faster Sharing',
-                                  subtitle: 'Quick pairing and smooth transfer speed.',
-                                ),
-                                const SizedBox(height: 10),
-                                _PremiumFeatureTile(
-                                  icon: Icons.ads_click_rounded,
-                                  title: 'No Ads Experience',
-                                  subtitle: 'Enjoy a clean interface without interruptions.',
-                                ),
-                                const SizedBox(height: 10),
-                                _PremiumFeatureTile(
-                                  icon: Icons.verified_user_rounded,
-                                  title: 'Secure Direct Connection',
-                                  subtitle: 'Your data moves directly between devices.',
-                                ),
-                              ],
-                            ),
                               ),
                             ),
                           )

@@ -39,7 +39,6 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
       body: bg_container(
         child: SafeArea(
           child: Obx(() {
-            final isAndroid = GetPlatform.isAndroid;
             final isPremium =
                 premium.isPremium || SubscriptionIAPService().isPremium;
             return Column(
@@ -67,23 +66,22 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                       ),
                     ),
                     const Spacer(),
-                    if (!isAndroid)
-                      TextButton.icon(
-                        onPressed: () => AppNavigator.toPremium(),
-                        icon: const Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        label: Text(
-                          isPremium ? 'Premium' : 'Free Plan',
-                          style: GoogleFonts.roboto(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                    TextButton.icon(
+                      onPressed: () => AppNavigator.toPremium(),
+                      icon: const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
+                      label: Text(
+                        isPremium ? 'Premium' : 'Free Plan',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
+                    ),
                   ],
                 ),
 

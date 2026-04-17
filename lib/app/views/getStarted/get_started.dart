@@ -44,7 +44,6 @@ class _getStartedScreenState extends State<getStartedScreen>
       body: bg_container(
         child: SafeArea(
           child: Obx(() {
-            final isAndroid = GetPlatform.isAndroid;
             final showAds =
                 AdUnitIds.kForceFreeUserForAdTesting
                     ? true
@@ -75,23 +74,22 @@ class _getStartedScreenState extends State<getStartedScreen>
                       ),
                     ),
                     const Spacer(),
-                    if (!isAndroid)
-                      TextButton.icon(
-                        onPressed: () => AppNavigator.toPremium(),
-                        icon: const Icon(
-                          Icons.star,
-                          color: Colors.amber,
-                          size: 20,
-                        ),
-                        label: Text(
-                          showAds ? 'Free Plan' : 'Premium',
-                          style: GoogleFonts.roboto(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                    TextButton.icon(
+                      onPressed: () => AppNavigator.toPremium(),
+                      icon: const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                        size: 20,
+                      ),
+                      label: Text(
+                        showAds ? 'Free Plan' : 'Premium',
+                        style: GoogleFonts.roboto(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
+                    ),
                   ],
                 ),
 
