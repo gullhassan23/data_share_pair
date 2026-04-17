@@ -386,11 +386,16 @@ class PremiumPage extends GetView<PremiumController> {
   }
 
   Widget _buildFooter(BuildContext context) {
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     final privacy =
-        dotenv.env['PRIVACY_POLICY_URL'] ??
+        (isAndroid
+            ? dotenv.env['ANDROID_PRIVACY_POLICY_URL']
+            : dotenv.env['PRIVACY_POLICY_URL']) ??
         'https://maxgamesproduction.blogspot.com/2023/01/privacy-policy.html';
     final terms =
-        dotenv.env['TERMS_OF_USE_URL'] ??
+        (isAndroid
+            ? dotenv.env['ANDROID_TERMS_AND_CONDITIONS_URL']
+            : dotenv.env['TERMS_OF_USE_URL']) ??
         'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 
     Future<void> _open(String url) async {
