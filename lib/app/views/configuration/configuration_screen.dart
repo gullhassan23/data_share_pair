@@ -25,23 +25,20 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   static const Color _iconCircleFill = Color(0xFFE8EEFF);
 
-  static const String _supportEmail = 'admin@maxgamesproduction.com';
-  static const String _iosAppStoreId = '6759640831';
-  static const String _androidPackageId =
-      'com.FutureDialLabs.copymydata.transfer.file.all.data.app';
-  static const String _iosStoreUrl =
-      'https://apps.apple.com/us/app/share-all-file-transfer-app/id6759640831';
-  static const String _androidStoreUrlFallback =
-      'https://play.google.com/store/apps/details?id=$_androidPackageId';
-  static const String _androidStoreDeepLink =
-      'market://details?id=$_androidPackageId';
-
   String _envUrl(List<String> keys, String fallback) {
     for (final key in keys) {
       final value = dotenv.env[key]?.trim();
       if (value != null && value.isNotEmpty) {
         return value;
       }
+    }
+    return fallback;
+  }
+
+  String _envValue(List<String> keys, String fallback) {
+    for (final key in keys) {
+      final value = dotenv.env[key]?.trim();
+      if (value != null && value.isNotEmpty) return value;
     }
     return fallback;
   }
@@ -93,8 +90,13 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   Future<void> _shareAppLink(BuildContext context) async {
     final info = await PackageInfo.fromPlatform();
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
-    final androidStoreUrl = _envUrl(['ANDROID_STORE_URL'], _androidStoreUrlFallback);
-    final url = isAndroid ? androidStoreUrl : _iosStoreUrl;
+    final androidStoreUrl = _envUrl([
+      'ANDROID_STORE_URL',
+    ], 'https://play.google.com/store/apps/details?id=com.FutureDialLabs.copymydata.transfer.file.all.data.app');
+    final iosStoreUrl = _envUrl([
+      'IOS_STORE_URL',
+    ], 'https://apps.apple.com/us/app/share-all-file-transfer-app/id6759640831');
+    final url = isAndroid ? androidStoreUrl : iosStoreUrl;
     final text = '${info.appName}\n$url';
     final box = context.findRenderObject() as RenderBox?;
     final Rect? origin =
@@ -110,10 +112,14 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   }
 
   Future<void> _openFeedbackEmail(BuildContext context) async {
+    final supportEmail = _envValue(
+      ['SUPPORT_EMAIL'],
+      'admin@maxgamesproduction.com',
+    );
     // 1. Standard mailto URI (Most reliable)
     final Uri mailtoUri = Uri(
       scheme: 'mailto',
-      path: _supportEmail,
+      path: supportEmail,
       query: 'subject=${Uri.encodeComponent('Feedback & Troubleshooting')}',
     );
 
@@ -273,12 +279,31 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   Future<void> _openNativeReviewOrStore(BuildContext context) async {
     final InAppReview inAppReview = InAppReview.instance;
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
-    final androidStoreUrl = _envUrl(['ANDROID_STORE_URL'], _androidStoreUrlFallback);
-    final Uri androidStoreDeepLinkUri = Uri.parse(_androidStoreDeepLink);
-    final Uri androidStoreWebUri = Uri.parse(androidStoreUrl);
-    final Uri iosStoreUri = Uri.parse(
-      'https://apps.apple.com/us/app/share-all-file-transfer-app/id$_iosAppStoreId',
+    final androidPackageId = _envValue(
+      ['ANDROID_PACKAGE_ID'],
+      'com.FutureDialLabs.copymydata.transfer.file.all.data.app',
     );
+    final iosAppStoreId = _envValue(['IOS_APP_STORE_ID'], '6759640831');
+    final androidStoreWebUrl = _envUrl([
+      'ANDROID_STORE_URL',
+    ], 'https://play.google.com/store/apps/details?id=$androidPackageId');
+    final androidReviewWebUrl = _envUrl([
+      'ANDROID_REVIEW_URL',
+    ], 'https://play.google.com/store/apps/details?id=$androidPackageId&showAllReviews=true');
+    final Uri androidStoreDeepLinkUri = Uri.parse(
+      'market://details?id=$androidPackageId',
+    );
+    final Uri androidStoreWebUri = Uri.parse(androidStoreWebUrl);
+    final Uri androidReviewDeepLinkUri = Uri.parse(
+      'market://details?id=$androidPackageId&showAllReviews=true',
+    );
+    final Uri androidReviewWebUri = Uri.parse(androidReviewWebUrl);
+    final Uri iosStoreUri = Uri.parse(
+      'https://apps.apple.com/us/app/share-all-file-transfer-app/id$iosAppStoreId',
+    );
+    Future<bool> tryLaunch(Uri uri) {
+      return launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
     try {
       if (!isAndroid && await inAppReview.isAvailable()) {
         await inAppReview.requestReview();
@@ -286,27 +311,27 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       }
       if (isAndroid) {
         // In-app review on Android is quota-limited and may not allow submission
-        // during testing, so always route to Play Store listing for reliability.
-        if (await canLaunchUrl(androidStoreDeepLinkUri)) {
-          await launchUrl(
-            androidStoreDeepLinkUri,
-            mode: LaunchMode.externalApplication,
-          );
+        // during testing, so route to Play Store reviews page first for reliability.
+        if (await tryLaunch(androidReviewDeepLinkUri)) {
           return;
         }
-        if (await canLaunchUrl(androidStoreWebUri)) {
-          await launchUrl(androidStoreWebUri, mode: LaunchMode.externalApplication);
+        if (await tryLaunch(androidReviewWebUri)) {
+          return;
+        }
+        if (await tryLaunch(androidStoreDeepLinkUri)) {
+          return;
+        }
+        if (await tryLaunch(androidStoreWebUri)) {
           return;
         }
         await inAppReview.openStoreListing();
       } else {
-        await inAppReview.openStoreListing(appStoreId: _iosAppStoreId);
+        await inAppReview.openStoreListing(appStoreId: iosAppStoreId);
       }
       return;
     } catch (_) {
       final Uri storeUri = isAndroid ? androidStoreWebUri : iosStoreUri;
-      if (await canLaunchUrl(storeUri)) {
-        await launchUrl(storeUri, mode: LaunchMode.externalApplication);
+      if (await tryLaunch(storeUri)) {
         return;
       }
       if (context.mounted) {

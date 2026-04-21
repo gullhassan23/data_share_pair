@@ -37,22 +37,22 @@ class PremiumPage extends GetView<PremiumController> {
       final weeklyId =
           isAndroid
               ? (dotenv.env['IAP_ANDROID_PRODUCT_WEEKLY'] ??
-                  'transfer.file.data.app.premium.weekly')
+                  '')
               : (dotenv.env['IAP_PRODUCT_WEEKLY'] ??
-                  'com.share.transfer.file.all.data.app.premium.weekly');
+                  '');
       final monthlyId =
           isAndroid
               ? (dotenv.env['IAP_ANDROID_PRODUCT_MONTHLY'] ??
-                  'transfer.file.data.app.premium.monthly')
+                  '')
               : (dotenv.env['IAP_PRODUCT_MONTHLY'] ??
-                  'com.share.transfer.file.all.data.app.premium.monthly');
+                  '');
 
       final yearlyId =
           isAndroid
               ? (dotenv.env['IAP_ANDROID_PRODUCT_YEARLY'] ??
-                  'transfer.file.data.app.premium.yearly')
+                  '')
               : (dotenv.env['IAP_PRODUCT_YEARLY'] ??
-                  'com.share.transfer.file.all.data.app.premium.yearly');
+                  '');
       final monthlyPlan = iapService.planForId(monthlyId);
       final weeklyPlan = iapService.planForId(weeklyId);
       final yearlyPlan = iapService.planForId(yearlyId);
@@ -391,12 +391,12 @@ class PremiumPage extends GetView<PremiumController> {
         (isAndroid
             ? dotenv.env['ANDROID_PRIVACY_POLICY_URL']
             : dotenv.env['PRIVACY_POLICY_URL']) ??
-        'https://maxgamesproduction.blogspot.com/2023/01/privacy-policy.html';
+        '';
     final terms =
         (isAndroid
             ? dotenv.env['ANDROID_TERMS_AND_CONDITIONS_URL']
             : dotenv.env['TERMS_OF_USE_URL']) ??
-        'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
+        '';
 
     Future<void> _open(String url) async {
       final uri = Uri.parse(url);

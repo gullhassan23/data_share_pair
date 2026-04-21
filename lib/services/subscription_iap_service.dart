@@ -33,19 +33,10 @@ Set<String> get kPremiumProductIds {
   if (weekly != null && weekly.isNotEmpty) ids.add(weekly);
 
   if (ids.isEmpty) {
-    if (isAndroid) {
-      ids.addAll({
-        'transfer.file.data.app.premium.yearly',
-        'transfer.file.data.app.premium.monthly',
-        'transfer.file.data.app.premium.weekly',
-      });
-    } else {
-      ids.addAll({
-        'com.share.transfer.file.all.data.app.premium.yearly',
-        'com.share.transfer.file.all.data.app.premium.monthly',
-        'com.share.transfer.file.all.data.app.premium.weekly',
-      });
-    }
+    debugPrint(
+      '[SubscriptionIAP] Missing IAP product IDs in .env '
+      '(IAP_PRODUCT_* / IAP_ANDROID_PRODUCT_*).',
+    );
   }
 
   return ids;
