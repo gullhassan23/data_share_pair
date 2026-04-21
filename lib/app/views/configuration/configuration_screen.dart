@@ -87,6 +87,14 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     await _openExternalUrl(context, termsUrl);
   }
 
+  Future<void> _openMoreApps(BuildContext context) async {
+    final moreAppsUrl = _envUrl([
+      'ANDROID_DEVELOPER_APPS_URL',
+      'MORE_APPS_URL',
+    ], 'https://play.google.com/store/apps/developer?id=FutureDial+Labs+LLC');
+    await _openExternalUrl(context, moreAppsUrl);
+  }
+
   Future<void> _shareAppLink(BuildContext context) async {
     final info = await PackageInfo.fromPlatform();
     final isAndroid = Theme.of(context).platform == TargetPlatform.android;
@@ -367,6 +375,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAndroid = Theme.of(context).platform == TargetPlatform.android;
     return Scaffold(
       body: bg_container(
         child: SafeArea(
@@ -400,6 +409,14 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                       label: 'Share with family & friends',
                       onTap: () => _shareAppLink(context),
                     ),
+                    if (isAndroid) ...[
+                      const SizedBox(height: 10),
+                      _buildMenuTile(
+                        leading: _circleIcon(Icons.apps_rounded),
+                        label: 'More App',
+                        onTap: () => _openMoreApps(context),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     _buildMenuTile(
                       icon: "assets/icons/Rate Us.png",
