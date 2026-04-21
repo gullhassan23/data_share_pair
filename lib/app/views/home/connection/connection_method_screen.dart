@@ -8,6 +8,7 @@ import 'package:share_app_latest/app/views/home/bluetooth/reciever_bluetooth.dar
 import 'package:share_app_latest/app/views/home/bluetooth/sender_bluetooth.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
+import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
@@ -150,7 +151,9 @@ class _ConnectionMethodScreenState extends State<ConnectionMethodScreen> {
                               },
                             ),
                             Obx(() {
-                              final isPremium = premium.isPremium;
+                              final isPremium =
+                                  premium.isPremium ||
+                                  SubscriptionIAPService().isPremium;
                               final canUseWifi = isPremium;
                               return TransferOptionIconCard(
                                 title: "WiFi",

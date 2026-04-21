@@ -10,6 +10,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
+import 'package:share_app_latest/services/premium_status_store.dart';
 
 Set<String> get kPremiumProductIds {
   final isAndroid = Platform.isAndroid;
@@ -239,6 +240,8 @@ class SubscriptionIAPService {
           );
           if (isValid) {
             setCachedPremium(true);
+            // Persist immediately so app restart does not temporarily lose Pro state.
+            await PremiumStatusStore.saveIsPremium(true);
             debugPrint(
               '[SubscriptionIAP] _onPurchaseUpdated: success — premium granted',
             );
@@ -283,6 +286,8 @@ class SubscriptionIAPService {
           );
           if (isValid) {
             setCachedPremium(true);
+            // Persist immediately so app restart does not temporarily lose Pro state.
+            await PremiumStatusStore.saveIsPremium(true);
             debugPrint(
               '[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted',
             );
