@@ -91,11 +91,17 @@ class GameAnalyticsService {
         print('GA event dispatch requested: $safeEventId');
       }
       // Keep GA events flat/top-level in dashboard: send only eventId.
-      await GameAnalytics.addDesignEvent(
+      final future = GameAnalytics.addDesignEvent(
         <String, dynamic>{'eventId': safeEventId},
-      ).timeout(const Duration(seconds: 8));
+      );
       if (kDebugMode) {
-        print('GA event sent: $safeEventId');
+        future
+            .then((_) {
+              print('GA event sent: $safeEventId');
+            })
+            .catchError((error) {
+              print('GA event callback warning ($safeEventId): $error');
+            });
       }
     } catch (e, stackTrace) {
       if (kDebugMode) {
