@@ -1,5 +1,6 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:share_app_latest/services/game_analytics_service.dart';
 
 class AnalyticsScreenTracker {
   AnalyticsScreenTracker._();
@@ -76,7 +77,9 @@ class AnalyticsScreenTracker {
     if (screenName.isEmpty) return;
     if (_currentScreen == screenName) return;
 
-    final fromScreen = _analyticsSafeScreenName(previousScreen ?? _currentScreen);
+    final rawFromScreen = previousScreen ?? _currentScreen;
+    final fromScreen =
+        rawFromScreen == null ? null : _analyticsSafeScreenName(rawFromScreen);
     await _flushCurrentScreenDuration(nextScreen: screenName);
 
     _currentScreen = screenName;
@@ -98,8 +101,24 @@ class AnalyticsScreenTracker {
             'from_screen': fromScreen,
         },
       );
+      await GameAnalyticsService.logDesignEvent(
+        screenEventName,
+        parameters: <String, Object>{
+          'screen_name': screenName,
+          if (fromScreen != null && fromScreen.isNotEmpty)
+            'from_screen': fromScreen,
+        },
+      );
       await _analytics.logEvent(
         name: 'screen_opened',
+        parameters: <String, Object>{
+          'screen_name': screenName,
+          if (fromScreen != null && fromScreen.isNotEmpty)
+            'from_screen': fromScreen,
+        },
+      );
+      await GameAnalyticsService.logDesignEvent(
+        'screen_opened',
         parameters: <String, Object>{
           'screen_name': screenName,
           if (fromScreen != null && fromScreen.isNotEmpty)
@@ -109,6 +128,13 @@ class AnalyticsScreenTracker {
       if (fromScreen != null && fromScreen.isNotEmpty) {
         await _analytics.logEvent(
           name: 'screen_transition',
+          parameters: <String, Object>{
+            'from_screen': fromScreen,
+            'to_screen': screenName,
+          },
+        );
+        await GameAnalyticsService.logDesignEvent(
+          'screen_transition',
           parameters: <String, Object>{
             'from_screen': fromScreen,
             'to_screen': screenName,
@@ -139,6 +165,10 @@ class AnalyticsScreenTracker {
       };
       await _analytics.logEvent(
         name: safeEventName,
+        parameters: params.isEmpty ? null : params,
+      );
+      await GameAnalyticsService.logDesignEvent(
+        safeEventName,
         parameters: params.isEmpty ? null : params,
       );
     } catch (e, stackTrace) {
@@ -214,6 +244,15 @@ class AnalyticsScreenTracker {
     try {
       await _analytics.logEvent(
         name: 'screen_time_spent',
+        parameters: <String, Object>{
+          'screen_name': screen,
+          'next_screen': nextScreen,
+          'duration_ms': millis,
+          'duration_sec': millis ~/ 1000,
+        },
+      );
+      await GameAnalyticsService.logDesignEvent(
+        'screen_time_spent',
         parameters: <String, Object>{
           'screen_name': screen,
           'next_screen': nextScreen,

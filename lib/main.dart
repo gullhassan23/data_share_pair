@@ -21,6 +21,7 @@ import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/services/analytics_screen_tracker.dart';
+import 'package:share_app_latest/services/game_analytics_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -33,6 +34,8 @@ void main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+  // Don't block app launch on third-party analytics initialization.
+  GameAnalyticsService.initFromEnv();
   await initializeFcmAndUploadToken();
 
   // Load cached premium status (if any) so ads respect Pro immediately.
@@ -108,12 +111,12 @@ class _TransferLifecycleWrapper extends StatefulWidget {
 class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     with WidgetsBindingObserver {
   bool _firstFrameDone = false;
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   Future<void> _logAppLifecycleEvent(String eventName, String state) async {
     try {
       final params = <String, Object>{'lifecycle_state': state};
-      await _analytics.logEvent(name: eventName, parameters: params);
+      await FirebaseAnalytics.instance.logEvent(name: eventName, parameters: params);
+      await GameAnalyticsService.logDesignEvent(eventName, parameters: params);
     } catch (_) {}
   }
 

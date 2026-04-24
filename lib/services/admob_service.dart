@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
+import 'package:share_app_latest/services/game_analytics_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Central AdMob lifecycle: App Open, Banner, Interstitial.
@@ -35,6 +36,7 @@ class AdMobService {
       if (status != null) params['status'] = status;
       if (errorMessage != null) params['error_message'] = errorMessage;
       await _analytics.logEvent(name: name, parameters: params);
+      await GameAnalyticsService.logDesignEvent(name, parameters: params);
     } catch (_) {}
   }
 
