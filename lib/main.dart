@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -35,6 +36,9 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
   // Don't block app launch on third-party analytics initialization.
+  if (kDebugMode) {
+    print('GA init trigger called from main');
+  }
   GameAnalyticsService.initFromEnv();
   await initializeFcmAndUploadToken();
 
@@ -128,6 +132,9 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
       if (!_firstFrameDone && mounted) {
         _firstFrameDone = true;
         _logAppLifecycleEvent('app_open', 'first_frame');
+        if (kDebugMode) {
+          GameAnalyticsService.logDesignEvent('ga_debug_first_frame');
+        }
         AdMobService.instance.showAppOpenIfAvailable();
       }
     });

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gameanalytics_sdk/gameanalytics.dart';
@@ -6,8 +8,16 @@ class GameAnalyticsService {
   GameAnalyticsService._();
 
   static bool _isInitialized = false;
+  static Future<void>? _initFuture;
+  static final List<String> _pendingEventNames = <String>[];
 
   static Future<void> initFromEnv() async {
+    if (_initFuture != null) return _initFuture!;
+    _initFuture = _initInternal();
+    return _initFuture!;
+  }
+
+  static Future<void> _initInternal() async {
     if (_isInitialized) return;
 
     final gameKey = dotenv.env['GAME_ANALYTICS_GAME_KEY']?.trim() ?? '';
@@ -15,24 +25,47 @@ class GameAnalyticsService {
 
     if (gameKey.isEmpty || secretKey.isEmpty) {
       if (kDebugMode) {
-        debugPrint('GameAnalyticsService skipped: keys missing in .env');
+        print('GameAnalyticsService skipped: keys missing in .env');
       }
       return;
     }
 
     try {
       if (kDebugMode) {
-        await GameAnalytics.setEnabledInfoLog(true);
-        debugPrint('GA init started...');
+        print('GA init started...');
+        try {
+          await GameAnalytics.setEnabledInfoLog(
+            true,
+          ).timeout(const Duration(seconds: 5));
+          await GameAnalytics.setEnabledVerboseLog(
+            true,
+          ).timeout(const Duration(seconds: 5));
+          print('GA debug logs enabled.');
+        } catch (e) {
+          print('GA debug-log setup warning: $e');
+        }
       }
-      await GameAnalytics.initialize(gameKey, secretKey);
-      _isInitialized = true;
+      print('GA initialize call started.');
+      try {
+        await GameAnalytics.initialize(
+          gameKey,
+          secretKey,
+        ).timeout(const Duration(seconds: 12));
+        _isInitialized = true;
+      } on TimeoutException {
+        // Some Android devices/plugin versions never complete the future even
+        // though native GA runtime is active. Use soft-init so event flow continues.
+        _isInitialized = true;
+        print('GA initialize timed out; continuing with soft init.');
+      }
       if (kDebugMode) {
-        debugPrint('GA init success.');
+        print('GA init success.');
       }
+      await _flushPendingEvents();
+      await _sendDesignEvent('ga_sdk_initialized');
     } catch (e, stackTrace) {
       if (kDebugMode) {
-        debugPrint('GameAnalyticsService.initFromEnv failed: $e');
+        print('GameAnalyticsService.initFromEnv failed: $e');
         debugPrintStack(stackTrace: stackTrace);
       }
     }
@@ -42,22 +75,42 @@ class GameAnalyticsService {
     String eventName, {
     Map<String, Object>? parameters,
   }) async {
-    if (!_isInitialized || eventName.trim().isEmpty) return;
+    if (eventName.trim().isEmpty) return;
+    if (!_isInitialized) {
+      // Queue events that happen before SDK initialization completes.
+      _pendingEventNames.add(eventName);
+      return;
+    }
+    await _sendDesignEvent(eventName);
+  }
 
+  static Future<void> _sendDesignEvent(String eventName) async {
     try {
       final safeEventId = _safeEventId(eventName);
-      // Keep GA events flat/top-level in dashboard: send only eventId.
-      await GameAnalytics.addDesignEvent(<String, dynamic>{
-        'eventId': safeEventId,
-      });
       if (kDebugMode) {
-        debugPrint('GA event sent: $safeEventId');
+        print('GA event dispatch requested: $safeEventId');
+      }
+      // Keep GA events flat/top-level in dashboard: send only eventId.
+      await GameAnalytics.addDesignEvent(
+        <String, dynamic>{'eventId': safeEventId},
+      ).timeout(const Duration(seconds: 8));
+      if (kDebugMode) {
+        print('GA event sent: $safeEventId');
       }
     } catch (e, stackTrace) {
       if (kDebugMode) {
-        debugPrint('GameAnalyticsService.logDesignEvent failed: $e');
+        print('GameAnalyticsService.logDesignEvent failed: $e');
         debugPrintStack(stackTrace: stackTrace);
       }
+    }
+  }
+
+  static Future<void> _flushPendingEvents() async {
+    if (_pendingEventNames.isEmpty) return;
+    final events = List<String>.from(_pendingEventNames);
+    _pendingEventNames.clear();
+    for (final eventName in events) {
+      await _sendDesignEvent(eventName);
     }
   }
 
