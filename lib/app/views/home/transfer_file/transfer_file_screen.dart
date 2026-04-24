@@ -770,7 +770,14 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       );
       return;
     }
-    await AnalyticsScreenTracker.trackScreen('after_Select_file_continue');
+    await AnalyticsScreenTracker.trackUiEvent(
+      'after_select_file_continue',
+      parameters: <String, Object>{
+        'selected_category': _selectedCategory ?? 'unknown',
+        'selected_file_count': _selectedFilePaths.length,
+        'event_location': 'transfer_file_screen',
+      },
+    );
     await _sendSelectedFile(_selectedFilePaths.first);
   }
 

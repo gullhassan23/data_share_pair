@@ -27,7 +27,13 @@ class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
   }
 
   void _goNext() {
-    AnalyticsScreenTracker.trackScreen('Done_Button');
+    AnalyticsScreenTracker.trackUiEvent(
+      'done_button_tapped',
+      parameters: <String, Object>{
+        'flow_type': widget.isSender ? 'sender' : 'receiver',
+        'event_location': 'transfer_complete_screen',
+      },
+    );
     if (widget.isSender) {
       AppNavigator.toHome();
     } else {

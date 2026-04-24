@@ -9,16 +9,16 @@ class AnalyticsScreenTracker {
   static DateTime? _screenEnterTime;
 
   static const Map<String, String> _routeToScreenName = <String, String>{
-    '/premium': 'premium_splash',
-    '/onboaring': 'home_screen',
+    '/premium': 'Premium_splash',
+    '/onboaring': 'Home_screen',
     '/home': 'Transfer_Menu',
     '/choose-method-scan': 'Sender_via_menu',
     '/pairing': 'Wifi_sender',
     '/select-device': 'Send_device_Menu',
     '/send-scan-qr': 'QR_sender',
     '/receive-show-qr': 'Recive_QR',
-    '/transfer-file': 'select_file_Button',
-    '/transfer-complete': 'complete_menu',
+    '/transfer-file': 'Select_file_Button',
+    '/transfer-complete': 'Complete_menu',
   };
 
   /// Routes that resolve to these screen ids are not logged to analytics.
@@ -83,9 +83,20 @@ class AnalyticsScreenTracker {
     _screenEnterTime = DateTime.now();
 
     try {
+      final screenEventName = _analyticsSafeEventName(screenName);
       await _analytics.logScreenView(
         screenName: screenName,
         screenClass: screenName,
+      );
+      // Keep screen_view for standard reports, but also emit a dedicated
+      // per-screen custom event so each screen appears in Events list.
+      await _analytics.logEvent(
+        name: screenEventName,
+        parameters: <String, Object>{
+          'screen_name': screenName,
+          if (fromScreen != null && fromScreen.isNotEmpty)
+            'from_screen': fromScreen,
+        },
       );
       await _analytics.logEvent(
         name: 'screen_opened',
@@ -107,6 +118,32 @@ class AnalyticsScreenTracker {
     } catch (e, stackTrace) {
       if (kDebugMode) {
         debugPrint('AnalyticsScreenTracker.trackScreen failed: $e');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
+  }
+
+  /// Track non-screen user actions (button taps, flow steps, etc.)
+  /// so they appear as dedicated events instead of screen_view entries.
+  static Future<void> trackUiEvent(
+    String eventName, {
+    Map<String, Object>? parameters,
+  }) async {
+    final safeEventName = _analyticsSafeEventName(eventName);
+    if (safeEventName.isEmpty) return;
+    try {
+      final params = <String, Object>{
+        if (_currentScreen != null && _currentScreen!.isNotEmpty)
+          'screen_name': _currentScreen!,
+        if (parameters != null) ...parameters,
+      };
+      await _analytics.logEvent(
+        name: safeEventName,
+        parameters: params.isEmpty ? null : params,
+      );
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('AnalyticsScreenTracker.trackUiEvent failed: $e');
         debugPrintStack(stackTrace: stackTrace);
       }
     }
@@ -143,6 +180,24 @@ class AnalyticsScreenTracker {
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
     if (value.isEmpty) return 'unknown_screen';
+    return value;
+  }
+
+  static String _analyticsSafeEventName(String? input) {
+    if (input == null || input.isEmpty) return '';
+    var value = input
+        .trim()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+    if (value.isEmpty) return '';
+    if (RegExp(r'^[0-9]').hasMatch(value)) {
+      value = 'event_$value';
+    }
+    if (value.length > 40) {
+      value = value.substring(0, 40).replaceAll(RegExp(r'_+$'), '');
+    }
     return value;
   }
 
