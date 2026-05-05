@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:get/get.dart';
@@ -14,6 +15,8 @@ import 'package:share_app_latest/components/build_choose_option.dart';
 
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 import '../../../controllers/bluetooth_controller.dart';
 import '../../../controllers/progress_controller.dart';
@@ -88,8 +91,6 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
       _handleInvalidArgs();
       return;
     }
-
-   
 
     _transferCompleteWorker = ever<String>(progress.status, (status) {
       if (_didAutoNavigate) return;
@@ -899,6 +900,13 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
+                        // Banner Ads (Android only)
+                        if (!kIsWeb &&
+                            defaultTargetPlatform ==
+                                TargetPlatform.android) ...[
+                          const Center(child: AdBannerWidget()),
+                        ],
+                        const SizedBox(height: 12),
                         BuildChooseOption(
                           icon: Icons.video_library,
                           title: 'Videos',
@@ -945,6 +953,13 @@ class _TransferFileScreenState extends State<TransferFileScreen> {
                                 'Files',
                               ),
                         ),
+                        // Mrec Ads (Android only)
+                        if (!kIsWeb &&
+                            defaultTargetPlatform ==
+                                TargetPlatform.android) ...[
+                          const SizedBox(height: 12),
+                          AdLargeRectWidget(),
+                        ],
                       ],
                     ),
                   ),

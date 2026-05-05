@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 
 class CustomUploadProgress extends StatelessWidget {
   final double progress; // 0.0 - 1.0
@@ -67,6 +69,10 @@ class CustomUploadProgress extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Banner Ads (Android only)
+          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+            const Center(child: AdBannerWidget()),
+          ],
           Text(
             isSender ? "Sending your files" : "Receiving your files",
             textAlign: TextAlign.center,
@@ -179,84 +185,7 @@ class CustomUploadProgress extends StatelessWidget {
                     ),
                   ),
                 ),
-                // const SizedBox(height: 8),
-                // const Row(
-                //   children: [
-                //     Expanded(
-                //       child: Text(
-                //         "Videos",
-                //         textAlign: TextAlign.left,
-                //         style: TextStyle(
-                //           color: Color(0xFF303030),
-                //           fontSize: 13,
-                //           fontWeight: FontWeight.w600,
-                //         ),
-                //       ),
-                //     ),
-                //     Expanded(
-                //       child: Text(
-                //         "Images",
-                //         textAlign: TextAlign.center,
-                //         style: TextStyle(
-                //           color: Color(0xFF303030),
-                //           fontSize: 13,
-                //           fontWeight: FontWeight.w600,
-                //         ),
-                //       ),
-                //     ),
-                //     Expanded(
-                //       child: Text(
-                //         "Contacts",
-                //         textAlign: TextAlign.center,
-                //         style: TextStyle(
-                //           color: Color(0xFF303030),
-                //           fontSize: 13,
-                //           fontWeight: FontWeight.w600,
-                //         ),
-                //       ),
-                //     ),
-                //     Expanded(
-                //       child: Text(
-                //         "Calendar",
-                //         textAlign: TextAlign.right,
-                //         style: TextStyle(
-                //           color: Color(0xFF303030),
-                //           fontSize: 13,
-                //           fontWeight: FontWeight.w600,
-                //         ),
-                //       ),
-                //     ),
-                //   ],
-                // ),
                 const SizedBox(height: 6),
-                // Row(
-                //   children: [
-                //     Expanded(
-                //       child: Container(
-                //         height: 9,
-                //         color: const Color(0xFFE24A35),
-                //       ),
-                //     ),
-                //     Expanded(
-                //       child: Container(
-                //         height: 9,
-                //         color: const Color(0xFF20D56B),
-                //       ),
-                //     ),
-                //     Expanded(
-                //       child: Container(
-                //         height: 9,
-                //         color: const Color(0xFFEAB525),
-                //       ),
-                //     ),
-                //     Expanded(
-                //       child: Container(
-                //         height: 9,
-                //         color: const Color(0xFF4E62DF),
-                //       ),
-                //     ),
-                //   ],
-                // ),
               ],
             ),
           ),

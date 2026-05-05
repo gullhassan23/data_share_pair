@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +9,8 @@ import 'package:share_app_latest/app/controllers/transfer_controller.dart';
 import 'package:share_app_latest/app/models/device_info.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 import '../../../routes/app_navigator.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -74,178 +77,6 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
     }
     return _buildWiFiContent();
   }
-
-  // Widget _buildBluetoothContent() {
-  //   final bluetooth = Get.find<BluetoothController>(tag: 'sender');
-  //   return Scaffold(
-  //     body: Container(
-  //       width: double.infinity,
-  //       height: double.infinity,
-  //       decoration: const BoxDecoration(
-  //         gradient: LinearGradient(
-  //           begin: Alignment.topLeft,
-  //           end: Alignment.bottomRight,
-  //           colors: [Color(0xffEEF4FF), Color(0xffF8FAFF), Color(0xffFFFFFF)],
-  //         ),
-  //       ),
-  //       child: SafeArea(
-  //         child: Padding(
-  //           padding: const EdgeInsets.all(18.0),
-  //           child: Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               Row(
-  //                 children: [
-  //                   IconButton(
-  //                     onPressed: () => Get.back(),
-  //                     icon: const Icon(Icons.arrow_back),
-  //                   ),
-  //                   Text(
-  //                     "Back",
-  //                     style: GoogleFonts.roboto(
-  //                       fontSize: 16,
-  //                       fontWeight: FontWeight.w500,
-  //                     ),
-  //                   ),
-  //                 ],
-  //               ),
-  //               StepProgressBar(
-  //                 currentStep: 3,
-  //                 totalSteps: kTransferFlowTotalSteps,
-  //                 activeColor: Theme.of(context).colorScheme.primary,
-  //                 inactiveColor: Colors.grey.shade300,
-  //                 height: 6,
-  //                 segmentSpacing: 5,
-  //                 padding: const EdgeInsets.only(top: 8, bottom: 16),
-  //               ),
-  //               const SizedBox(height: 30),
-  //               Expanded(
-  //                 child: Obx(() {
-  //                   if (bluetooth.error.value.isNotEmpty) {
-  //                     return Center(
-  //                       child: Text(
-  //                         bluetooth.error.value,
-  //                         style: const TextStyle(
-  //                           color: Colors.red,
-  //                           fontSize: 16,
-  //                         ),
-  //                       ),
-  //                     );
-  //                   }
-  //                   // Already connected: show the connected device (no scan list)
-  //                   final connected = bluetooth.connectedDevice.value;
-  //                   if (connected != null) {
-  //                     return SingleChildScrollView(
-  //                       child: Column(
-  //                         crossAxisAlignment: CrossAxisAlignment.stretch,
-  //                         children: [
-  //                           Text(
-  //                             "Already connected",
-  //                             style: GoogleFonts.roboto(
-  //                               fontSize: 22,
-  //                               fontWeight: FontWeight.bold,
-  //                             ),
-  //                           ),
-  //                           const SizedBox(height: 6),
-  //                           Text(
-  //                             "You are connected to the device below. Tap to send files or disconnect.",
-  //                             style: GoogleFonts.roboto(
-  //                               fontSize: 13,
-  //                               color: Colors.grey.shade700,
-  //                             ),
-  //                           ),
-  //                           const SizedBox(height: 16),
-  //                           _BluetoothDeviceTile(
-  //                             device: connected,
-  //                             bluetooth: bluetooth,
-  //                           ),
-  //                         ],
-  //                       ),
-  //                     );
-  //                   }
-  //                   final devices = bluetooth.devices;
-  //                   if (bluetooth.isScanning.value && devices.isEmpty) {
-  //                     return Center(
-  //                       child: Column(
-  //                         mainAxisAlignment: MainAxisAlignment.center,
-  //                         children: [
-  //                           const CircularProgressIndicator(),
-  //                           const SizedBox(height: 16),
-  //                           Text(
-  //                             'Searching for devices...',
-  //                             style: GoogleFonts.roboto(
-  //                               color: Colors.grey.shade700,
-  //                             ),
-  //                           ),
-  //                         ],
-  //                       ),
-  //                     );
-  //                   }
-  //                   if (devices.isEmpty) {
-  //                     return Center(
-  //                       child: Column(
-  //                         mainAxisAlignment: MainAxisAlignment.center,
-  //                         children: [
-  //                           Icon(
-  //                             Icons.bluetooth_disabled,
-  //                             size: 64,
-  //                             color: Colors.grey.shade400,
-  //                           ),
-  //                           const SizedBox(height: 16),
-  //                           Text(
-  //                             'No Bluetooth devices found',
-  //                             style: GoogleFonts.roboto(
-  //                               color: Colors.grey.shade700,
-  //                             ),
-  //                           ),
-  //                           const SizedBox(height: 16),
-  //                           OutlinedButton.icon(
-  //                             onPressed: () => bluetooth.startScan(),
-  //                             icon: const Icon(Icons.refresh),
-  //                             label: const Text('Scan again'),
-  //                           ),
-  //                         ],
-  //                       ),
-  //                     );
-  //                   }
-  //                   return SingleChildScrollView(
-  //                     child: Column(
-  //                       crossAxisAlignment: CrossAxisAlignment.stretch,
-  //                       children: [
-  //                         Text(
-  //                           "Select The Device",
-  //                           style: GoogleFonts.roboto(
-  //                             fontSize: 22,
-  //                             fontWeight: FontWeight.bold,
-  //                           ),
-  //                         ),
-  //                         const SizedBox(height: 6),
-  //                         Text(
-  //                           "Tap Connect on the device you want to send files to",
-  //                           style: GoogleFonts.roboto(
-  //                             fontSize: 13,
-  //                             color: Colors.grey.shade700,
-  //                           ),
-  //                         ),
-  //                         const SizedBox(height: 16),
-  //                         ...devices.map(
-  //                           (device) => _BluetoothDeviceTile(
-  //                             device: device,
-  //                             bluetooth: bluetooth,
-  //                           ),
-  //                         ),
-  //                       ],
-  //                     ),
-  //                   );
-  //                 }),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 
   Widget _buildBluetoothContent() {
     final bluetooth = Get.find<BluetoothController>(tag: 'sender');
@@ -338,9 +169,12 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                 // navigate directly to TransferFileScreen.
                                 if (bluetooth.isDeviceConnected(device) &&
                                     !_navigatedToTransfer) {
-                                  final info = bluetooth.connectedDeviceInfo ??
+                                  final info =
+                                      bluetooth.connectedDeviceInfo ??
                                       DeviceInfo(
-                                        name: bluetooth.getDeviceDisplayName(device),
+                                        name: bluetooth.getDeviceDisplayName(
+                                          device,
+                                        ),
                                         ip: '',
                                         transferPort: 0,
                                         isBluetooth: true,
@@ -404,7 +238,9 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            bluetooth.getDeviceDisplayName(device),
+                                            bluetooth.getDeviceDisplayName(
+                                              device,
+                                            ),
                                             style: GoogleFonts.roboto(
                                               fontSize: 15,
                                               fontWeight: FontWeight.w500,
@@ -455,10 +291,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                         onPressed: () {
                           AppNavigator.toTransferFile(device: info);
                         },
-                        icon: const Icon(
-                          Icons.refresh,
-                          size: 18,
-                        ),
+                        icon: const Icon(Icons.refresh, size: 18),
                         label: Text(
                           'Pick file again',
                           style: GoogleFonts.roboto(
@@ -472,10 +305,9 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                             vertical: 10,
                           ),
                           side: BorderSide(
-                            color: Theme.of(Get.context!)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.6),
+                            color: Theme.of(
+                              Get.context!,
+                            ).colorScheme.primary.withOpacity(0.6),
                           ),
                           foregroundColor:
                               Theme.of(Get.context!).colorScheme.primary,
@@ -544,7 +376,14 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                       segmentSpacing: 5,
                       padding: const EdgeInsets.only(top: 8, bottom: 16),
                     ),
-                    const SizedBox(height: 30),
+
+                    // Banner Ads (Android only)
+                    if (!kIsWeb &&
+                        defaultTargetPlatform == TargetPlatform.android) ...[
+                      const SizedBox(height: 4),
+                      const Center(child: AdBannerWidget()),
+                    ],
+                    const SizedBox(height: 16),
                     Center(
                       child: Container(
                         width: double.infinity,
@@ -601,10 +440,8 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                                             if (widget.isReceiver) {
                                               final pairing =
                                                   Get.find<PairingController>();
-                                              final bool success =
-                                                  await pairing.acceptHandshake(
-                                                device.ip,
-                                              );
+                                              final bool success = await pairing
+                                                  .acceptHandshake(device.ip);
 
                                               if (!mounted) return;
 
@@ -731,7 +568,7 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                         ),
                       ),
                     ),
-                    const Spacer(),
+                    // const Spacer(),
                     // Show "Pick again" button on Wi‑Fi device selection screen
                     // after the user cancelled/closed the file picker.
                     Obx(() {
@@ -747,16 +584,28 @@ class _SelectDeviceScreenState extends State<SelectDeviceScreen> {
                       return SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: _handshakeInProgress
-                              ? null
-                              : () {
-                                  AppNavigator.toTransferFile(device: device);
-                                },
+                          onPressed:
+                              _handshakeInProgress
+                                  ? null
+                                  : () {
+                                    AppNavigator.toTransferFile(device: device);
+                                  },
                           icon: const Icon(Icons.folder_open),
                           label: const Text('Pick file again'),
                         ),
                       );
                     }),
+
+                    // Mrec Ads (Android only)
+                    if (!kIsWeb &&
+                        defaultTargetPlatform == TargetPlatform.android) ...[
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: AdLargeRectWidget(),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
