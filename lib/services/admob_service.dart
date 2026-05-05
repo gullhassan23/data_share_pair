@@ -51,6 +51,8 @@ class AdMobService {
   // ---------- App Open ----------
   AppOpenAd? _appOpenAd;
   bool _isLoadingAppOpen = false;
+  bool _pendingShowAppOpen = false;
+  bool _hasShownAppOpenThisLaunch = false;
   DateTime? _lastAppOpenShownAt;
   static const Duration _appOpenMinInterval = Duration(seconds: 45);
 
@@ -72,9 +74,14 @@ class AdMobService {
             status: 'loaded',
           );
           debugPrint('[AdMob] App Open ad loaded');
+          if (_pendingShowAppOpen) {
+            _pendingShowAppOpen = false;
+            showAppOpenIfAvailable(isPremium: false);
+          }
         },
         onAdFailedToLoad: (error) {
           _isLoadingAppOpen = false;
+          _pendingShowAppOpen = false;
           _logAdEvent(
             name: 'admob_app_open_failed_load',
             adType: 'app_open',
@@ -93,7 +100,9 @@ class AdMobService {
   }) async {
     final shouldShow = isPremium ?? _getIsPremium();
     if (shouldShow) return;
+    if (_hasShownAppOpenThisLaunch) return;
     if (_appOpenAd == null) {
+      _pendingShowAppOpen = true;
       loadAppOpenAd(isPremium: false);
       return;
     }
@@ -108,6 +117,7 @@ class AdMobService {
     );
     _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
+        _hasShownAppOpenThisLaunch = true;
         _logAdEvent(
           name: 'admob_app_open_shown',
           adType: 'app_open',
@@ -123,7 +133,6 @@ class AdMobService {
           adType: 'app_open',
           status: 'dismissed',
         );
-        loadAppOpenAd(isPremium: false);
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         ad.dispose();
@@ -134,7 +143,6 @@ class AdMobService {
           status: 'show_failed',
           errorMessage: error.message,
         );
-        loadAppOpenAd(isPremium: false);
       },
     );
     await _appOpenAd!.show();

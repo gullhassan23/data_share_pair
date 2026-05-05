@@ -1,7 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 
 class CustomUploadProgress extends StatelessWidget {
   final double progress; // 0.0 - 1.0
@@ -69,10 +67,6 @@ class CustomUploadProgress extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Banner Ads (Android only)
-          if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
-            const Center(child: AdBannerWidget()),
-          ],
           Text(
             isSender ? "Sending your files" : "Receiving your files",
             textAlign: TextAlign.center,

@@ -82,7 +82,8 @@ class _TransferCompleteScreenState extends State<TransferCompleteScreen> {
                       segmentSpacing: 5,
                       padding: const EdgeInsets.symmetric(horizontal: 8),
                     ),
-
+                    
+                    // Ads Banner (Only Android)
                     if (!kIsWeb &&
                         defaultTargetPlatform == TargetPlatform.android) ...[
                       const SizedBox(height: 10),

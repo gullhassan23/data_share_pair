@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +12,7 @@ import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/components/app_dialog.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../controllers/transfer_controller.dart';
@@ -88,7 +90,14 @@ class _ReceivedFilesScreenState extends State<ReceivedFilesScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                 ),
 
-                const SizedBox(height: 20),
+                // Ads Banner (Only Android)
+                if (!kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.android) ...[
+                  const SizedBox(height: 10),
+                  const Center(child: AdBannerWidget()),
+                ],
+
+                const SizedBox(height: 12),
 
                 /// Main Content Card
                 Expanded(

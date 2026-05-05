@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,6 +14,8 @@ import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/components/app_dialog.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 class TransferProgressScreen extends StatefulWidget {
   const TransferProgressScreen({super.key});
@@ -400,7 +403,14 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
                     padding: const EdgeInsets.only(top: 8, bottom: 16),
                   ),
 
-                  const SizedBox(height: 30),
+                  // Ads Banner (Only Android)
+                  if (!kIsWeb &&
+                      defaultTargetPlatform == TargetPlatform.android) ...[
+                    const SizedBox(height: 10),
+                    const Center(child: AdBannerWidget()),
+                  ],
+
+                  const SizedBox(height: 12),
 
                   // Main Progress Card
                   Expanded(
@@ -431,61 +441,6 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Icon
-        // Container(
-        //   padding: const EdgeInsets.all(20),
-        //   decoration: BoxDecoration(
-        //     color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-        //     shape: BoxShape.circle,
-        //   ),
-        //   child: Icon(
-        //     isSender
-        //         ? Icons.cloud_upload_rounded
-        //         : Icons.cloud_download_rounded,
-        //     size: 64,
-        //     color: Theme.of(context).colorScheme.primary,
-        //   ),
-        // ),
-
-        // const SizedBox(height: 24),
-
-        // // Title
-        // Text(
-        //   isSender ? "Transferring File" : "Receiving File",
-        //   style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w600),
-        // ),
-
-        // const SizedBox(height: 8),
-
-        // // File Name
-        // if ((fileName ?? '').isNotEmpty)
-        //   Text(
-        //     fileName ?? '',
-        //     textAlign: TextAlign.center,
-        //     style: GoogleFonts.roboto(
-        //       fontSize: 14,
-        //       color: Colors.grey.shade600,
-        //     ),
-        //     maxLines: 2,
-        //     overflow: TextOverflow.ellipsis,
-        //   ),
-
-        // const SizedBox(height: 8),
-
-        // // Device Name (receiver: show sender name; sender: show receiver name)
-        // if (device != null)
-        //   Text(
-        //     isSender
-        //         ? "To: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Unknown'}"
-        //         : "From: ${device!.name.trim().isNotEmpty ? device!.name.trim() : 'Sender'}",
-        //     style: GoogleFonts.roboto(
-        //       fontSize: 12,
-        //       color: Colors.grey.shade500,
-        //     ),
-        //   ),
-
-        // const SizedBox(height: 32),
-
         // Progress Bar
         Obx(
           () => CustomUploadProgress(
@@ -543,7 +498,7 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
           );
         }),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
 
         // Cancel Button (only while transfer running)
         Obx(() {
@@ -574,6 +529,13 @@ class _TransferProgressScreenState extends State<TransferProgressScreen> {
             ),
           );
         }),
+
+        // Mrec Ads (Android only)
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) ...[
+          const SizedBox(height: 12),
+          AdLargeRectWidget(),
+        ],
+        const SizedBox(height: 12),
       ],
     );
   }
