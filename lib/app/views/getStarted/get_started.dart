@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/components/on_boardingbutton.dart';
@@ -8,6 +9,7 @@ import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 
@@ -44,10 +46,12 @@ class _getStartedScreenState extends State<getStartedScreen>
       body: bg_container(
         child: SafeArea(
           child: Obx(() {
+            final isPremiumFromController =
+                premium.subscriptionStatus.value?.isPremium ?? false;
             final showAds =
                 AdUnitIds.kForceFreeUserForAdTesting
                     ? true
-                    : !(premium.isPremium ||
+                    : !(isPremiumFromController ||
                         SubscriptionIAPService().isPremium);
             return Column(
               children: [
@@ -93,7 +97,13 @@ class _getStartedScreenState extends State<getStartedScreen>
                   ],
                 ),
 
-                const SizedBox(height: 20),
+                // Banner Ads (Android only)
+                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                  ...[
+                    const SizedBox(height: 4),
+                    const Center(child: AdBannerWidget()),
+                    const SizedBox(height: 12),
+                  ],
 
                 /// WHITE CARD / CONTAINER
                 Padding(
@@ -246,59 +256,12 @@ class _getStartedScreenState extends State<getStartedScreen>
                   ),
                 ),
 
-                /// DESCRIPTION
-                // Padding(
-                //   padding: const EdgeInsets.symmetric(horizontal: 32),
-                //   child: Column(
-                //     children: [
-                //       Text(
-                //         "Easily transfer photos, videos, and files easily using WiFi Direct, Bluetooth, or QR Code.",
-                //         textAlign: TextAlign.center,
-                //         style: GoogleFonts.roboto(
-                //           color: const Color(0xff72777F),
-                //         ),
-                //       ),
-                //     ],
-                //   ),
-                // ),
-                if (showAds)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16, bottom: 24),
-                      child: AdLargeRectWidget(),
-                    ),
-                  )
-                else
-                  const SizedBox(height: 24),
-
-                /// BUTTON
-                // Padding(
-                //   padding: const EdgeInsets.symmetric(horizontal: 32),
-                //   child: SizedBox(
-                //     width: double.infinity,
-                //     height: 48,
-                //     child: ElevatedButton(
-                //       style: ElevatedButton.styleFrom(
-                //         backgroundColor: Color(0xff00E5FF),
-                //         shape: RoundedRectangleBorder(
-                //           borderRadius: BorderRadius.circular(12),
-                //         ),
-                //       ),
-                //       onPressed: () {
-                //         AppNavigator.toHome();
-                //       },
-                //       child: Text(
-                //         "GET STARTED",
-                //         style: GoogleFonts.roboto(
-                //           color: Colors.white,
-                //           fontSize: 16,
-                //           fontWeight: FontWeight.w700,
-                //         ),
-                //         // style: TextStyle(fontWeight: FontWeight.bold),
-                //       ),
-                //     ),
-                //   ),
-                // ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: AdLargeRectWidget(),
+                  ),
+                ),
               ],
             );
           }),

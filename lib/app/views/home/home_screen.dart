@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/progress_controller.dart';
@@ -11,6 +12,7 @@ import 'package:share_app_latest/utils/constants.dart';
 
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,8 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
             final canUsePremiumFeatures = isPremium;
             return Column(
               children: [
-                const SizedBox(height: 19),
-
                 /// Back Row
                 Row(
                   children: [
@@ -99,8 +99,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   segmentSpacing: 5,
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                 ),
+                // Banner Ads (Android only)
+                 // Banner Ads (Android only)
+                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
+                  ...[
+                    const SizedBox(height: 16),
+                    const Center(child: AdBannerWidget()),
+                  ],
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 10),
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Container(
@@ -166,7 +173,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   alignment: Alignment.center,
                                   children: [
                                     Opacity(
-                                      opacity: canUsePremiumFeatures ? 1.0 : 0.55,
+                                      opacity:
+                                          canUsePremiumFeatures ? 1.0 : 0.55,
                                       child: Image.asset(
                                         'assets/icons/send.png',
                                         height: 130,
@@ -184,8 +192,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                             shape: BoxShape.circle,
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black
-                                                    .withOpacity(0.2),
+                                                color: Colors.black.withOpacity(
+                                                  0.2,
+                                                ),
                                                 blurRadius: 4,
                                                 offset: const Offset(0, 1),
                                               ),

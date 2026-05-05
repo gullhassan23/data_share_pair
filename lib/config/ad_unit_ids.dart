@@ -2,12 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// AdMob ad unit IDs and test/production switch.
-/// Set _useTestAds = false and replace production IDs before release.
+/// Test mode is controlled by `.env` key: ADMOB_TEST_MODE=true/false.
 /// Set kForceFreeUserForAdTesting = false before production.
 class AdUnitIds {
   AdUnitIds._();
 
-  static const bool _useTestAds = false;
+  static bool _envBool(String key, {bool fallback = false}) {
+    final raw = dotenv.env[key]?.trim().toLowerCase();
+    if (raw == 'true' || raw == '1' || raw == 'yes' || raw == 'on') {
+      return true;
+    }
+    if (raw == 'false' || raw == '0' || raw == 'no' || raw == 'off') {
+      return false;
+    }
+    return fallback;
+  }
+
+  static bool get _useTestAds => _envBool('ADMOB_TEST_MODE', fallback: false);
 
   /// TEST ONLY: when true, ads show even if user is premium. Set false for production.
   static const bool kForceFreeUserForAdTesting = false;
