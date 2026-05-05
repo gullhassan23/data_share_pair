@@ -15,6 +15,7 @@ import 'package:share_app_latest/app/controllers/pairing_controller.dart';
 import 'package:share_app_latest/app/controllers/bluetooth_controller.dart';
 import 'package:share_app_latest/services/transfer_foreground_service.dart';
 import 'package:share_app_latest/services/one_time_free_send_store.dart';
+import 'package:share_app_latest/services/free_send_unlock_service.dart';
 import 'package:share_app_latest/services/transfer_state_persistence.dart';
 import 'package:share_app_latest/services/transfer_temp_manager.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
@@ -43,6 +44,7 @@ class TransferController extends GetxController {
 
   bool _isSelectingFile = false;
   bool suppressCompletionRouting = false;
+
   /// Becomes true if the last file-picker interaction was cancelled/closed
   /// so UI screens (e.g. SelectDevice) can show a "Pick again" button.
   final canReopenPicker = false.obs;
@@ -75,6 +77,9 @@ class TransferController extends GetxController {
       print('✅ File successfully sent to receiver!');
       // Consume one-time free send exactly at successful sender completion.
       await OneTimeFreeSendStore.markUsed();
+      if (Get.isRegistered<FreeSendUnlockService>()) {
+        Get.find<FreeSendUnlockService>().consumeOneCredit();
+      }
       Get.off(
         () => const TransferCompleteScreen(isSender: true),
         routeName: AppRoutes.transferComplete,
@@ -470,7 +475,9 @@ class TransferController extends GetxController {
       final extPath = p.extension(sourcePath).toLowerCase();
       if (extName != '.vcf' && extPath != '.vcf') return;
 
-      final permission = await FlutterContacts.requestPermission(readonly: false);
+      final permission = await FlutterContacts.requestPermission(
+        readonly: false,
+      );
       if (!permission) {
         print('⚠️ Contacts permission denied; skipping VCF import.');
         Get.snackbar(
@@ -486,7 +493,9 @@ class TransferController extends GetxController {
       }
 
       final content = await File(sourcePath).readAsString();
-      final parts = content.split(RegExp(r'(?=BEGIN:VCARD)', caseSensitive: false));
+      final parts = content.split(
+        RegExp(r'(?=BEGIN:VCARD)', caseSensitive: false),
+      );
       int added = 0;
 
       for (final part in parts) {
@@ -516,9 +525,8 @@ class TransferController extends GetxController {
   /// Ensures contact has a non-empty display name so insert() succeeds on devices that require it.
   void _ensureContactDisplayName(Contact contact) {
     if (contact.displayName.trim().isEmpty) {
-      final fallback = contact.phones.isNotEmpty
-          ? contact.phones.first.number
-          : 'Unknown';
+      final fallback =
+          contact.phones.isNotEmpty ? contact.phones.first.number : 'Unknown';
       contact.name.first = fallback;
     }
   }
@@ -530,12 +538,15 @@ class TransferController extends GetxController {
       final fileName = p.basename(filePath);
       if (p.extension(fileName).toLowerCase() != '.vcf') return null;
 
-      final permission = await FlutterContacts.requestPermission(readonly: false);
+      final permission = await FlutterContacts.requestPermission(
+        readonly: false,
+      );
       if (!permission) return null;
 
       final content = await File(filePath).readAsString();
-      final parts =
-          content.split(RegExp(r'(?=BEGIN:VCARD)', caseSensitive: false));
+      final parts = content.split(
+        RegExp(r'(?=BEGIN:VCARD)', caseSensitive: false),
+      );
       int added = 0;
 
       for (final part in parts) {
@@ -1047,6 +1058,7 @@ class TransferController extends GetxController {
 
   /// Max connection attempts (initial + retries)
   static const int _senderMaxAttempts = 3;
+
   /// Backoff delays in ms between attempts: after 1st failure wait 2s, after 2nd wait 5s
   static const List<int> _senderBackoffMs = [2000, 5000];
 
@@ -1061,7 +1073,9 @@ class TransferController extends GetxController {
     Socket? socket;
     Exception? lastError;
     for (int attempt = 1; attempt <= _senderMaxAttempts; attempt++) {
-      print('🔌 Connecting to receiver: $ip:$port (attempt $attempt/$_senderMaxAttempts)');
+      print(
+        '🔌 Connecting to receiver: $ip:$port (attempt $attempt/$_senderMaxAttempts)',
+      );
       try {
         socket = await Socket.connect(
           ip,
@@ -1082,10 +1096,13 @@ class TransferController extends GetxController {
       }
     }
     if (socket == null) {
-      final msg = lastError != null
-          ? 'Connection lost. The other device may be off or the app closed. Try again.'
-          : 'Could not connect to receiver. Try again.';
-      print('❌ Error sending file after $_senderMaxAttempts attempts: $lastError');
+      final msg =
+          lastError != null
+              ? 'Connection lost. The other device may be off or the app closed. Try again.'
+              : 'Could not connect to receiver. Try again.';
+      print(
+        '❌ Error sending file after $_senderMaxAttempts attempts: $lastError',
+      );
       sendPort.send('error:$msg');
       return;
     }
@@ -1233,9 +1250,10 @@ class TransferController extends GetxController {
       sendPort.send('done');
     } catch (e) {
       print('❌ Error sending file: $e');
-      final msg = e is SocketException
-          ? 'Connection lost. The other device may be off or the app closed. Try again.'
-          : (e is Exception ? e.toString() : 'Transfer failed. Try again.');
+      final msg =
+          e is SocketException
+              ? 'Connection lost. The other device may be off or the app closed. Try again.'
+              : (e is Exception ? e.toString() : 'Transfer failed. Try again.');
       sendPort.send('error:$msg');
     } finally {
       socket.destroy();

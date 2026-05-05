@@ -7,6 +7,8 @@ import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
+import 'package:share_app_latest/services/admob_service.dart';
+import 'package:share_app_latest/services/free_send_unlock_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 
@@ -22,6 +24,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool _isRewardedFlowRunning = false;
+
   @override
   void initState() {
     super.initState();
@@ -37,13 +41,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final premium = Get.find<PremiumController>();
+    final unlockService = Get.find<FreeSendUnlockService>();
     return Scaffold(
       body: bg_container(
         child: SafeArea(
           child: Obx(() {
             final isPremium =
                 premium.isPremium || SubscriptionIAPService().isPremium;
-            final canUsePremiumFeatures = isPremium;
+            final canSend = isPremium || unlockService.hasCredit;
             return Column(
               children: [
                 /// Back Row
@@ -100,12 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                 ),
 
-                 // Banner Ads (Android only)
-                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android)
-                  ...[
-                    const SizedBox(height: 16),
-                    const Center(child: AdBannerWidget()),
-                  ],
+                // Banner Ads (Android only)
+                if (!kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.android) ...[
+                  const SizedBox(height: 16),
+                  const Center(child: AdBannerWidget()),
+                ],
 
                 const SizedBox(height: 10),
                 Padding(
@@ -157,31 +162,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Expanded(
                               child: InkWell(
-                                onTap: () {
-                                  if (!canUsePremiumFeatures) {
-                                    AppNavigator.toPremium();
-                                    return;
-                                  }
-                                  Get.toNamed(
-                                    AppRoutes.choosemethodscan,
-                                    arguments: <String, dynamic>{
-                                      'isReceiver': false,
-                                    },
-                                  );
-                                },
+                                onTap: () => _onSendTapped(canSend: canSend),
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
                                     Opacity(
-                                      opacity:
-                                          canUsePremiumFeatures ? 1.0 : 0.55,
+                                      opacity: canSend ? 1.0 : 0.55,
                                       child: Image.asset(
                                         'assets/icons/send.png',
                                         height: 130,
                                         fit: BoxFit.contain,
                                       ),
                                     ),
-                                    if (!canUsePremiumFeatures)
+                                    if (!canSend)
                                       Positioned(
                                         top: 4,
                                         right: 4,
@@ -266,6 +259,125 @@ class _HomeScreenState extends State<HomeScreen> {
           }),
         ),
       ),
+    );
+  }
+
+  Future<void> _onSendTapped({required bool canSend}) async {
+    if (canSend) {
+      Get.toNamed(
+        AppRoutes.choosemethodscan,
+        arguments: <String, dynamic>{'isReceiver': false},
+      );
+      return;
+    }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      AppNavigator.toPremium();
+      return;
+    }
+    await _showFreeSendOptionsSheet();
+  }
+
+  Future<void> _showFreeSendOptionsSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (sheetContext) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Unlock Send',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.roboto(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Watch a rewarded ad for one send, or upgrade to Premium.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.roboto(
+                      fontSize: 14,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed:
+                        _isRewardedFlowRunning ? null : _handleWatchAdTap,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4A67F6),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child:
+                        _isRewardedFlowRunning
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                            : Text(
+                              'Watch Ads',
+                              style: GoogleFonts.roboto(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                  ),
+                  const SizedBox(height: 10),
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(sheetContext).pop();
+                      AppNavigator.toPremium();
+                    },
+                    child: Text(
+                      'Go to Premium',
+                      style: GoogleFonts.roboto(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+
+  Future<void> _handleWatchAdTap() async {
+    if (_isRewardedFlowRunning) return;
+    setState(() {
+      _isRewardedFlowRunning = true;
+    });
+    final rewarded = await AdMobService.instance.showRewardedAdForSendUnlock();
+    if (!mounted) return;
+    setState(() {
+      _isRewardedFlowRunning = false;
+    });
+    if (!rewarded) {
+      Get.snackbar(
+        'Ad not completed',
+        'Please watch the full ad to unlock one send.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    Get.find<FreeSendUnlockService>().grantOneCredit();
+    if (Get.isBottomSheetOpen ?? false) {
+      Get.back();
+    }
+    Get.toNamed(
+      AppRoutes.choosemethodscan,
+      arguments: <String, dynamic>{'isReceiver': false},
     );
   }
 }

@@ -22,6 +22,7 @@ import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/services/game_analytics_service.dart';
+import 'package:share_app_latest/services/free_send_unlock_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -61,6 +62,7 @@ void main() async {
   Get.put(BluetoothController(), permanent: true);
 
   Get.put(QrController(), permanent: true);
+  Get.put(FreeSendUnlockService(), permanent: true);
 
   // Start listening to Firestore subscription status as soon as app launches,
   // so premium cache stays in sync with backend on every open/renewal.
@@ -114,7 +116,10 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
   Future<void> _logAppLifecycleEvent(String eventName, String state) async {
     try {
       final params = <String, Object>{'lifecycle_state': state};
-      await FirebaseAnalytics.instance.logEvent(name: eventName, parameters: params);
+      await FirebaseAnalytics.instance.logEvent(
+        name: eventName,
+        parameters: params,
+      );
       await GameAnalyticsService.logDesignEvent(eventName, parameters: params);
     } catch (_) {}
   }

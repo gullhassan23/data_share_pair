@@ -25,8 +25,10 @@ class AdUnitIds {
 
   // --- Test ad unit IDs (Google sample IDs, safe for development) ---
   static const String _testBanner = 'ca-app-pub-3940256099942544/6300978111';
-  static const String _testInterstitial = 'ca-app-pub-3940256099942544/1033173712';
+  static const String _testInterstitial =
+      'ca-app-pub-3940256099942544/1033173712';
   static const String _testAppOpen = 'ca-app-pub-3940256099942544/9257395921';
+  static const String _testRewarded = 'ca-app-pub-3940256099942544/1712485313';
 
   // --- Production AdMob unit IDs (live) ---
   // Values are read from .env at runtime.
@@ -46,35 +48,48 @@ class AdUnitIds {
     return defaultTargetPlatform == TargetPlatform.android ? android : ios;
   }
 
-  static String get bannerAdUnitId => _useTestAds
-      ? _testBanner
-      : _platformValue(
-          ios: _env('ADMOB_BANNER_ID_IOS'),
-          android: _env('ADMOB_BANNER_ID_ANDROID'),
-          legacy: _env('ADMOB_BANNER_ID'),
-        );
+  static String get bannerAdUnitId =>
+      _useTestAds
+          ? _testBanner
+          : _platformValue(
+            ios: _env('ADMOB_BANNER_ID_IOS'),
+            android: _env('ADMOB_BANNER_ID_ANDROID'),
+            legacy: _env('ADMOB_BANNER_ID'),
+          );
 
-  static String get mrecAdUnitId => _useTestAds
-      ? _testBanner
-      : _platformValue(
-          ios: _env('ADMOB_MREC_ID_IOS'),
-          android: _env('ADMOB_MREC_ID_ANDROID'),
-          legacy: _env('ADMOB_MREC_ID'),
-        );
+  static String get mrecAdUnitId =>
+      _useTestAds
+          ? _testBanner
+          : _platformValue(
+            ios: _env('ADMOB_MREC_ID_IOS'),
+            android: _env('ADMOB_MREC_ID_ANDROID'),
+            legacy: _env('ADMOB_MREC_ID'),
+          );
 
-  static String get interstitialAdUnitId => _useTestAds
-      ? _testInterstitial
-      : _platformValue(
-          ios: _env('ADMOB_INTERSTITIAL_ID_IOS'),
-          android: _env('ADMOB_INTERSTITIAL_ID_ANDROID'),
-          legacy: _env('ADMOB_INTERSTITIAL_ID'),
-        );
+  static String get interstitialAdUnitId =>
+      _useTestAds
+          ? _testInterstitial
+          : _platformValue(
+            ios: _env('ADMOB_INTERSTITIAL_ID_IOS'),
+            android: _env('ADMOB_INTERSTITIAL_ID_ANDROID'),
+            legacy: _env('ADMOB_INTERSTITIAL_ID'),
+          );
 
-  static String get appOpenAdUnitId => _useTestAds
-      ? _testAppOpen
-      : _platformValue(
-          ios: _env('ADMOB_APPOPEN_ID_IOS'),
-          android: _env('ADMOB_APPOPEN_ID_ANDROID'),
-          legacy: _env('ADMOB_APPOPEN_ID'),
-        );
+  static String get appOpenAdUnitId =>
+      _useTestAds
+          ? _testAppOpen
+          : _platformValue(
+            ios: _env('ADMOB_APPOPEN_ID_IOS'),
+            android: _env('ADMOB_APPOPEN_ID_ANDROID'),
+            legacy: _env('ADMOB_APPOPEN_ID'),
+          );
+
+  static String get rewardedAdUnitId =>
+      _useTestAds
+          ? _testRewarded
+          : _platformValue(
+            ios: _env('ADMOB_REWARDED_ID_IOS'),
+            android: _env('ADMOB_REWARDED_ID_ANDROID'),
+            legacy: _env('ADMOB_REWARDED_ID'),
+          );
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:get/get.dart';
@@ -279,5 +281,99 @@ class AdMobService {
     );
     ad.load();
     return ad;
+  }
+
+  // ---------- Rewarded ----------
+  Future<bool> showRewardedAdForSendUnlock({bool? isPremium}) async {
+    final shouldShow = isPremium ?? _getIsPremium();
+    if (shouldShow) return true;
+
+    final ad = await _loadRewardedAd();
+    if (ad == null) return false;
+
+    bool earnedReward = false;
+    final completer = Completer<bool>();
+
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdShowedFullScreenContent: (_) {
+        _logAdEvent(
+          name: 'admob_rewarded_shown',
+          adType: 'rewarded',
+          status: 'shown',
+        );
+      },
+      onAdDismissedFullScreenContent: (dismissedAd) {
+        dismissedAd.dispose();
+        if (!completer.isCompleted) {
+          completer.complete(earnedReward);
+        }
+        _logAdEvent(
+          name: 'admob_rewarded_dismissed',
+          adType: 'rewarded',
+          status: earnedReward ? 'reward_earned' : 'dismissed',
+        );
+      },
+      onAdFailedToShowFullScreenContent: (failedAd, error) {
+        failedAd.dispose();
+        if (!completer.isCompleted) {
+          completer.complete(false);
+        }
+        _logAdEvent(
+          name: 'admob_rewarded_failed_show',
+          adType: 'rewarded',
+          status: 'show_failed',
+          errorMessage: error.message,
+        );
+      },
+    );
+
+    ad.show(
+      onUserEarnedReward: (_, __) {
+        earnedReward = true;
+        _logAdEvent(
+          name: 'admob_rewarded_earned',
+          adType: 'rewarded',
+          status: 'earned',
+        );
+      },
+    );
+
+    return completer.future.timeout(
+      const Duration(seconds: 60),
+      onTimeout: () => false,
+    );
+  }
+
+  Future<RewardedAd?> _loadRewardedAd() async {
+    final completer = Completer<RewardedAd?>();
+    _logAdEvent(
+      name: 'admob_rewarded_show_requested',
+      adType: 'rewarded',
+      status: 'show_requested',
+    );
+    await RewardedAd.load(
+      adUnitId: AdUnitIds.rewardedAdUnitId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _logAdEvent(
+            name: 'admob_rewarded_loaded',
+            adType: 'rewarded',
+            status: 'loaded',
+          );
+          completer.complete(ad);
+        },
+        onAdFailedToLoad: (error) {
+          _logAdEvent(
+            name: 'admob_rewarded_failed_load',
+            adType: 'rewarded',
+            status: 'load_failed',
+            errorMessage: error.message,
+          );
+          completer.complete(null);
+        },
+      ),
+    );
+    return completer.future;
   }
 }
