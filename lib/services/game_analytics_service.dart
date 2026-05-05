@@ -20,12 +20,22 @@ class GameAnalyticsService {
   static Future<void> _initInternal() async {
     if (_isInitialized) return;
 
-    final gameKey = dotenv.env['GAME_ANALYTICS_GAME_KEY']?.trim() ?? '';
-    final secretKey = dotenv.env['GAME_ANALYTICS_SECRET_KEY']?.trim() ?? '';
+    final isAndroid = defaultTargetPlatform == TargetPlatform.android;
+    final gameKey = (isAndroid
+            ? dotenv.env['GAME_ANALYTICS_GAME_KEY_ANDROID']
+            : dotenv.env['GAME_ANALYTICS_GAME_KEY_IOS'])?.trim() ??
+        '';
+    final secretKey = (isAndroid
+            ? dotenv.env['GAME_ANALYTICS_SECRET_KEY_ANDROID']
+            : dotenv.env['GAME_ANALYTICS_SECRET_KEY_IOS'])?.trim() ??
+        '';
 
     if (gameKey.isEmpty || secretKey.isEmpty) {
       if (kDebugMode) {
-        print('GameAnalyticsService skipped: keys missing in .env');
+        final platformName = isAndroid ? 'Android' : 'iOS';
+        print(
+          'GameAnalyticsService skipped: $platformName keys missing in .env',
+        );
       }
       return;
     }
