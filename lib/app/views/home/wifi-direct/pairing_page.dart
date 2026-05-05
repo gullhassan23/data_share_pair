@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,6 +16,8 @@ import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
+import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 import '../../../../components/radar.dart';
 import '../../../controllers/QR_controller.dart';
@@ -300,7 +303,8 @@ class _PairingScreenState extends State<PairingScreen>
                 ? 'Sender'
                 : (rawName as String).trim();
         final fileMeta = FileMeta.fromJson(
-          (o?['meta'] as Map<String, dynamic>?) ?? offer['meta'] as Map<String, dynamic>,
+          (o?['meta'] as Map<String, dynamic>?) ??
+              offer['meta'] as Map<String, dynamic>,
         );
 
         print('✅ User accepted file transfer from $fromIp (sender: $name)');
@@ -395,7 +399,15 @@ class _PairingScreenState extends State<PairingScreen>
                   segmentSpacing: 5,
                   padding: const EdgeInsets.only(top: 8, bottom: 16),
                 ),
-                const SizedBox(height: 22),
+
+                // Banner Ads (Android only)
+                if (!kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.android) ...[
+                  const SizedBox(height: 8),
+                  const Center(child: AdBannerWidget()),
+                ],
+
+                const SizedBox(height: 10),
                 Text(
                   widget.isReceiver
                       ? "Waiting for sender device to recieve file"
@@ -617,153 +629,16 @@ class _PairingScreenState extends State<PairingScreen>
 
                 const SizedBox(height: 16),
 
-                // Discovered devices list
-                // Expanded(
-                //   child: Obx(
-                //     () =>
-                //         pairing.devices.isEmpty
-                //             ? Center(
-                //               child: Column(
-                //                 mainAxisAlignment: MainAxisAlignment.center,
-                //                 children: [
-                //                   const Icon(
-                //                     Icons.devices_other,
-                //                     size: 64,
-                //                     color: Colors.grey,
-                //                   ),
-                //                   const SizedBox(height: 16),
-                //                   const Text(
-                //                     'No devices found',
-                //                     style: TextStyle(
-                //                       fontSize: 18,
-                //                       fontWeight: FontWeight.w500,
-                //                       color: Colors.grey,
-                //                     ),
-                //                   ),
-                //                   const SizedBox(height: 8),
-                //                   const Text(
-                //                     'Make sure both devices are on the same Wi-Fi network and running this app.',
-                //                     textAlign: TextAlign.center,
-                //                     style: TextStyle(color: Colors.grey),
-                //                   ),
-                //                   const SizedBox(height: 8),
-                //                   const Text(
-                //                     'Note: You need at least 2 devices to test pairing.',
-                //                     textAlign: TextAlign.center,
-                //                     style: TextStyle(
-                //                       color: Colors.grey,
-                //                       fontSize: 12,
-                //                     ),
-                //                   ),
-                //                   const SizedBox(height: 24),
-                //                   ElevatedButton.icon(
-                //                     onPressed:
-                //                         pairing.isScanning.value
-                //                             ? null
-                //                             : pairing.discover,
-                //                     icon: const Icon(Icons.refresh),
-                //                     label: const Text('Retry Discovery'),
-                //                   ),
-                //                 ],
-                //               ),
-                //             )
-                //             : ListView.builder(
-                //               itemCount: pairing.devices.length,
-                //               itemBuilder: (context, index) {
-                //                 final d = pairing.devices[index];
-                //                 return Column(
-                //                   children: [
-                //                     Dismissible(
-                //                       key: Key('device_${d.ip}_${index}'),
-                //                       direction: DismissDirection.startToEnd,
-                //                       background: Container(
-                //                         margin: const EdgeInsets.symmetric(
-                //                           vertical: 4,
-                //                         ),
-                //                         padding: const EdgeInsets.only(right: 20),
-                //                         alignment: Alignment.centerRight,
-                //                         decoration: BoxDecoration(
-                //                           color: Colors.green,
-                //                           borderRadius: BorderRadius.circular(16),
-                //                         ),
-                //                         child: const Icon(
-                //                           Icons.delete,
-                //                           color: Colors.white,
-                //                         ),
-                //                       ),
-                //                       onDismissed: (direction) {
-                //                         // Remove the device from the list
-                //                         pairing.devices.removeAt(index);
-
-                //                         // If no devices left, restart discovery automatically
-                //                         if (pairing.devices.isEmpty) {
-                //                           pairing.discover();
-                //                         }
-
-                //                         // Show snackbar feedback
-                //                         Get.snackbar(
-                //                           'Device Removed',
-                //                           '${d.name} removed from list',
-                //                           duration: const Duration(seconds: 2),
-                //                         );
-                //                       },
-                //                       child: Card(
-                //                         margin: const EdgeInsets.symmetric(
-                //                           vertical: 4,
-                //                         ),
-                //                         child: ListTile(
-                //                           leading: const Icon(
-                //                             Icons.devices,
-                //                             color: Colors.deepPurple,
-                //                           ),
-                //                           title: Text(d.name),
-                //                           subtitle: Text('Device • Ready to pair'),
-                //                           trailing: ElevatedButton(
-                //                             onPressed: () => _pairWithDevice(d),
-                //                             child: const Text('Pair'),
-                //                           ),
-                //                         ),
-                //                       ),
-                //                     ),
-
-                //                     SizedBox(height: 20),
-                //                     Text(
-                //                       "Swipe left to right to reject the pairing request",
-                //                       textAlign: TextAlign.center,
-                //                       style: TextStyle(color: Colors.grey),
-                //                     ),
-                //                   ],
-                //                 );
-                //               },
-                //             ),
-                //   ),
-                // ),
-                // Expanded(
-                //   child: Obx(
-                //     () => Center(
-                //       child: Column(
-                //         mainAxisAlignment: MainAxisAlignment.center,
-                //         children: [
-                //           const Icon(Icons.radar, size: 60, color: Colors.grey),
-                //           const SizedBox(height: 14),
-                //           Text(
-                //             _isReceiver
-                //                 ? "Waiting for sender..."
-                //                 : (pairing.devices.isEmpty
-                //                     ? "Searching for devices..."
-                //                     : "Device found! Redirecting..."),
-                //             style: GoogleFonts.roboto(
-                //               fontSize: 16,
-                //               fontWeight: FontWeight.w500,
-                //               color: Colors.grey.shade700,
-                //             ),
-                //           ),
-                //         ],
-                //       ),
-                //     ),
-                //   ),
-                // ),
-                // Bluetooth devices
+                // MREC Ads (Android only)
+                if (!kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.android) ...[
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: AdLargeRectWidget(),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

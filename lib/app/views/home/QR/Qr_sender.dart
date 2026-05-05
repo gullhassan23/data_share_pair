@@ -1,10 +1,12 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 
 import 'package:vibration/vibration.dart';
 import '../../../controllers/hotspot_controller.dart';
@@ -225,46 +227,6 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
     }
     super.dispose();
   }
-  // Future<void> _startFileTransfer(HotspotInfo receiverInfo) async {
-  //   try {
-  //     for (final filePath in widget.selectedFiles) {
-  //       final success = await fileTransferController.sendFile(
-  //         filePath,
-  //         receiverInfo.ip,
-  //         receiverInfo.port,
-  //       );
-
-  //       if (!success) {
-  //         Get.snackbar(
-  //           'Transfer Failed',
-  //           'Failed to send file: ${filePath.split('/').last}',
-  //           backgroundColor: Colors.red.withOpacity(0.8),
-  //           colorText: Colors.white,
-  //         );
-
-  //         break;
-  //       }
-  //     }
-
-  //     // All files sent successfully - transfer progress screen will handle navigation
-  //     Get.snackbar(
-  //       'Transfer Complete',
-  //       'All files sent successfully!',
-  //       backgroundColor: Colors.green.withOpacity(0.8),
-  //       colorText: Colors.white,
-  //       duration: const Duration(seconds: 3),
-  //     );
-  //   } catch (e) {
-  //     Get.snackbar(
-  //       'Transfer Error',
-  //       'Failed to send files: $e',
-  //       backgroundColor: Colors.red.withOpacity(0.8),
-  //       colorText: Colors.white,
-  //     );
-
-  //     print('Failed to send files: $e');
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -308,6 +270,16 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                           ),
                           child: Column(
                             children: [
+                              // Banner Ads (Android only)
+                              if (!kIsWeb &&
+                                  defaultTargetPlatform ==
+                                      TargetPlatform.android) ...[
+                                const SizedBox(height: 10),
+                                const Center(child: AdBannerWidget()),
+                              ],
+
+                              const SizedBox(height: 10),
+
                               Text(
                                 'Connect to Receiver',
                                 style: GoogleFonts.roboto(
@@ -344,7 +316,10 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                                   Positioned(
                                     top: 0,
                                     left: 0,
-                                    child: _ScanCorner(isTop: true, isLeft: true),
+                                    child: _ScanCorner(
+                                      isTop: true,
+                                      isLeft: true,
+                                    ),
                                   ),
                                   Positioned(
                                     top: 0,
@@ -376,74 +351,74 @@ class _QrSenderScannerScreenState extends State<QrSenderScannerScreen> {
                           ),
                         ),
 
-                      // Container(
-                      //   width: double.infinity,
-                      //   color: Colors.black.withOpacity(0.78),
-                      //   padding: const EdgeInsets.symmetric(
-                      //     horizontal: 20,
-                      //     vertical: 16,
-                      //   ),
-                      //   child: SafeArea(
-                      //     top: false,
-                      //     child: Column(
-                      //       mainAxisSize: MainAxisSize.min,
-                      //       children: [
-                      //         Row(
-                      //           mainAxisAlignment:
-                      //               MainAxisAlignment.spaceAround,
-                      //           children: [
-                      //             _bottomAction(
-                      //               icon: Icons.dialpad,
-                      //               label: 'Enter Till\nNumber',
-                      //               onTap: () {},
-                      //             ),
-                      //             _bottomAction(
-                      //               icon: Icons.flashlight_on,
-                      //               label: 'Torch',
-                      //               onTap: () => cameraController.toggleTorch(),
-                      //             ),
-                      //             _bottomAction(
-                      //               icon: Icons.image,
-                      //               label: 'Scan from\nGallery',
-                      //               onTap: () {},
-                      //             ),
-                      //             _bottomAction(
-                      //               icon: Icons.more_horiz,
-                      //               label: 'More',
-                      //               onTap: () => Get.back(),
-                      //             ),
-                      //           ],
-                      //         ),
-                      //         const SizedBox(height: 10),
-                      //         Obx(() {
-                      //           final canReopen =
-                      //               fileTransferController
-                      //                   .canReopenPicker
-                      //                   .value;
-                      //           final device =
-                      //               qrController.lastPairedReceiver.value;
-                      //           if (!canReopen || device == null) {
-                      //             return const SizedBox.shrink();
-                      //           }
-                      //           return TextButton(
-                      //             onPressed:
-                      //                 () => AppNavigator.toTransferFile(
-                      //                   device: device,
-                      //                 ),
-                      //             child: Text(
-                      //               'Pick file again',
-                      //               style: GoogleFonts.roboto(
-                      //                 color: Colors.white,
-                      //                 fontSize: 13,
-                      //                 fontWeight: FontWeight.w500,
-                      //               ),
-                      //             ),
-                      //           );
-                      //         }),
-                      //       ],
-                      //     ),
-                      //   ),
-                      // ),
+                        // Container(
+                        //   width: double.infinity,
+                        //   color: Colors.black.withOpacity(0.78),
+                        //   padding: const EdgeInsets.symmetric(
+                        //     horizontal: 20,
+                        //     vertical: 16,
+                        //   ),
+                        //   child: SafeArea(
+                        //     top: false,
+                        //     child: Column(
+                        //       mainAxisSize: MainAxisSize.min,
+                        //       children: [
+                        //         Row(
+                        //           mainAxisAlignment:
+                        //               MainAxisAlignment.spaceAround,
+                        //           children: [
+                        //             _bottomAction(
+                        //               icon: Icons.dialpad,
+                        //               label: 'Enter Till\nNumber',
+                        //               onTap: () {},
+                        //             ),
+                        //             _bottomAction(
+                        //               icon: Icons.flashlight_on,
+                        //               label: 'Torch',
+                        //               onTap: () => cameraController.toggleTorch(),
+                        //             ),
+                        //             _bottomAction(
+                        //               icon: Icons.image,
+                        //               label: 'Scan from\nGallery',
+                        //               onTap: () {},
+                        //             ),
+                        //             _bottomAction(
+                        //               icon: Icons.more_horiz,
+                        //               label: 'More',
+                        //               onTap: () => Get.back(),
+                        //             ),
+                        //           ],
+                        //         ),
+                        //         const SizedBox(height: 10),
+                        //         Obx(() {
+                        //           final canReopen =
+                        //               fileTransferController
+                        //                   .canReopenPicker
+                        //                   .value;
+                        //           final device =
+                        //               qrController.lastPairedReceiver.value;
+                        //           if (!canReopen || device == null) {
+                        //             return const SizedBox.shrink();
+                        //           }
+                        //           return TextButton(
+                        //             onPressed:
+                        //                 () => AppNavigator.toTransferFile(
+                        //                   device: device,
+                        //                 ),
+                        //             child: Text(
+                        //               'Pick file again',
+                        //               style: GoogleFonts.roboto(
+                        //                 color: Colors.white,
+                        //                 fontSize: 13,
+                        //                 fontWeight: FontWeight.w500,
+                        //               ),
+                        //             ),
+                        //           );
+                        //         }),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // ),
                       ],
                     ),
                     ...(screenController.isProcessing.value

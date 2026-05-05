@@ -1,4 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +12,7 @@ import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 import 'package:share_app_latest/widgets/ad_large_rect_widget.dart';
 
 class ChooseMethodScan extends StatefulWidget {
@@ -43,6 +45,7 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                 premium.isPremium || SubscriptionIAPService().isPremium;
             return Column(
               children: [
+                /// Back Row
                 const SizedBox(height: 19),
                 Row(
                   children: [
@@ -85,8 +88,6 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                   ],
                 ),
 
-                /// Back Row
-
                 /// Progress Barss
                 StepProgressBar(
                   currentStep: 2,
@@ -98,7 +99,14 @@ class _ChooseMethodScanState extends State<ChooseMethodScan> {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                 ),
 
-                const SizedBox(height: 40),
+                // Banner Ads (Android only)
+                if (!kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.android) ...[
+                  const SizedBox(height: 16),
+                  const Center(child: AdBannerWidget()),
+                ],
+
+                const SizedBox(height: 12),
 
                 /// Main White Card
                 Padding(

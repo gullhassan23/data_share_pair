@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,6 +17,7 @@ import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/utils/show_uploadbar_dialogue.dart';
 import 'package:share_app_latest/utils/tab_bar_progress.dart';
 import 'package:share_app_latest/components/app_dialog.dart';
+import 'package:share_app_latest/widgets/ad_banner_widget.dart';
 import 'package:vibration/vibration.dart';
 
 import '../../../controllers/hotspot_controller.dart';
@@ -80,7 +82,9 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
     });
 
     // Listen for incoming pairing requests (sender scanned our QR)
-    _pairingRequestWorker = ever(qrController.incomingPairingRequest, (request) {
+    _pairingRequestWorker = ever(qrController.incomingPairingRequest, (
+      request,
+    ) {
       if (request != null && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && request == qrController.incomingPairingRequest.value) {
@@ -387,7 +391,14 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
               ),
 
-              const SizedBox(height: 40),
+              // Banner Ads (Android only)
+              if (!kIsWeb &&
+                  defaultTargetPlatform == TargetPlatform.android) ...[
+                const SizedBox(height: 16),
+                const Center(child: AdBannerWidget()),
+              ],
+
+              const SizedBox(height: 0),
               // Main Content
               Expanded(
                 child: SingleChildScrollView(
@@ -668,7 +679,7 @@ class _QrReceiverDisplayScreenState extends State<QrReceiverDisplayScreen> {
                                 Text(
                                   'Waiting for sender to scan QR code...',
                                   style: GoogleFonts.roboto(
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: const Color.fromARGB(255, 210, 210, 210).withOpacity(0.8),
                                     fontSize: 16,
                                   ),
                                   textAlign: TextAlign.center,
