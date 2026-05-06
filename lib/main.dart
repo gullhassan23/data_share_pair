@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -23,6 +26,7 @@ import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/services/game_analytics_service.dart';
 import 'package:share_app_latest/services/free_send_unlock_service.dart';
+import 'package:share_app_latest/services/ads_remote_config_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
@@ -34,6 +38,7 @@ void main() async {
   } catch (_) {}
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await AdsRemoteConfigService.instance.init();
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
   await GameAnalyticsService.initFromEnv();
   await initializeFcmAndUploadToken();
@@ -47,6 +52,7 @@ void main() async {
   await SubscriptionIAPService().init();
   await AdaptyService.instance.init();
   await AdMobService.initialize();
+  AdMobService.instance.bindPremiumSyncForAndroidInterstitials();
   AdMobService.instance.loadAppOpenAd();
   AdMobService.instance.maybePreloadInterstitial();
 
@@ -113,6 +119,12 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     with WidgetsBindingObserver {
   bool _firstFrameDone = false;
 
+  Future<void> _refreshAndroidAdsRemoteConfigAndResync() async {
+    await AdsRemoteConfigService.instance.refresh();
+    if (!mounted) return;
+    AdMobService.instance.activateAndroidPeriodicInterstitialsWhileForeground();
+  }
+
   Future<void> _logAppLifecycleEvent(String eventName, String state) async {
     try {
       final params = <String, Object>{'lifecycle_state': state};
@@ -134,11 +146,17 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
         _logAppLifecycleEvent('app_open', 'first_frame');
         AdMobService.instance.showAppOpenIfAvailable();
       }
+      if (!kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.android &&
+          mounted) {
+        AdMobService.instance.activateAndroidPeriodicInterstitialsWhileForeground();
+      }
     });
   }
 
   @override
   void dispose() {
+    AdMobService.instance.deactivateAndroidPeriodicInterstitials();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -150,15 +168,20 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _logAppLifecycleEvent('app_open', 'resumed');
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        unawaited(_refreshAndroidAdsRemoteConfigAndResync());
+      }
       _onResumed();
       return;
     }
     if (state == AppLifecycleState.paused) {
+      AdMobService.instance.deactivateAndroidPeriodicInterstitials();
       _logAppLifecycleEvent('app_background', 'paused');
       AnalyticsScreenTracker.onAppBackground();
       return;
     }
     if (state == AppLifecycleState.detached) {
+      AdMobService.instance.deactivateAndroidPeriodicInterstitials();
       _logAppLifecycleEvent('app_close', 'detached');
       AnalyticsScreenTracker.onAppBackground();
     }

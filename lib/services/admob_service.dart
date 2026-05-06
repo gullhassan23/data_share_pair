@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
+import 'package:share_app_latest/services/ads_remote_config_service.dart';
 import 'package:share_app_latest/services/game_analytics_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
@@ -49,6 +50,13 @@ class AdMobService {
     }
     return SubscriptionIAPService().isPremium;
   }
+
+  bool get _androidFreeAdThrottleEnabled =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+
+  Duration get _effectiveAppOpenMinInterval => _androidFreeAdThrottleEnabled
+      ? AdsRemoteConfigService.instance.adsControlDuration
+      : _appOpenMinInterval;
 
   // ---------- App Open ----------
   AppOpenAd? _appOpenAd;
@@ -98,18 +106,19 @@ class AdMobService {
 
   Future<void> showAppOpenIfAvailable({
     bool? isPremium,
-    Duration minInterval = _appOpenMinInterval,
+    Duration? minInterval,
   }) async {
     final shouldShow = isPremium ?? _getIsPremium();
     if (shouldShow) return;
     if (_hasShownAppOpenThisLaunch) return;
+    final resolvedInterval = minInterval ?? _effectiveAppOpenMinInterval;
     if (_appOpenAd == null) {
       _pendingShowAppOpen = true;
       loadAppOpenAd(isPremium: false);
       return;
     }
     if (_lastAppOpenShownAt != null &&
-        DateTime.now().difference(_lastAppOpenShownAt!) < minInterval) {
+        DateTime.now().difference(_lastAppOpenShownAt!) < resolvedInterval) {
       return;
     }
     _logAdEvent(
@@ -154,6 +163,55 @@ class AdMobService {
   InterstitialAd? _interstitialAd;
   bool _isLoadingInterstitial = false;
   bool _pendingShowInterstitial = false;
+  bool _pendingShowInterstitialSkipAndroidMinGap = false;
+  bool _interstitialIsShowing = false;
+  DateTime? _lastInterstitialClosedAt;
+  Timer? _androidPeriodicInterstitialTimer;
+  bool _isPremiumSyncBound = false;
+
+  /// Android free tier: show an interstitial every [AdsRemoteConfigService.adsControlDuration]
+  /// (default 30s) while the app is in the foreground. No-op on iOS / web / premium.
+  void activateAndroidPeriodicInterstitialsWhileForeground() {
+    if (!_androidFreeAdThrottleEnabled) return;
+    if (_getIsPremium()) {
+      deactivateAndroidPeriodicInterstitials();
+      return;
+    }
+    _androidPeriodicInterstitialTimer?.cancel();
+    final interval = AdsRemoteConfigService.instance.adsControlDuration;
+    _androidPeriodicInterstitialTimer = Timer.periodic(interval, (_) {
+      if (_getIsPremium()) {
+        deactivateAndroidPeriodicInterstitials();
+        return;
+      }
+      unawaited(
+        showInterstitial(
+          isPremium: false,
+          skipAndroidMinGap: true,
+        ),
+      );
+    });
+  }
+
+  void deactivateAndroidPeriodicInterstitials() {
+    _androidPeriodicInterstitialTimer?.cancel();
+    _androidPeriodicInterstitialTimer = null;
+  }
+
+  /// Keeps Android periodic interstitial timer in sync with runtime premium
+  /// flips (e.g. cached true on launch, later Firestore says free).
+  void bindPremiumSyncForAndroidInterstitials() {
+    if (_isPremiumSyncBound) return;
+    _isPremiumSyncBound = true;
+    SubscriptionIAPService().premiumListenable.addListener(() {
+      if (!_androidFreeAdThrottleEnabled) return;
+      if (_getIsPremium()) {
+        deactivateAndroidPeriodicInterstitials();
+      } else {
+        activateAndroidPeriodicInterstitialsWhileForeground();
+      }
+    });
+  }
 
   Future<void> loadInterstitial({bool? isPremium}) async {
     final shouldShow = isPremium ?? _getIsPremium();
@@ -174,13 +232,16 @@ class AdMobService {
           );
           debugPrint('[AdMob] Interstitial loaded');
           if (_pendingShowInterstitial) {
+            final skipGap = _pendingShowInterstitialSkipAndroidMinGap;
             _pendingShowInterstitial = false;
-            showInterstitial(isPremium: false);
+            _pendingShowInterstitialSkipAndroidMinGap = false;
+            showInterstitial(isPremium: false, skipAndroidMinGap: skipGap);
           }
         },
         onAdFailedToLoad: (error) {
           _isLoadingInterstitial = false;
           _pendingShowInterstitial = false;
+          _pendingShowInterstitialSkipAndroidMinGap = false;
           _logAdEvent(
             name: 'admob_interstitial_failed_load',
             adType: 'interstitial',
@@ -201,15 +262,28 @@ class AdMobService {
     }
   }
 
-  Future<void> showInterstitial({bool? isPremium}) async {
+  Future<void> showInterstitial({
+    bool? isPremium,
+    bool skipAndroidMinGap = false,
+  }) async {
     final shouldShow = isPremium ?? _getIsPremium();
     if (shouldShow) return;
+    if (_interstitialIsShowing) return;
+    if (_androidFreeAdThrottleEnabled && !skipAndroidMinGap) {
+      final last = _lastInterstitialClosedAt;
+      if (last != null &&
+          DateTime.now().difference(last) <
+              AdsRemoteConfigService.instance.adsControlDuration) {
+        return;
+      }
+    }
     _logAdEvent(
       name: 'admob_interstitial_show_requested',
       adType: 'interstitial',
       status: 'show_requested',
     );
     if (_interstitialAd != null) {
+      _interstitialIsShowing = true;
       _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
         onAdShowedFullScreenContent: (ad) {
           _logAdEvent(
@@ -219,6 +293,8 @@ class AdMobService {
           );
         },
         onAdDismissedFullScreenContent: (ad) {
+          _interstitialIsShowing = false;
+          _lastInterstitialClosedAt = DateTime.now();
           ad.dispose();
           _interstitialAd = null;
           _logAdEvent(
@@ -229,6 +305,8 @@ class AdMobService {
           loadInterstitial(isPremium: false);
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
+          _interstitialIsShowing = false;
+          _lastInterstitialClosedAt = DateTime.now();
           ad.dispose();
           _interstitialAd = null;
           _logAdEvent(
@@ -240,10 +318,15 @@ class AdMobService {
           loadInterstitial(isPremium: false);
         },
       );
-      await _interstitialAd!.show();
+      try {
+        await _interstitialAd!.show();
+      } catch (_) {
+        _interstitialIsShowing = false;
+      }
       return;
     }
     _pendingShowInterstitial = true;
+    _pendingShowInterstitialSkipAndroidMinGap = skipAndroidMinGap;
     loadInterstitial(isPremium: false);
   }
 
