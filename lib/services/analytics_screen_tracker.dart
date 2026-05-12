@@ -22,6 +22,20 @@ class AnalyticsScreenTracker {
     '/transfer-complete': 'Complete_menu',
   };
 
+  /// GameAnalytics design events: only these exact ids (no parameters).
+  static const Set<String> _gameAnalyticsScreenEventIds = <String>{
+    'Premium_splash',
+    'Home_screen',
+    'Transfer_Menu',
+    'Sender_via_menu',
+    'Wifi_sender',
+    'Send_device_Menu',
+    'QR_sender',
+    'Recive_QR',
+    'Select_file_Button',
+    'Complete_menu',
+  };
+
   /// Routes that resolve to these screen ids are not logged to analytics.
   static const Set<String> _excludedScreenIds = <String>{
     'login_screen',
@@ -101,24 +115,11 @@ class AnalyticsScreenTracker {
             'from_screen': fromScreen,
         },
       );
-      await GameAnalyticsService.logDesignEvent(
-        screenEventName,
-        parameters: <String, Object>{
-          'screen_name': screenName,
-          if (fromScreen != null && fromScreen.isNotEmpty)
-            'from_screen': fromScreen,
-        },
-      );
+      if (_gameAnalyticsScreenEventIds.contains(screenName)) {
+        await GameAnalyticsService.logDesignEvent(screenName);
+      }
       await _analytics.logEvent(
         name: 'screen_opened',
-        parameters: <String, Object>{
-          'screen_name': screenName,
-          if (fromScreen != null && fromScreen.isNotEmpty)
-            'from_screen': fromScreen,
-        },
-      );
-      await GameAnalyticsService.logDesignEvent(
-        'screen_opened',
         parameters: <String, Object>{
           'screen_name': screenName,
           if (fromScreen != null && fromScreen.isNotEmpty)
@@ -128,13 +129,6 @@ class AnalyticsScreenTracker {
       if (fromScreen != null && fromScreen.isNotEmpty) {
         await _analytics.logEvent(
           name: 'screen_transition',
-          parameters: <String, Object>{
-            'from_screen': fromScreen,
-            'to_screen': screenName,
-          },
-        );
-        await GameAnalyticsService.logDesignEvent(
-          'screen_transition',
           parameters: <String, Object>{
             'from_screen': fromScreen,
             'to_screen': screenName,
@@ -165,10 +159,6 @@ class AnalyticsScreenTracker {
       };
       await _analytics.logEvent(
         name: safeEventName,
-        parameters: params.isEmpty ? null : params,
-      );
-      await GameAnalyticsService.logDesignEvent(
-        safeEventName,
         parameters: params.isEmpty ? null : params,
       );
     } catch (e, stackTrace) {
@@ -244,15 +234,6 @@ class AnalyticsScreenTracker {
     try {
       await _analytics.logEvent(
         name: 'screen_time_spent',
-        parameters: <String, Object>{
-          'screen_name': screen,
-          'next_screen': nextScreen,
-          'duration_ms': millis,
-          'duration_sec': millis ~/ 1000,
-        },
-      );
-      await GameAnalyticsService.logDesignEvent(
-        'screen_time_spent',
         parameters: <String, Object>{
           'screen_name': screen,
           'next_screen': nextScreen,

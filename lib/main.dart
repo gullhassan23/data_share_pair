@@ -38,23 +38,7 @@ void main() async {
   } catch (_) {}
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await AdsRemoteConfigService.instance.init();
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-  await GameAnalyticsService.initFromEnv();
-  await initializeFcmAndUploadToken();
-
-  // Load cached premium status (if any) so ads respect Pro immediately.
-  final cachedPremium = await PremiumStatusStore.loadIsPremium();
-  if (cachedPremium != null) {
-    SubscriptionIAPService().setCachedPremium(cachedPremium);
-  }
-
-  await SubscriptionIAPService().init();
-  await AdaptyService.instance.init();
-  await AdMobService.initialize();
-  AdMobService.instance.bindPremiumSyncForAndroidInterstitials();
-  AdMobService.instance.loadAppOpenAd();
-  AdMobService.instance.maybePreloadInterstitial();
 
   // Restrict to portrait only
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -75,7 +59,38 @@ void main() async {
   Get.put(PremiumController(), permanent: true);
 
   Get.put(HotspotController(), permanent: true);
+
+  // Ads must initialize before first frame so App Open / interstitial loaders work.
+  await AdMobService.initialize();
+  AdMobService.instance.bindPremiumSyncForAndroidInterstitials();
+  AdMobService.instance.loadAppOpenAd();
+  AdMobService.instance.maybePreloadInterstitial();
+
+  if (kDebugMode) {
+    debugPrint('[main] runApp — UI starting (Remote Config / GA / FCM / IAP run after)');
+  }
   runApp(const MyApp());
+
+  // Remote Config can block ~60s; IAP / FCM / GA can also be slow — never gate UI on these.
+  unawaited(_initializeDeferredServices());
+}
+
+Future<void> _initializeDeferredServices() async {
+  try {
+    await AdsRemoteConfigService.instance.init();
+    await GameAnalyticsService.initFromEnv();
+    await initializeFcmAndUploadToken();
+
+    final cachedPremium = await PremiumStatusStore.loadIsPremium();
+    if (cachedPremium != null) {
+      SubscriptionIAPService().setCachedPremium(cachedPremium);
+    }
+
+    await SubscriptionIAPService().init();
+    await AdaptyService.instance.init();
+  } catch (e, st) {
+    debugPrint('[main] deferred init error: $e\n$st');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -132,7 +147,6 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
         name: eventName,
         parameters: params,
       );
-      await GameAnalyticsService.logDesignEvent(eventName, parameters: params);
     } catch (_) {}
   }
 
