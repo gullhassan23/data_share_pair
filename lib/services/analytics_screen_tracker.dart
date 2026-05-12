@@ -117,9 +117,24 @@ class AnalyticsScreenTracker {
             'from_screen': fromScreen,
         },
       );
+      await GameAnalyticsService.logDesignEvent(
+        'screen_opened',
+        parameters: <String, Object>{
+          'screen_name': screenName,
+          if (fromScreen != null && fromScreen.isNotEmpty)
+            'from_screen': fromScreen,
+        },
+      );
       if (fromScreen != null && fromScreen.isNotEmpty) {
         await _analytics.logEvent(
           name: 'screen_transition',
+          parameters: <String, Object>{
+            'from_screen': fromScreen,
+            'to_screen': screenName,
+          },
+        );
+        await GameAnalyticsService.logDesignEvent(
+          'screen_transition',
           parameters: <String, Object>{
             'from_screen': fromScreen,
             'to_screen': screenName,
@@ -150,6 +165,10 @@ class AnalyticsScreenTracker {
       };
       await _analytics.logEvent(
         name: safeEventName,
+        parameters: params.isEmpty ? null : params,
+      );
+      await GameAnalyticsService.logDesignEvent(
+        safeEventName,
         parameters: params.isEmpty ? null : params,
       );
     } catch (e, stackTrace) {
@@ -225,6 +244,15 @@ class AnalyticsScreenTracker {
     try {
       await _analytics.logEvent(
         name: 'screen_time_spent',
+        parameters: <String, Object>{
+          'screen_name': screen,
+          'next_screen': nextScreen,
+          'duration_ms': millis,
+          'duration_sec': millis ~/ 1000,
+        },
+      );
+      await GameAnalyticsService.logDesignEvent(
+        'screen_time_spent',
         parameters: <String, Object>{
           'screen_name': screen,
           'next_screen': nextScreen,

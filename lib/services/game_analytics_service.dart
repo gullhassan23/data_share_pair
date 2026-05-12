@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:gameanalytics_sdk/gameanalytics.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 class GameAnalyticsService {
   GameAnalyticsService._();
@@ -11,18 +10,6 @@ class GameAnalyticsService {
   static bool _isInitialized = false;
   static Future<void>? _initFuture;
   static final List<String> _pendingEventNames = <String>[];
-  static const Set<String> _allowedEventIds = <String>{
-    'Premium_splash',
-    'Home_screen',
-    'Transfer_Menu',
-    'Sender_via_menu',
-    'Wifi_sender',
-    'Send_device_Menu',
-    'QR_sender',
-    'Recive_QR',
-    'Select_file_Button',
-    'Complete_menu',
-  };
 
   static Future<void> initFromEnv() async {
     if (_initFuture != null) return _initFuture!;
@@ -54,7 +41,6 @@ class GameAnalyticsService {
     }
 
     try {
-      await _configureBuildVersion();
       if (kDebugMode) {
         print('GA init started...');
         try {
@@ -86,6 +72,7 @@ class GameAnalyticsService {
         print('GA init success.');
       }
       await _flushPendingEvents();
+      await _sendDesignEvent('ga_sdk_initialized');
     } catch (e, stackTrace) {
       if (kDebugMode) {
         print('GameAnalyticsService.initFromEnv failed: $e');
@@ -99,7 +86,6 @@ class GameAnalyticsService {
     Map<String, Object>? parameters,
   }) async {
     if (eventName.trim().isEmpty) return;
-    if (!_allowedEventIds.contains(eventName)) return;
     if (!_isInitialized) {
       // Queue events that happen before SDK initialization completes.
       _pendingEventNames.add(eventName);
@@ -141,22 +127,6 @@ class GameAnalyticsService {
     _pendingEventNames.clear();
     for (final eventName in events) {
       await _sendDesignEvent(eventName);
-    }
-  }
-
-  static Future<void> _configureBuildVersion() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final version = packageInfo.version.trim();
-      if (version.isEmpty) return;
-      await GameAnalytics.configureBuild(version);
-      if (kDebugMode) {
-        print('GA build configured: $version');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('GA build configuration warning: $e');
-      }
     }
   }
 
