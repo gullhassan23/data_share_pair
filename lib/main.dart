@@ -38,10 +38,7 @@ void main() async {
   } catch (_) {}
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await AdsRemoteConfigService.instance.init();
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-  await GameAnalyticsService.initFromEnv();
-  await initializeFcmAndUploadToken();
 
   // Load cached premium status (if any) so ads respect Pro immediately.
   final cachedPremium = await PremiumStatusStore.loadIsPremium();
@@ -49,12 +46,8 @@ void main() async {
     SubscriptionIAPService().setCachedPremium(cachedPremium);
   }
 
-  await SubscriptionIAPService().init();
-  await AdaptyService.instance.init();
   await AdMobService.initialize();
   AdMobService.instance.bindPremiumSyncForAndroidInterstitials();
-  AdMobService.instance.loadAppOpenAd();
-  AdMobService.instance.maybePreloadInterstitial();
 
   // Restrict to portrait only
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -76,6 +69,44 @@ void main() async {
 
   Get.put(HotspotController(), permanent: true);
   runApp(const MyApp());
+
+  // Do non-critical SDK/network startup in background so first frame is instant.
+  unawaited(_initializeAppServicesInBackground());
+}
+
+Future<void> _initializeAppServicesInBackground() async {
+  try {
+    await AdsRemoteConfigService.instance.init();
+  } catch (e, st) {
+    debugPrint('[Startup] AdsRemoteConfig init failed: $e\n$st');
+  }
+
+  try {
+    await GameAnalyticsService.initFromEnv();
+  } catch (e, st) {
+    debugPrint('[Startup] GameAnalytics init failed: $e\n$st');
+  }
+
+  try {
+    await initializeFcmAndUploadToken();
+  } catch (e, st) {
+    debugPrint('[Startup] FCM init failed: $e\n$st');
+  }
+
+  try {
+    await SubscriptionIAPService().init();
+  } catch (e, st) {
+    debugPrint('[Startup] SubscriptionIAP init failed: $e\n$st');
+  }
+
+  try {
+    await AdaptyService.instance.init();
+  } catch (e, st) {
+    debugPrint('[Startup] Adapty init failed: $e\n$st');
+  }
+
+  AdMobService.instance.loadAppOpenAd();
+  AdMobService.instance.maybePreloadInterstitial();
 }
 
 class MyApp extends StatelessWidget {
@@ -132,7 +163,6 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
         name: eventName,
         parameters: params,
       );
-      await GameAnalyticsService.logDesignEvent(eventName, parameters: params);
     } catch (_) {}
   }
 
