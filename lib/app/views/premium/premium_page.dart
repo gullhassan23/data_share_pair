@@ -7,6 +7,7 @@ import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/components/on_boardingbutton.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
+import 'package:share_app_latest/services/analytics_screen_tracker.dart';
 import 'package:share_app_latest/services/one_time_free_send_store.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
@@ -277,6 +278,9 @@ class PremiumPage extends GetView<PremiumController> {
                         left: 4,
                         child: IconButton(
                           onPressed: () {
+                            AnalyticsScreenTracker.trackUiEvent(
+                              'Premium_Cross_button',
+                            );
                             AppNavigator.back();
                           },
                           icon: const Icon(
