@@ -21,10 +21,9 @@ class GameAnalyticsService {
   static final List<_QueuedDesignEvent> _pendingEvents =
       <_QueuedDesignEvent>[];
 
-  static Future<void> initFromEnv() async {
-    if (_initFuture != null) return _initFuture!;
-    _initFuture = _initInternal();
-    return _initFuture!;
+  /// Single-flight: returns the same [Future] for concurrent callers.
+  static Future<void> initFromEnv() {
+    return _initFuture ??= _initInternal();
   }
 
   static bool _isAndroidOrIos() {
@@ -60,10 +59,16 @@ class GameAnalyticsService {
         true,
       ).timeout(const Duration(seconds: 5));
     } catch (_) {
-      final info = await PackageInfo.fromPlatform();
-      await GameAnalytics.configureBuild(
-        '${info.version}+${info.buildNumber}',
-      );
+      try {
+        final info = await PackageInfo.fromPlatform();
+        await GameAnalytics.configureBuild(
+          '${info.version}+${info.buildNumber}',
+        ).timeout(const Duration(seconds: 5));
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('GA configureBuildVersion fallback failed (continuing): $e');
+        }
+      }
     }
   }
 
@@ -118,23 +123,26 @@ class GameAnalyticsService {
           gameKey,
           secretKey,
         ).timeout(const Duration(seconds: 12));
-        _isInitialized = true;
         completedNormally = true;
       } on TimeoutException {
-        // Some Android devices/plugin versions never complete the future even
-        // though native GA runtime is active. Use soft-init so event flow continues.
-        _isInitialized = true;
         if (kDebugMode) {
           debugPrint(
             'GA initialize timed out; continuing with soft init.',
           );
         }
+      } catch (e) {
+        // Any other failure (e.g. PlatformException): still unblock the pipeline
+        // so queued design events are sent; native SDK may still accept events.
+        if (kDebugMode) {
+          debugPrint('GA initialize failed (soft init): $e');
+        }
       }
+      _isInitialized = true;
       if (kDebugMode) {
         debugPrint(
           completedNormally
               ? 'GA init completed.'
-              : 'GA init finished after timeout (soft).',
+              : 'GA init finished (partial or soft).',
         );
       }
       await _flushPendingEvents();
@@ -142,6 +150,13 @@ class GameAnalyticsService {
       if (kDebugMode) {
         debugPrint('GameAnalyticsService.initFromEnv failed: $e');
         debugPrintStack(stackTrace: stackTrace);
+      }
+      if (!_isInitialized) {
+        _isInitialized = true;
+        if (kDebugMode) {
+          debugPrint('GA: recovering — flushing queued events after error');
+        }
+        await _flushPendingEvents();
       }
     }
   }
@@ -152,6 +167,12 @@ class GameAnalyticsService {
   }) async {
     if (eventName.trim().isEmpty) return;
     if (!_isInitialized) {
+      if (kDebugMode) {
+        debugPrint(
+          'GA event queued (SDK not ready yet): ${_safeEventId(eventName)} '
+          '(pending: ${_pendingEvents.length + 1})',
+        );
+      }
       _pendingEvents.add(
         _QueuedDesignEvent(eventName: eventName, parameters: parameters),
       );
@@ -218,6 +239,9 @@ class GameAnalyticsService {
     if (_pendingEvents.isEmpty) return;
     final events = List<_QueuedDesignEvent>.from(_pendingEvents);
     _pendingEvents.clear();
+    if (kDebugMode) {
+      debugPrint('GA flushing ${events.length} queued design event(s)');
+    }
     for (final q in events) {
       await _sendDesignEvent(q.eventName, q.parameters);
     }

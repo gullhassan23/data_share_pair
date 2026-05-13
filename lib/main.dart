@@ -77,14 +77,20 @@ void main() async {
 
   runApp(const MyApp());
 
-  // GameAnalytics native init can stall on some devices; never block first frame.
-  unawaited(
-    GameAnalyticsService.initFromEnv().catchError((Object e, StackTrace st) {
-      if (kDebugMode) {
-        debugPrint('[main] GameAnalytics init error: $e\n$st');
-      }
-    }),
-  );
+  // After first frame: native GA SDK expects a running Flutter surface; also
+  // avoids blocking the initial route. Still must not block the callback.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (kDebugMode) {
+      debugPrint('[main] GameAnalytics initFromEnv (post-frame)');
+    }
+    unawaited(
+      GameAnalyticsService.initFromEnv().catchError((Object e, StackTrace st) {
+        if (kDebugMode) {
+          debugPrint('[main] GameAnalytics init error: $e\n$st');
+        }
+      }),
+    );
+  });
 }
 
 class MyApp extends StatelessWidget {

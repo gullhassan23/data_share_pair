@@ -10,6 +10,7 @@ class AnalyticsScreenTracker {
   static DateTime? _screenEnterTime;
 
   static const Map<String, String> _routeToScreenName = <String, String>{
+    '/splash': 'Splash_screen',
     '/premium': 'Premium_splash',
     '/onboaring': 'Home_screen',
     '/home': 'Transfer_Menu',
@@ -24,6 +25,7 @@ class AnalyticsScreenTracker {
 
   /// GameAnalytics design events: only these exact ids (no parameters).
   static const Set<String> _gameAnalyticsScreenEventIds = <String>{
+    'Splash_screen',
     'Premium_splash',
     'Home_screen',
     'Transfer_Menu',
