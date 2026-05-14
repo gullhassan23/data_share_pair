@@ -208,24 +208,22 @@ class GameAnalyticsService {
   ]) async {
     try {
       final safeEventId = _safeEventId(eventName);
-      if (kDebugMode) {
-        debugPrint('GA event dispatch requested: $safeEventId');
-      }
       final customFields = _encodeCustomFields(parameters);
       final payload = <String, dynamic>{'eventId': safeEventId};
       if (customFields != null) {
         payload['customFields'] = customFields;
         payload['mergeFields'] = true;
       }
-      final future = GameAnalytics.addDesignEvent(payload);
+      // Native plugin usually never completes the Future (no channel ack) —
+      // do not expect "GA event sent" or extra lines in Flutter console.
+      unawaited(GameAnalytics.addDesignEvent(payload));
       if (kDebugMode) {
-        future
-            .then((_) {
-              debugPrint('GA event sent: $safeEventId');
-            })
-            .catchError((Object error) {
-              debugPrint('GA event callback warning ($safeEventId): $error');
-            });
+        debugPrint(
+          'GA design | eventId=$safeEventId | flutter_console=done '
+          '(native addDesignEvent invoked; no further GA lines here — normal). '
+          'Dashboard: GameAnalytics web tool + delay. Proof: Logcat/Xcode '
+          'filter GameAnalytics.',
+        );
       }
     } catch (e, stackTrace) {
       if (kDebugMode) {
