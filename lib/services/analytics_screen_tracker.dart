@@ -1,7 +1,6 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
-import 'package:share_app_latest/services/game_analytics_service.dart';
 
 class AnalyticsScreenTracker {
   AnalyticsScreenTracker._();
@@ -10,7 +9,7 @@ class AnalyticsScreenTracker {
   static String? _currentScreen;
   static DateTime? _screenEnterTime;
 
-  /// [Get] route `name` → stable id used for Firebase + GameAnalytics.
+  /// [Get] route `name` → stable id used for Firebase Analytics.
   static const Map<String, String> _routeToScreenName = <String, String>{
     AppRoutes.splash: 'Splash_screen',
     AppRoutes.premium: 'Premium_splash',
@@ -24,23 +23,6 @@ class AnalyticsScreenTracker {
     AppRoutes.qrReceiver: 'Recive_QR',
     AppRoutes.transferFile: 'Select_file_Button',
     AppRoutes.transferComplete: 'Complete_menu',
-  };
-
-  /// GameAnalytics design events only: official `addDesignEvent({"eventId": ...})`
-  /// with these exact ids (no `customFields`). Add new ids here and in
-  /// [_routeToScreenName] values when you add funnel screens.
-  static const Set<String> gameAnalyticsDesignEventIds = <String>{
-    'Splash_screen',
-    'Premium_splash',
-    'Home_screen',
-    'Transfer_Menu',
-    'Sender_via_menu',
-    'Wifi_sender',
-    'Send_device_Menu',
-    'QR_sender',
-    'Recive_QR',
-    'Select_file_Button',
-    'Complete_menu',
   };
 
   /// Routes that resolve to these screen ids are not logged to analytics.
@@ -91,12 +73,6 @@ class AnalyticsScreenTracker {
     await trackScreen(screenName, previousScreen: previousScreenName);
   }
 
-  /// Sends a design event only if [eventId] is in [gameAnalyticsDesignEventIds].
-  static Future<void> logGameAnalyticsDesignEvent(String eventId) async {
-    if (!gameAnalyticsDesignEventIds.contains(eventId)) return;
-    await GameAnalyticsService.logDesignEvent(eventId);
-  }
-
   static Future<void> trackScreen(
     String screenName, {
     String? previousScreen,
@@ -128,7 +104,6 @@ class AnalyticsScreenTracker {
             'from_screen': fromScreen,
         },
       );
-      await logGameAnalyticsDesignEvent(screenName);
       await _analytics.logEvent(
         name: 'screen_opened',
         parameters: <String, Object>{

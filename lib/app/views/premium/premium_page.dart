@@ -281,9 +281,6 @@ class PremiumPage extends GetView<PremiumController> {
                             AnalyticsScreenTracker.trackUiEvent(
                               'Premium_Cross_button',
                             );
-                            AnalyticsScreenTracker.logGameAnalyticsDesignEvent(
-                              'Premium_Cross_button',
-                            );
                             AppNavigator.back();
                           },
                           icon: const Icon(

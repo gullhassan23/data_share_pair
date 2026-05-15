@@ -24,7 +24,6 @@ import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/services/analytics_screen_tracker.dart';
-import 'package:share_app_latest/services/game_analytics_service.dart';
 import 'package:share_app_latest/services/free_send_unlock_service.dart';
 import 'package:share_app_latest/services/ads_remote_config_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -76,21 +75,6 @@ void main() async {
   Get.put(HotspotController(), permanent: true);
 
   runApp(const MyApp());
-
-  // After first frame: native GA SDK expects a running Flutter surface; also
-  // avoids blocking the initial route. Still must not block the callback.
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (kDebugMode) {
-      debugPrint('[main] GameAnalytics initFromEnv (post-frame)');
-    }
-    unawaited(
-      GameAnalyticsService.initFromEnv().catchError((Object e, StackTrace st) {
-        if (kDebugMode) {
-          debugPrint('[main] GameAnalytics init error: $e\n$st');
-        }
-      }),
-    );
-  });
 }
 
 class MyApp extends StatelessWidget {
