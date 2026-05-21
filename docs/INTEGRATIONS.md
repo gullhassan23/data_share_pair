@@ -18,6 +18,53 @@ Check `pubspec.yaml`:
 - **Subscriptions**: `in_app_purchase`
 - **Paywall analytics**: `adapty_flutter`
 - **Env**: `flutter_dotenv`
+- **Analytics**: `firebase_analytics`, `gameanalytics_sdk`
+
+---
+
+## GameAnalytics (Flutter SDK)
+
+Official guide: [GameAnalytics Flutter – Getting Started](https://docs.gameanalytics.com/event-tracking-and-integrations/sdks-and-collection-api/game-engine-sdks/flutter/)
+
+### 1) Install
+
+Already in `pubspec.yaml`:
+
+```yaml
+gameanalytics_sdk: ^1.3.1
+```
+
+For **web** builds, `web/index.html` includes the JS SDK script (docs §1.3).
+
+### 2) Environment keys
+
+Add to `.env` (never commit real keys):
+
+```bash
+# Platform-specific keys from Game Settings in the GA web tool (recommended)
+GAMEANALYTICS_GAME_KEY_ANDROID=your_android_game_key
+GAMEANALYTICS_SECRET_KEY_ANDROID=your_android_secret_key
+GAMEANALYTICS_GAME_KEY_IOS=your_ios_game_key
+GAMEANALYTICS_SECRET_KEY_IOS=your_ios_secret_key
+
+# Or a single pair if you use one game entry for all platforms:
+# GAMEANALYTICS_GAME_KEY=...
+# GAMEANALYTICS_SECRET_KEY=...
+```
+
+### 3) SDK lifecycle in this repo
+
+Initialization follows the docs order in `lib/services/gameanalytics_service.dart` and is called from `lib/main.dart` after `.env` load:
+
+1. **Configuration** – logging (debug), custom dimensions whitelist, resource currencies/types, build + auto-detect app version  
+2. **Initialization** – `GameAnalytics.initialize(gameKey, secretKey)`  
+3. **Event tracking** – design events via `GameAnalyticsService` (mirrors Firebase screen/UI analytics in `AnalyticsScreenTracker`)
+
+Premium status updates set custom dimension 01 (`free` / `premium`) in `PremiumController`.
+
+### 4) Event tracking
+
+Screen and UI events are sent as **Design** events (colon-separated `eventId`, see [Event Tracking](https://docs.gameanalytics.com/event-tracking-and-integrations/sdks-and-collection-api/game-engine-sdks/flutter/event-tracking)). Business, resource, progression, error, and ad events can be added with the same `GameAnalytics.*` APIs when needed.
 
 ---
 

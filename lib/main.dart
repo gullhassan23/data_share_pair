@@ -24,6 +24,7 @@ import 'package:share_app_latest/services/admob_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/services/analytics_screen_tracker.dart';
+import 'package:share_app_latest/services/gameanalytics_service.dart';
 import 'package:share_app_latest/services/free_send_unlock_service.dart';
 import 'package:share_app_latest/services/ads_remote_config_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
@@ -36,16 +37,19 @@ void main() async {
     await dotenv.load(fileName: '.env');
   } catch (_) {}
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await AdsRemoteConfigService.instance.init();
-  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-  await initializeFcmAndUploadToken();
-
   // Load cached premium status (if any) so ads respect Pro immediately.
   final cachedPremium = await PremiumStatusStore.loadIsPremium();
   if (cachedPremium != null) {
     SubscriptionIAPService().setCachedPremium(cachedPremium);
   }
+
+  // GameAnalytics: configuration + initialization (docs lifecycle §3–4).
+  await GameAnalyticsService.init(isPremium: cachedPremium);
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await AdsRemoteConfigService.instance.init();
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+  await initializeFcmAndUploadToken();
 
   await SubscriptionIAPService().init();
   await AdaptyService.instance.init();
@@ -131,6 +135,7 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
         name: eventName,
         parameters: params,
       );
+      await GameAnalyticsService.trackLifecycle('$eventName:$state');
     } catch (_) {}
   }
 

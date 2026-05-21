@@ -1,6 +1,7 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
+import 'package:share_app_latest/services/gameanalytics_service.dart';
 
 class AnalyticsScreenTracker {
   AnalyticsScreenTracker._();
@@ -121,6 +122,10 @@ class AnalyticsScreenTracker {
           },
         );
       }
+      await GameAnalyticsService.trackScreenOpened(
+        screenName,
+        fromScreen: fromScreen,
+      );
     } catch (e, stackTrace) {
       if (kDebugMode) {
         debugPrint('AnalyticsScreenTracker.trackScreen failed: $e');
@@ -146,6 +151,10 @@ class AnalyticsScreenTracker {
       await _analytics.logEvent(
         name: safeEventName,
         parameters: params.isEmpty ? null : params,
+      );
+      await GameAnalyticsService.trackUiEvent(
+        safeEventName,
+        screenName: _currentScreen,
       );
     } catch (e, stackTrace) {
       if (kDebugMode) {
@@ -226,6 +235,11 @@ class AnalyticsScreenTracker {
           'duration_ms': millis,
           'duration_sec': millis ~/ 1000,
         },
+      );
+      await GameAnalyticsService.trackScreenTimeSpent(
+        screenName: screen,
+        nextScreen: nextScreen,
+        durationMs: millis,
       );
     } catch (e, stackTrace) {
       if (kDebugMode) {

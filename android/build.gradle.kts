@@ -2,6 +2,10 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // GameAnalytics Android SDK (required by gameanalytics_sdk Flutter plugin)
+        maven {
+            url = uri("https://maven.gameanalytics.com/release")
+        }
         // Mintegral / Mbridge SDK (required by gma_mediation_mintegral)
         maven {
             url = uri("https://dl-maven-android.mintegral.com/repository/mbridge_android_sdk_oversea")

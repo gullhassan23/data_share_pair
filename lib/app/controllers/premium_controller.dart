@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
+import 'package:share_app_latest/services/gameanalytics_service.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 
 class SubscriptionStatus {
@@ -71,6 +72,7 @@ class PremiumController extends GetxController {
       SubscriptionIAPService().setCachedPremium(isPro);
       // Fire-and-forget; ads can read this synchronously on next launch.
       PremiumStatusStore.saveIsPremium(isPro);
+      GameAnalyticsService.setPremiumDimension(isPro);
       isLoading.value = false;
     });
   }
