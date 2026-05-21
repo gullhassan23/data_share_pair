@@ -19,9 +19,23 @@ class AdMobService {
   static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
   static Future<void> initialize() async {
-    await MobileAds.instance.initialize();
+    final initStatus = await MobileAds.instance.initialize();
+    if (kDebugMode) {
+      initStatus.adapterStatuses.forEach((adapter, status) {
+        debugPrint(
+          '[AdMob] Mediation adapter $adapter: ${status.description} '
+          '(latency ${status.latency}ms)',
+        );
+      });
+    }
     await _logAdEvent(name: 'admob_sdk_initialized', adType: 'sdk');
-    debugPrint('[AdMob] SDK initialized');
+    debugPrint('[AdMob] SDK initialized with mediation adapters');
+  }
+
+  static void _logMediationAdapter(String adType, Ad ad) {
+    final adapter = ad.responseInfo?.mediationAdapterClassName;
+    if (adapter == null || adapter.isEmpty) return;
+    debugPrint('[AdMob] $adType served by mediation adapter: $adapter');
   }
 
   static Future<void> _logAdEvent({
@@ -76,6 +90,7 @@ class AdMobService {
         onAdLoaded: (ad) {
           _appOpenAd = ad;
           _isLoadingAppOpen = false;
+          _logMediationAdapter('app_open', ad);
           _logAdEvent(
             name: 'admob_app_open_loaded',
             adType: 'app_open',
@@ -223,6 +238,7 @@ class AdMobService {
         onAdLoaded: (ad) {
           _interstitialAd = ad;
           _isLoadingInterstitial = false;
+          _logMediationAdapter('interstitial', ad);
           _logAdEvent(
             name: 'admob_interstitial_loaded',
             adType: 'interstitial',
@@ -341,7 +357,8 @@ class AdMobService {
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
-        onAdLoaded: (_) {
+        onAdLoaded: (ad) {
+          _logMediationAdapter('banner', ad);
           _logAdEvent(
             name: 'admob_banner_loaded',
             adType: 'banner',
@@ -437,6 +454,7 @@ class AdMobService {
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
+          _logMediationAdapter('rewarded', ad);
           _logAdEvent(
             name: 'admob_rewarded_loaded',
             adType: 'rewarded',

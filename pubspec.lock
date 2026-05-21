@@ -496,6 +496,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.7.3"
+  gma_mediation_liftoffmonetize:
+    dependency: "direct main"
+    description:
+      name: gma_mediation_liftoffmonetize
+      sha256: "927a13ddc9834d04ee387374b52e7b8d74d880c96f0490dfe9e33f44655d0cc6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
+  gma_mediation_meta:
+    dependency: "direct main"
+    description:
+      name: gma_mediation_meta
+      sha256: "92331c11d513f00acfaf830bfecd96a890ed789a56bc035f6856195601813398"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.0"
+  gma_mediation_mintegral:
+    dependency: "direct main"
+    description:
+      name: gma_mediation_mintegral
+      sha256: "536d5eb20e173bc6069db493fe45cd57065f03ca8a9b5d32721ac65e57e4a680"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   google_fonts:
     dependency: "direct main"
     description:

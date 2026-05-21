@@ -76,6 +76,9 @@ dependencies:
   share_plus: ^10.1.4
   in_app_review: ^2.0.10
   firebase_remote_config: ^6.4.0
+  gma_mediation_meta: ^1.1.0
+  gma_mediation_liftoffmonetize: ^1.1.0
+  gma_mediation_mintegral: ^1.2.0
   # fluttertoast: ^9.0.0s
 
 dev_dependencies:

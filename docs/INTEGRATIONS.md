@@ -722,6 +722,7 @@ Future<String?> _getFcmTokenWithRetry({int maxAttempts = 5, Duration delay = con
 - **FCM**: `lib/services/fcm_token_service.dart`
 - **Transfer foreground notification**: `lib/services/transfer_foreground_service.dart`
 - **AdMob**: `lib/services/admob_service.dart`, `lib/config/ad_unit_ids.dart`, `lib/widgets/ad_banner_widget.dart`
+- **AdMob Mediation** (Meta, Liftoff, Mintegral): see [docs/ADMOB_MEDIATION.md](ADMOB_MEDIATION.md)
 - **Adapty**: `lib/services/adapty_service.dart`
 - **IAP + backend verify**: `lib/services/subscription_iap_service.dart`, `functions/index.js`
 - **Premium status (Firestore)**: `lib/app/controllers/premium_controller.dart`, `lib/services/premium_status_store.dart`

@@ -23,3 +23,18 @@
 -dontwarn com.google.android.play.core.tasks.OnFailureListener
 -dontwarn com.google.android.play.core.tasks.OnSuccessListener
 -dontwarn com.google.android.play.core.tasks.Task
+
+# AdMob mediation: Meta Audience Network
+-keep class com.facebook.ads.** { *; }
+-keep class com.google.ads.mediation.facebook.** { *; }
+-dontwarn com.facebook.ads.**
+
+# AdMob mediation: Liftoff Monetize (Vungle)
+-keep class com.vungle.** { *; }
+-keep class com.google.ads.mediation.vungle.** { *; }
+-dontwarn com.vungle.**
+
+# AdMob mediation: Mintegral
+-keep class com.mbridge.** { *; }
+-keep class com.google.ads.mediation.mintegral.** { *; }
+-dontwarn com.mbridge.**
