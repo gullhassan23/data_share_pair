@@ -29,63 +29,6 @@ import 'package:share_app_latest/services/ads_remote_config_service.dart';
 import 'package:share_app_latest/utils/constants.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
 
-/// Tracks post-launch initialization (ads, IAP, FCM permission, etc.).
-class AppDeferredStartup {
-  AppDeferredStartup._();
-
-  static bool adsReady = false;
-  static Future<void>? _future;
-
-  static Future<void> run() {
-    return _future ??= _deferredStartup();
-  }
-}
-
-Future<void> _deferredStartup() async {
-  await AdsRemoteConfigService.instance.init();
-  unawaited(AdsRemoteConfigService.instance.refresh());
-
-  try {
-    await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-  } catch (_) {}
-
-  final cachedPremium = await PremiumStatusStore.loadIsPremium();
-  if (cachedPremium != null) {
-    SubscriptionIAPService().setCachedPremium(cachedPremium);
-  }
-
-  unawaited(initializeFcmAndUploadToken());
-  unawaited(SubscriptionIAPService().init());
-  unawaited(AdaptyService.instance.init());
-
-  try {
-    await AdMobService.initialize();
-    AdMobService.instance.bindPremiumSyncForAndroidInterstitials();
-    AdMobService.instance.loadAppOpenAd();
-    AdMobService.instance.maybePreloadInterstitial();
-    AppDeferredStartup.adsReady = true;
-  } catch (e) {
-    debugPrint('[DeferredStartup] AdMob init failed: $e');
-  }
-
-  try {
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-  } catch (_) {}
-}
-
-void _registerCoreControllers() {
-  Get.put(PairingController(), permanent: true);
-  Get.put(TransferController(), permanent: true);
-  Get.put(ProgressController(), permanent: true);
-  Get.put(BluetoothController(), permanent: true);
-  Get.put(QrController(), permanent: true);
-  Get.put(FreeSendUnlockService(), permanent: true);
-  Get.put(PremiumController(), permanent: true);
-  Get.put(HotspotController(), permanent: true);
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -94,16 +37,44 @@ void main() async {
   } catch (_) {}
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await AdsRemoteConfigService.instance.init();
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+  await initializeFcmAndUploadToken();
 
-  registerFcmMessagingHandlers();
+  // Load cached premium status (if any) so ads respect Pro immediately.
+  final cachedPremium = await PremiumStatusStore.loadIsPremium();
+  if (cachedPremium != null) {
+    SubscriptionIAPService().setCachedPremium(cachedPremium);
+  }
+
+  await SubscriptionIAPService().init();
+  await AdaptyService.instance.init();
+  await AdMobService.initialize();
+  AdMobService.instance.bindPremiumSyncForAndroidInterstitials();
+  AdMobService.instance.loadAppOpenAd();
+  AdMobService.instance.maybePreloadInterstitial();
+
+  // Restrict to portrait only
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  // Initialize foreground task plugin before runApp (required for transfer notifications)
   TransferForegroundService.init();
-  _registerCoreControllers();
+
+  // Initialize controllers globally so they persist across screens
+  Get.put(PairingController(), permanent: true);
+  Get.put(TransferController(), permanent: true);
+  Get.put(ProgressController(), permanent: true);
+  Get.put(BluetoothController(), permanent: true);
+
+  Get.put(QrController(), permanent: true);
+  Get.put(FreeSendUnlockService(), permanent: true);
+
+  // Start listening to Firestore subscription status as soon as app launches,
+  // so premium cache stays in sync with backend on every open/renewal.
+  Get.put(PremiumController(), permanent: true);
+
+  Get.put(HotspotController(), permanent: true);
 
   runApp(const MyApp());
-
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(AppDeferredStartup.run());
-  });
 }
 
 class MyApp extends StatelessWidget {
@@ -146,7 +117,6 @@ class _TransferLifecycleWrapper extends StatefulWidget {
 class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     with WidgetsBindingObserver {
   bool _firstFrameDone = false;
-  bool _appOpenScheduled = false;
 
   Future<void> _refreshAndroidAdsRemoteConfigAndResync() async {
     await AdsRemoteConfigService.instance.refresh();
@@ -164,14 +134,6 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
     } catch (_) {}
   }
 
-  Future<void> _showAppOpenWhenReady() async {
-    if (_appOpenScheduled) return;
-    _appOpenScheduled = true;
-    await AppDeferredStartup.run();
-    if (!mounted) return;
-    await AdMobService.instance.showAppOpenIfAvailable();
-  }
-
   @override
   void initState() {
     super.initState();
@@ -180,18 +142,13 @@ class _TransferLifecycleWrapperState extends State<_TransferLifecycleWrapper>
       if (!_firstFrameDone && mounted) {
         _firstFrameDone = true;
         _logAppLifecycleEvent('app_open', 'first_frame');
-        unawaited(_showAppOpenWhenReady());
+        AdMobService.instance.showAppOpenIfAvailable();
       }
       if (!kIsWeb &&
           defaultTargetPlatform == TargetPlatform.android &&
           mounted) {
-        unawaited(
-          AppDeferredStartup.run().then((_) {
-            if (!mounted) return;
-            AdMobService.instance
-                .activateAndroidPeriodicInterstitialsWhileForeground();
-          }),
-        );
+        AdMobService.instance
+            .activateAndroidPeriodicInterstitialsWhileForeground();
       }
     });
   }

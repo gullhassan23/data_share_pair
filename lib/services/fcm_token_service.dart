@@ -9,30 +9,6 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint('[FCM][BG] messageId=${message.messageId} data=${message.data}');
 }
 
-bool _fcmHandlersRegistered = false;
-
-/// Registers FCM listeners only (no permission dialog, no token upload).
-/// Safe to call from [main] before [runApp].
-void registerFcmMessagingHandlers() {
-  if (_fcmHandlersRegistered) return;
-  _fcmHandlersRegistered = true;
-
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
-  FirebaseMessaging.onMessage.listen((message) {
-    debugPrint(
-      '[FCM][FG] messageId=${message.messageId} '
-      'title=${message.notification?.title} body=${message.notification?.body} data=${message.data}',
-    );
-  });
-
-  FirebaseMessaging.onMessageOpenedApp.listen((message) {
-    debugPrint(
-      '[FCM][OPEN] messageId=${message.messageId} data=${message.data}',
-    );
-  });
-}
-
 /// Retries getToken() so APNS can become ready on iOS (e.g. after permission).
 Future<String?> _getFcmTokenWithRetry({
   int maxAttempts = 5,
@@ -72,8 +48,6 @@ Future<void> updateFcmTokenInFirestore() async {
 
 Future<void> initializeFcmAndUploadToken() async {
   try {
-    registerFcmMessagingHandlers();
-
     // Ensure FCM auto-init is enabled.
     await FirebaseMessaging.instance.setAutoInitEnabled(true);
 
@@ -84,6 +58,24 @@ Future<void> initializeFcmAndUploadToken() async {
           badge: true,
           sound: true,
         );
+
+    // Register background handler early.
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    // Log all incoming messages (foreground).
+    FirebaseMessaging.onMessage.listen((message) {
+      debugPrint(
+        '[FCM][FG] messageId=${message.messageId} '
+        'title=${message.notification?.title} body=${message.notification?.body} data=${message.data}',
+      );
+    });
+
+    // App opened from notification tap.
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      debugPrint(
+        '[FCM][OPEN] messageId=${message.messageId} data=${message.data}',
+      );
+    });
 
     final settings = await FirebaseMessaging.instance.requestPermission(
       alert: true,
