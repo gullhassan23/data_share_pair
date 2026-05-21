@@ -4,10 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:share_app_latest/config/ad_unit_ids.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/services/ads_remote_config_service.dart';
+import 'package:share_app_latest/services/admob_debug_service.dart';
 import 'package:share_app_latest/services/admob_service.dart';
+import 'package:share_app_latest/utils/ads_visibility.dart';
 
 /// Banner ad at bottom of main screens. Hidden for premium users (widget kept to avoid
 /// platform view recreate issues on iOS). Uses stable key for platform view.
@@ -42,7 +43,7 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
     _androidRefreshTimer = Timer.periodic(
       AdsRemoteConfigService.instance.adsControlDuration,
       (_) {
-        if (!mounted || _isPremiumNow()) return;
+        if (!mounted || AdsVisibility.shouldHideAds) return;
         setState(() {
           _bannerAd?.dispose();
           _bannerAd = null;
@@ -60,19 +61,16 @@ class _AdBannerWidgetState extends State<AdBannerWidget> {
     super.dispose();
   }
 
-  bool _isPremiumNow() {
-    if (AdUnitIds.kForceFreeUserForAdTesting) return false;
-    final fromController = Get.isRegistered<PremiumController>()
-        ? Get.find<PremiumController>().isPremium
-        : false;
-    return fromController;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final premium = _isPremiumNow();
-      if (premium) {
+      if (Get.isRegistered<PremiumController>()) {
+        Get.find<PremiumController>().subscriptionStatus.value;
+      }
+      if (AdsVisibility.shouldHideAds) {
+        if (kDebugMode) {
+          AdMobDebugService.log('AdBannerWidget hidden: ${AdsVisibility.blockReason}');
+        }
         _bannerAd?.dispose();
         _bannerAd = null;
         return const SizedBox.shrink();

@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
-import 'package:share_app_latest/app/controllers/premium_controller.dart';
+import 'package:share_app_latest/services/admob_debug_service.dart';
 import 'package:share_app_latest/services/ads_remote_config_service.dart';
+import 'package:share_app_latest/utils/ads_visibility.dart';
+import 'package:share_app_latest/app/controllers/premium_controller.dart';
 
 /// Larger display ad (medium rectangle 300x250) for big empty areas, e.g. home screen.
 /// Hidden for premium users; uses the same banner ad unit ID.
@@ -40,7 +42,7 @@ class _AdLargeRectWidgetState extends State<AdLargeRectWidget> {
     _androidRefreshTimer = Timer.periodic(
       AdsRemoteConfigService.instance.adsControlDuration,
       (_) {
-        if (!mounted || _isPremiumNow()) return;
+        if (!mounted || AdsVisibility.shouldHideAds) return;
         setState(() {
           _ad?.dispose();
           _ad = null;
@@ -58,24 +60,38 @@ class _AdLargeRectWidgetState extends State<AdLargeRectWidget> {
     super.dispose();
   }
 
-  bool _isPremiumNow() {
-    if (AdUnitIds.kForceFreeUserForAdTesting) return false;
-    final fromController = Get.isRegistered<PremiumController>()
-        ? Get.find<PremiumController>().isPremium
-        : false;
-    return fromController;
-  }
-
   void _ensureAdLoaded() {
     if (_ad != null) return;
+    final unitId = AdUnitIds.mrecAdUnitId;
+    if (!AdUnitIds.isValidAdUnitId(unitId)) {
+      AdMobDebugService.log(
+        'AdLargeRectWidget: invalid MREC unit id "$unitId" — check .env ADMOB_MREC_ID_*',
+      );
+      return;
+    }
+    AdMobDebugService.log(
+      'AdLargeRectWidget loading MREC (${AdUnitIds.describeAdUnitId(unitId)})',
+    );
     _ad = BannerAd(
-      adUnitId: AdUnitIds.mrecAdUnitId,
+      adUnitId: unitId,
       size: AdSize.mediumRectangle,
       request: const AdRequest(),
       listener: BannerAdListener(
-        onAdLoaded: (_) {},
+        onAdLoaded: (ad) {
+          final adapter = ad.responseInfo?.mediationAdapterClassName;
+          AdMobDebugService.log(
+            'MREC loaded${adapter != null ? " adapter=$adapter" : ""}',
+          );
+          if (mounted) setState(() {});
+        },
         onAdFailedToLoad: (ad, error) {
+          AdMobDebugService.log(
+            'MREC failed code=${error.code} domain=${error.domain} ${error.message}',
+          );
           ad.dispose();
+          if (mounted) {
+            setState(() => _ad = null);
+          }
         },
       ),
     )..load();
@@ -84,8 +100,15 @@ class _AdLargeRectWidgetState extends State<AdLargeRectWidget> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final premium = _isPremiumNow();
-      if (premium) {
+      if (Get.isRegistered<PremiumController>()) {
+        Get.find<PremiumController>().subscriptionStatus.value;
+      }
+      if (AdsVisibility.shouldHideAds) {
+        if (kDebugMode) {
+          AdMobDebugService.log(
+            'AdLargeRectWidget hidden: ${AdsVisibility.blockReason}',
+          );
+        }
         _ad?.dispose();
         _ad = null;
         return const SizedBox.shrink();

@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:get/get.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:share_app_latest/config/ad_unit_ids.dart';
-import 'package:share_app_latest/app/controllers/premium_controller.dart';
+import 'package:share_app_latest/services/admob_debug_service.dart';
 import 'package:share_app_latest/services/ads_remote_config_service.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
+import 'package:share_app_latest/utils/ads_visibility.dart';
 
 /// Central AdMob lifecycle: App Open, Banner, Interstitial.
 /// Premium users (SubscriptionIAPService().isPremium) see no ads unless
@@ -18,18 +18,32 @@ class AdMobService {
   static final AdMobService instance = AdMobService._();
   static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
+  /// Last [MobileAds.initialize] adapter map (for debug sheet).
+  static Map<String, AdapterStatus>? lastInitAdapterStatuses;
+
   static Future<void> initialize() async {
     final initStatus = await MobileAds.instance.initialize();
-    if (kDebugMode) {
-      initStatus.adapterStatuses.forEach((adapter, status) {
-        debugPrint(
-          '[AdMob] Mediation adapter $adapter: ${status.description} '
-          '(latency ${status.latency}ms)',
-        );
-      });
-    }
+    lastInitAdapterStatuses = initStatus.adapterStatuses;
+    initStatus.adapterStatuses.forEach((adapter, status) {
+      AdMobDebugService.log(
+        'Mediation adapter $adapter: ${status.description} '
+        'state=${status.state.name} latency=${status.latency}ms',
+      );
+    });
     await _logAdEvent(name: 'admob_sdk_initialized', adType: 'sdk');
-    debugPrint('[AdMob] SDK initialized with mediation adapters');
+    AdMobDebugService.log('SDK initialized');
+    AdMobDebugService.log(AdsVisibility.blockReason);
+    AdMobDebugService.logStartupReport();
+  }
+
+  /// In-memory preload state for the debug panel.
+  List<String> debugStateLines() {
+    return [
+      '  appOpen: loaded=${_appOpenAd != null} loading=$_isLoadingAppOpen '
+          'shownThisLaunch=$_hasShownAppOpenThisLaunch',
+      '  interstitial: loaded=${_interstitialAd != null} '
+          'loading=$_isLoadingInterstitial showing=$_interstitialIsShowing',
+    ];
   }
 
   static void _logMediationAdapter(String adType, Ad ad) {
@@ -56,11 +70,11 @@ class AdMobService {
   }
 
   bool _getIsPremium() {
-    if (AdUnitIds.kForceFreeUserForAdTesting) return false;
-    if (Get.isRegistered<PremiumController>()) {
-      return Get.find<PremiumController>().isPremium;
+    final hide = AdsVisibility.shouldHideAds;
+    if (kDebugMode && hide) {
+      AdMobDebugService.log('Skip ad op: ${AdsVisibility.blockReason}');
     }
-    return SubscriptionIAPService().isPremium;
+    return hide;
   }
 
   bool get _androidFreeAdThrottleEnabled =>
@@ -79,10 +93,17 @@ class AdMobService {
   static const Duration _appOpenMinInterval = Duration(seconds: 45);
 
   Future<void> loadAppOpenAd({bool? isPremium}) async {
-    final shouldShow = isPremium ?? _getIsPremium();
-    if (shouldShow) return;
+    final blocked = isPremium ?? _getIsPremium();
+    if (blocked) return;
     if (_isLoadingAppOpen || _appOpenAd != null) return;
+    if (!AdUnitIds.isValidAdUnitId(AdUnitIds.appOpenAdUnitId)) {
+      AdMobDebugService.log(
+        'App open load skipped: invalid unit id "${AdUnitIds.appOpenAdUnitId}"',
+      );
+      return;
+    }
     _isLoadingAppOpen = true;
+    AdMobDebugService.log('Loading app open (${AdUnitIds.describeAdUnitId(AdUnitIds.appOpenAdUnitId)})');
     await AppOpenAd.load(
       adUnitId: AdUnitIds.appOpenAdUnitId,
       request: const AdRequest(),
@@ -227,10 +248,19 @@ class AdMobService {
   }
 
   Future<void> loadInterstitial({bool? isPremium}) async {
-    final shouldShow = isPremium ?? _getIsPremium();
-    if (shouldShow) return;
+    final blocked = isPremium ?? _getIsPremium();
+    if (blocked) return;
     if (_isLoadingInterstitial || _interstitialAd != null) return;
+    if (!AdUnitIds.isValidAdUnitId(AdUnitIds.interstitialAdUnitId)) {
+      AdMobDebugService.log(
+        'Interstitial load skipped: invalid unit id "${AdUnitIds.interstitialAdUnitId}"',
+      );
+      return;
+    }
     _isLoadingInterstitial = true;
+    AdMobDebugService.log(
+      'Loading interstitial (${AdUnitIds.describeAdUnitId(AdUnitIds.interstitialAdUnitId)})',
+    );
     await InterstitialAd.load(
       adUnitId: AdUnitIds.interstitialAdUnitId,
       request: const AdRequest(),
@@ -347,6 +377,15 @@ class AdMobService {
   // ---------- Banner ----------
   BannerAd? createBannerAd() {
     if (_getIsPremium()) return null;
+    if (!AdUnitIds.isValidAdUnitId(AdUnitIds.bannerAdUnitId)) {
+      AdMobDebugService.log(
+        'Banner skipped: invalid unit id "${AdUnitIds.bannerAdUnitId}"',
+      );
+      return null;
+    }
+    AdMobDebugService.log(
+      'Creating banner (${AdUnitIds.describeAdUnitId(AdUnitIds.bannerAdUnitId)})',
+    );
     _logAdEvent(
       name: 'admob_banner_requested',
       adType: 'banner',

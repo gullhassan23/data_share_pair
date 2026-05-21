@@ -20,6 +20,21 @@ class AdUnitIds {
 
   static bool get _useTestAds => _envBool('ADMOB_TEST_MODE', fallback: false);
 
+  /// Exposed for AdMob debug UI.
+  static bool get useTestAds => _useTestAds;
+
+  static bool isValidAdUnitId(String id) {
+    return id.startsWith('ca-app-pub-') && id.contains('/');
+  }
+
+  static String describeAdUnitId(String id) {
+    if (id.isEmpty) return 'MISSING (empty — check .env)';
+    if (!isValidAdUnitId(id)) return 'INVALID: "$id"';
+    if (id.contains('3940256099942544')) return 'Google TEST unit';
+    final tail = id.length > 12 ? id.substring(id.length - 12) : id;
+    return 'OK …$tail';
+  }
+
   /// TEST ONLY: when true, ads show even if user is premium. Set false for production.
   static const bool kForceFreeUserForAdTesting = false;
 
