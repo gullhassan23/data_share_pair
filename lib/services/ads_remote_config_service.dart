@@ -28,14 +28,19 @@ class AdsRemoteConfigService {
 
   Duration get adsControlDuration => Duration(seconds: _adsControlSeconds);
 
+  static const Duration _networkFetchTimeout = Duration(seconds: 15);
+
+  bool _localConfigReady = false;
+
+  /// Applies defaults / last-activated values immediately (no network).
+  /// Network fetch runs in the background via [refresh].
   Future<void> init() async {
+    if (_localConfigReady) return;
     try {
       _rc = FirebaseRemoteConfig.instance;
       await _rc!.setConfigSettings(
         RemoteConfigSettings(
-          fetchTimeout: const Duration(seconds: 60),
-          // Shorter in release so console changes apply without waiting hours
-          // (still subject to Firebase rate limits).
+          fetchTimeout: _networkFetchTimeout,
           minimumFetchInterval: kDebugMode
               ? const Duration(minutes: 1)
               : const Duration(minutes: 15),
@@ -44,8 +49,8 @@ class AdsRemoteConfigService {
       await _rc!.setDefaults(<String, dynamic>{
         keyAdsControlTime: defaultAdsControlSeconds,
       });
-      await _rc!.fetchAndActivate();
       _applyLoadedValues();
+      _localConfigReady = true;
     } catch (e, st) {
       debugPrint('[AdsRemoteConfig] init failed: $e\n$st');
       _adsControlSeconds = defaultAdsControlSeconds;
