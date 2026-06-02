@@ -176,23 +176,6 @@ exports.verifyAppleSubscription = onRequest(
           latestInfo && typeof latestInfo.original_transaction_id === "string"
             ? latestInfo.original_transaction_id
             : null;
-        const purchaseDateMs =
-          latestInfo && latestInfo.purchase_date_ms
-            ? Number(latestInfo.purchase_date_ms)
-            : null;
-        const expiresDateMs =
-          latestInfo && latestInfo.expires_date_ms
-            ? Number(latestInfo.expires_date_ms)
-            : null;
-        const cancellationDateMs =
-          latestInfo && latestInfo.cancellation_date_ms
-            ? Number(latestInfo.cancellation_date_ms)
-            : null;
-        const pendingRenewalInfo = Array.isArray(data.pending_renewal_info)
-          ? data.pending_renewal_info.find(
-              (p) => p && (p.auto_renew_product_id === productId || p.product_id === productId)
-            ) || null
-          : null;
         const docId = transactionId || `${Date.now()}`;
         await userRef
           .collection("subscriptions")
@@ -200,8 +183,6 @@ exports.verifyAppleSubscription = onRequest(
           .set(
             {
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
-              verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-              userId,
               productId,
               isPremium,
               expiryDate: expiryDate
@@ -213,76 +194,6 @@ exports.verifyAppleSubscription = onRequest(
               status: data.status,
               environment: usedSandbox ? "sandbox" : "production",
               isRestore: !!isRestore,
-              purchaseDateMs,
-              expiresDateMs,
-              cancellationDateMs,
-              webOrderLineItemId:
-                latestInfo && typeof latestInfo.web_order_line_item_id === "string"
-                  ? latestInfo.web_order_line_item_id
-                  : null,
-              subscriptionGroupIdentifier:
-                latestInfo && typeof latestInfo.subscription_group_identifier === "string"
-                  ? latestInfo.subscription_group_identifier
-                  : null,
-              isTrialPeriod:
-                latestInfo && typeof latestInfo.is_trial_period !== "undefined"
-                  ? String(latestInfo.is_trial_period)
-                  : null,
-              isInIntroOfferPeriod:
-                latestInfo && typeof latestInfo.is_in_intro_offer_period !== "undefined"
-                  ? String(latestInfo.is_in_intro_offer_period)
-                  : null,
-              inAppOwnershipType:
-                latestInfo && typeof latestInfo.in_app_ownership_type === "string"
-                  ? latestInfo.in_app_ownership_type
-                  : null,
-              pendingRenewal: pendingRenewalInfo
-                ? {
-                    autoRenewProductId: pendingRenewalInfo.auto_renew_product_id || null,
-                    autoRenewStatus: pendingRenewalInfo.auto_renew_status || null,
-                    expirationIntent: pendingRenewalInfo.expiration_intent || null,
-                    isInBillingRetryPeriod:
-                      pendingRenewalInfo.is_in_billing_retry_period || null,
-                    gracePeriodExpiresDateMs:
-                      pendingRenewalInfo.grace_period_expires_date_ms || null,
-                    priceConsentStatus: pendingRenewalInfo.price_consent_status || null,
-                    offerCodeRefName: pendingRenewalInfo.offer_code_ref_name || null,
-                    promotionalOfferId: pendingRenewalInfo.promotional_offer_id || null,
-                    productId: pendingRenewalInfo.product_id || null,
-                  }
-                : null,
-              latestInfoRaw: latestInfo || null,
-              requestMeta: {
-                requestedProductId: productId,
-                isRestore: !!isRestore,
-                fcmTokenProvided: !!(fcmToken && typeof fcmToken === "string"),
-              },
-              appleVerification: {
-                status: data.status,
-                receiptType: data.receipt_type || null,
-                adamId:
-                  typeof data.adam_id !== "undefined" ? data.adam_id : null,
-                bundleId:
-                  data.receipt && data.receipt.bundle_id
-                    ? data.receipt.bundle_id
-                    : null,
-                appItemId:
-                  data.receipt && typeof data.receipt.app_item_id !== "undefined"
-                    ? data.receipt.app_item_id
-                    : null,
-                applicationVersion:
-                  data.receipt && data.receipt.application_version
-                    ? data.receipt.application_version
-                    : null,
-                originalApplicationVersion:
-                  data.receipt && data.receipt.original_application_version
-                    ? data.receipt.original_application_version
-                    : null,
-                requestDateMs:
-                  data.receipt && data.receipt.request_date_ms
-                    ? Number(data.receipt.request_date_ms)
-                    : null,
-              },
             },
             { merge: true }
           );
