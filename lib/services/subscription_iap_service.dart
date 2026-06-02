@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -95,6 +96,7 @@ class SubscriptionIAPService {
 
   List<ProductDetails> _products = [];
   List<ProductDetails> get products => _products;
+  final Set<String> _reportedPurchaseKeys = <String>{};
 
   Future<void> init() async {
     debugPrint('[SubscriptionIAP] init: starting...');
@@ -242,6 +244,7 @@ class SubscriptionIAPService {
             setCachedPremium(true);
             // Persist immediately so app restart does not temporarily lose Pro state.
             await PremiumStatusStore.saveIsPremium(true);
+            await _reportSubscriptionRevenueToFirebase(purchaseDetails);
             debugPrint(
               '[SubscriptionIAP] _onPurchaseUpdated: success — premium granted',
             );
@@ -421,6 +424,56 @@ class SubscriptionIAPService {
         '[SubscriptionIAP] _verifyPurchaseWithBackend: stackTrace: $st',
       );
       return false;
+    }
+  }
+
+  Future<void> _reportSubscriptionRevenueToFirebase(
+    PurchaseDetails purchaseDetails,
+  ) async {
+    final product = _products.cast<ProductDetails?>().firstWhere(
+      (p) => p?.id == purchaseDetails.productID,
+      orElse: () => null,
+    );
+    if (product == null) {
+      debugPrint(
+        '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: product not found for ${purchaseDetails.productID}',
+      );
+      return;
+    }
+
+    final transactionId = purchaseDetails.purchaseID;
+    final purchaseKey =
+        '${purchaseDetails.productID}:${transactionId ?? purchaseDetails.transactionDate ?? ''}';
+    if (_reportedPurchaseKeys.contains(purchaseKey)) {
+      return;
+    }
+
+    try {
+      await FirebaseAnalytics.instance.logPurchase(
+        currency: product.currencyCode,
+        value: product.rawPrice,
+        transactionId: transactionId,
+        items: [
+          AnalyticsEventItem(
+            itemId: product.id,
+            itemName: product.title,
+            itemCategory: 'subscription',
+            price: product.rawPrice,
+            currency: product.currencyCode,
+          ),
+        ],
+      );
+      _reportedPurchaseKeys.add(purchaseKey);
+      debugPrint(
+        '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: logged product=${product.id} value=${product.rawPrice} ${product.currencyCode}',
+      );
+    } catch (e, st) {
+      debugPrint(
+        '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: failed: $e',
+      );
+      debugPrint(
+        '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: stackTrace: $st',
+      );
     }
   }
 

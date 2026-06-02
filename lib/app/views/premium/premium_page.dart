@@ -701,8 +701,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
       widget.yearlyPlan?.price,
       _fallbackYearlyPrice,
     );
-    final ctaText =
-        _selectedId == widget.yearlyId ? 'Try for Free' : 'Continue';
+    const ctaText = 'Continue';
 
     return Column(
       children: [
@@ -710,7 +709,6 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
           title: 'Yearly Plan',
           price: yearlyPrice,
           priceSuffix: 'per year',
-          note: '7 DAYS FREE',
           badgeText: 'SAVE UP TO 88%',
           isSelected: yearlySelected,
           onTap: () => setState(() => _selectedId = widget.yearlyId),
@@ -720,8 +718,6 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
           title: 'Monthly Plan',
           price: monthlyPrice,
           priceSuffix: 'per month',
-          // note: '3 DAYS FREE',
-          badgeText: '3 DAYS TRIAL',
           isSelected: monthlySelected,
           onTap: () => setState(() => _selectedId = widget.monthlyId),
         ),
