@@ -87,121 +87,11 @@ exports.verifyAppleSubscription = onRequest(
 
       if (data.status !== 0) {
         console.error("Apple verification failed:", data);
-        // DEV fallback: still grant premium with 30/365 days for testing
-        const now = new Date();
-        const days =
-          typeof productId === "string" && productId.includes("yearly")
-            ? 365
-            : 30;
-        const expiryDate = new Date(
-          now.getTime() + days * 24 * 60 * 60 * 1000
-        );
-        const userRef = db.collection(USERS_COLLECTION).doc(userId);
-        const previousUserSnapshot = await userRef.get();
-        const previousUserData = previousUserSnapshot.exists
-          ? previousUserSnapshot.data() || {}
-          : {};
-        const previousIsPremium = previousUserData.isPremium === true;
-        const previousExpiryDateMs = previousUserData.expiryDate?.toDate
-          ? previousUserData.expiryDate.toDate().getTime()
-          : null;
-
-        const updateData = {
-          isPremium: true,
-          productId,
-          expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-          autoRenewStatus: "1",
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-        if (fcmToken && typeof fcmToken === "string")
-          updateData.fcmToken = fcmToken;
-        await userRef.set(updateData, { merge: true });
-
-        // Store a history record for troubleshooting / analytics.
-        try {
-          const subRef = userRef.collection("subscriptions").doc(String(Date.now()));
-          await subRef.set(
-            {
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
-              productId,
-              isPremium: true,
-              expiryDate: admin.firestore.Timestamp.fromDate(expiryDate),
-              autoRenewStatus: "1",
-              status: data.status,
-              environment: usedSandbox ? "sandbox" : "production",
-              isRestore: !!isRestore,
-              source: "apple_verify_fallback",
-            },
-            { merge: true }
-          );
-        } catch (e) {
-          console.error("Subscription history write failed (fallback):", e);
-        }
-        if (fcmToken && typeof fcmToken === "string") {
-          const newExpiryDateMs = expiryDate.getTime();
-          const isNewSubscription = !previousIsPremium;
-          const isRenewal =
-            previousIsPremium &&
-            previousExpiryDateMs != null &&
-            newExpiryDateMs > previousExpiryDateMs + 12 * 60 * 60 * 1000;
-
-          const lastNotified = previousUserData.lastNotified || {};
-          const markAndSend = async ({
-            notificationKey,
-            title,
-            body,
-            event,
-            expiryDateMs,
-          }) => {
-            const alreadyNotifiedForExpiry =
-              expiryDateMs != null &&
-              lastNotified?.[notificationKey] === expiryDateMs;
-            if (alreadyNotifiedForExpiry) return;
-
-            await sendFcmNotification({
-              fcmToken,
-              title,
-              body,
-              data: {
-                subscriptionEvent: event,
-                productId: String(productId || ""),
-                expiryDateMs: expiryDateMs != null ? String(expiryDateMs) : "",
-              },
-            });
-
-            const update = {};
-            update[`lastNotified.${notificationKey}`] =
-              expiryDateMs != null ? expiryDateMs : Date.now();
-            await userRef.set(update, { merge: true });
-          };
-
-          if (isRestore) {
-            await markAndSend({
-              notificationKey: "restore",
-              title: "Premium restored",
-              body: "Your premium access has been restored on this device.",
-              event: "restore",
-              expiryDateMs: newExpiryDateMs,
-            });
-          } else if (isNewSubscription) {
-            await markAndSend({
-              notificationKey: "firstSubscribe",
-              title: "Welcome to Premium",
-              body: "Your premium subscription is active. Enjoy all features!",
-              event: "first_subscribe",
-              expiryDateMs: newExpiryDateMs,
-            });
-          } else if (isRenewal) {
-            await markAndSend({
-              notificationKey: "renewal",
-              title: "Subscription renewed",
-              body: "Your premium subscription has been renewed successfully.",
-              event: "renewal",
-              expiryDateMs: newExpiryDateMs,
-            });
-          }
-        }
-        return res.status(200).json({ isValid: true });
+        return res.status(200).json({
+          isValid: false,
+          environment: usedSandbox ? "sandbox" : "production",
+          status: data.status,
+        });
       }
 
       const receiptInfo = Array.isArray(data.latest_receipt_info)
@@ -394,7 +284,16 @@ exports.verifyAppleSubscription = onRequest(
         }
       }
 
-      return res.status(200).json({ isValid: isPremium });
+      const transactionId =
+        latestInfo && typeof latestInfo.transaction_id === "string"
+          ? latestInfo.transaction_id
+          : null;
+
+      return res.status(200).json({
+        isValid: isPremium,
+        environment: usedSandbox ? "sandbox" : "production",
+        transactionId,
+      });
     } catch (e) {
       console.error("verifyAppleSubscription error:", e);
       return res.status(500).json({ isValid: false, error: "Internal error" });
