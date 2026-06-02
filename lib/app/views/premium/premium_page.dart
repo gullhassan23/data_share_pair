@@ -824,7 +824,6 @@ class _PlanCard extends StatelessWidget {
   final String title;
   final String price;
   final String priceSuffix;
-  final String? note;
   final String? badgeText;
   final bool isSelected;
   final VoidCallback onTap;
@@ -833,7 +832,6 @@ class _PlanCard extends StatelessWidget {
     required this.title,
     required this.price,
     required this.priceSuffix,
-    this.note,
     this.badgeText,
     required this.isSelected,
     required this.onTap,
@@ -910,20 +908,6 @@ class _PlanCard extends StatelessWidget {
                                 : Colors.black54,
                       ),
                     ),
-                    if (note != null) ...[
-                      // const SizedBox(height: 4),
-                      Text(
-                        note!,
-                        style: GoogleFonts.roboto(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          color:
-                              isSelected
-                                  ? Colors.white
-                                  : const Color(0xff0f766e),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
