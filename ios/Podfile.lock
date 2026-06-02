@@ -1256,6 +1256,7 @@ PODS:
   - DKPhotoGallery/Resource (0.0.19):
     - SDWebImage
     - SwiftyGif
+  - FBAudienceNetwork (6.16.0)
   - file_picker (0.0.1):
     - DKImagePickerController/PhotoGallery
     - Flutter
@@ -1368,13 +1369,22 @@ PODS:
     - Flutter
   - flutter_secure_storage (6.0.0):
     - Flutter
-  - GA-SDK-IOS (5.0.0)
+  - GA-SDK-IOS (5.0.1)
   - gal (1.0.0):
     - Flutter
     - FlutterMacOS
-  - gameanalytics_sdk (1.3.0):
+  - gameanalytics_sdk (1.3.1):
     - Flutter
-    - GA-SDK-IOS (= 5.0.0)
+    - GA-SDK-IOS (= 5.0.1)
+  - gma_mediation_liftoffmonetize (1.1.0):
+    - Flutter
+    - GoogleMobileAdsMediationVungle (~> 7.4.4.0)
+  - gma_mediation_meta (1.1.0):
+    - Flutter
+    - GoogleMobileAdsMediationFacebook (~> 6.16.0.0)
+  - gma_mediation_mintegral (1.2.0):
+    - Flutter
+    - GoogleMobileAdsMediationMintegral (~> 7.7.5.0)
   - Google-Mobile-Ads-SDK (11.13.0):
     - GoogleUserMessagingPlatform (>= 1.1)
   - google_mobile_ads (5.3.1):
@@ -1411,6 +1421,15 @@ PODS:
   - GoogleDataTransport (10.1.0):
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
+  - GoogleMobileAdsMediationFacebook (6.16.0.0):
+    - FBAudienceNetwork (= 6.16.0)
+    - Google-Mobile-Ads-SDK (~> 11.0)
+  - GoogleMobileAdsMediationMintegral (7.7.5.0):
+    - Google-Mobile-Ads-SDK (~> 11.0)
+    - MintegralAdSDK/All (= 7.7.5)
+  - GoogleMobileAdsMediationVungle (7.4.4.0):
+    - Google-Mobile-Ads-SDK (~> 11.0)
+    - VungleAds (= 7.4.4)
   - GoogleUserMessagingPlatform (3.1.0)
   - GoogleUtilities/AppDelegateSwizzler (8.1.0):
     - GoogleUtilities/Environment
@@ -1549,6 +1568,31 @@ PODS:
   - libwebp/sharpyuv (1.5.0)
   - libwebp/webp (1.5.0):
     - libwebp/sharpyuv
+  - MintegralAdSDK/All (7.7.5):
+    - MintegralAdSDK/BannerAd
+    - MintegralAdSDK/BidNativeAd
+    - MintegralAdSDK/InterstitialVideoAd
+    - MintegralAdSDK/NativeAd
+    - MintegralAdSDK/NativeAdvancedAd
+    - MintegralAdSDK/NewInterstitialAd
+    - MintegralAdSDK/RewardVideoAd
+    - MintegralAdSDK/SplashAd
+  - MintegralAdSDK/BannerAd (7.7.5):
+    - MintegralAdSDK/NativeAd
+  - MintegralAdSDK/BidNativeAd (7.7.5):
+    - MintegralAdSDK/NativeAd
+  - MintegralAdSDK/InterstitialVideoAd (7.7.5):
+    - MintegralAdSDK/NativeAd
+  - MintegralAdSDK/NativeAd (7.7.5)
+  - MintegralAdSDK/NativeAdvancedAd (7.7.5):
+    - MintegralAdSDK/NativeAd
+  - MintegralAdSDK/NewInterstitialAd (7.7.5):
+    - MintegralAdSDK/InterstitialVideoAd
+    - MintegralAdSDK/NativeAd
+  - MintegralAdSDK/RewardVideoAd (7.7.5):
+    - MintegralAdSDK/NativeAd
+  - MintegralAdSDK/SplashAd (7.7.5):
+    - MintegralAdSDK/NativeAd
   - mobile_scanner (7.0.0):
     - Flutter
     - FlutterMacOS
@@ -1590,6 +1634,7 @@ PODS:
   - video_thumbnail (0.0.1):
     - Flutter
     - libwebp
+  - VungleAds (7.4.4)
   - webview_flutter_wkwebview (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -1612,6 +1657,9 @@ DEPENDENCIES:
   - flutter_secure_storage (from `.symlinks/plugins/flutter_secure_storage/ios`)
   - gal (from `.symlinks/plugins/gal/darwin`)
   - gameanalytics_sdk (from `.symlinks/plugins/gameanalytics_sdk/ios`)
+  - gma_mediation_liftoffmonetize (from `.symlinks/plugins/gma_mediation_liftoffmonetize/ios`)
+  - gma_mediation_meta (from `.symlinks/plugins/gma_mediation_meta/ios`)
+  - gma_mediation_mintegral (from `.symlinks/plugins/gma_mediation_mintegral/ios`)
   - google_mobile_ads (from `.symlinks/plugins/google_mobile_ads/ios`)
   - in_app_purchase_storekit (from `.symlinks/plugins/in_app_purchase_storekit/darwin`)
   - in_app_review (from `.symlinks/plugins/in_app_review/ios`)
@@ -1641,6 +1689,7 @@ SPEC REPOS:
     - BoringSSL-GRPC
     - DKImagePickerController
     - DKPhotoGallery
+    - FBAudienceNetwork
     - Firebase
     - FirebaseABTesting
     - FirebaseAnalytics
@@ -1660,16 +1709,21 @@ SPEC REPOS:
     - GoogleAdsOnDeviceConversion
     - GoogleAppMeasurement
     - GoogleDataTransport
+    - GoogleMobileAdsMediationFacebook
+    - GoogleMobileAdsMediationMintegral
+    - GoogleMobileAdsMediationVungle
     - GoogleUserMessagingPlatform
     - GoogleUtilities
     - "gRPC-C++"
     - gRPC-Core
     - leveldb-library
     - libwebp
+    - MintegralAdSDK
     - nanopb
     - PromisesObjC
     - SDWebImage
     - SwiftyGif
+    - VungleAds
 
 EXTERNAL SOURCES:
   adapty_flutter:
@@ -1706,6 +1760,12 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/gal/darwin"
   gameanalytics_sdk:
     :path: ".symlinks/plugins/gameanalytics_sdk/ios"
+  gma_mediation_liftoffmonetize:
+    :path: ".symlinks/plugins/gma_mediation_liftoffmonetize/ios"
+  gma_mediation_meta:
+    :path: ".symlinks/plugins/gma_mediation_meta/ios"
+  gma_mediation_mintegral:
+    :path: ".symlinks/plugins/gma_mediation_mintegral/ios"
   google_mobile_ads:
     :path: ".symlinks/plugins/google_mobile_ads/ios"
   in_app_purchase_storekit:
@@ -1756,6 +1816,7 @@ SPEC CHECKSUMS:
   device_info_plus: 71ffc6ab7634ade6267c7a93088ed7e4f74e5896
   DKImagePickerController: 946cec48c7873164274ecc4624d19e3da4c1ef3c
   DKPhotoGallery: b3834fecb755ee09a593d7c9e389d8b5d6deed60
+  FBAudienceNetwork: d1670939884e3a2e0ad98dca98d7e0c841417228
   file_picker: a0560bc09d61de87f12d246fc47d2119e6ef37be
   Firebase: aa154fee4e9b8eac17aa42344988865b3e857d33
   firebase_analytics: bae6cbdc8c4b0398552b023e1b0bcf29a3608a01
@@ -1775,19 +1836,25 @@ SPEC CHECKSUMS:
   FirebaseRemoteConfig: 6ab95b4ee5fd4a94d09a704d88f5341db5713250
   FirebaseRemoteConfigInterop: 23996ab7397494722df4fdd1fd398024389d5da8
   FirebaseSharedSwift: bccaff90721d14bafc14be34f28b77fdd7c91dc9
-  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   flutter_blue_plus_darwin: 20a08bfeaa0f7804d524858d3d8744bcc1b6dbc3
   flutter_contacts: 5383945387e7ca37cf963d4be57c21f2fc15ca9f
   flutter_foreground_task: a159d2c2173b33699ddb3e6c2a067045d7cebb89
   flutter_secure_storage: 1ed9476fba7e7a782b22888f956cce43e2c62f13
-  GA-SDK-IOS: 1bd8210bd7b34d2b4ff1f574718183ba3af91383
+  GA-SDK-IOS: f72b0e3271ffeaf4343db5eb3d00b268bd5153c9
   gal: baecd024ebfd13c441269ca7404792a7152fde89
-  gameanalytics_sdk: 3f871a7a843fdbba89b99071da23ccafdc6e7a70
+  gameanalytics_sdk: 6a2b8c5ad8c5fbab25e94b7c555ab728c0337906
+  gma_mediation_liftoffmonetize: 554399972380c074f9293bb284490e6a51c3c2d7
+  gma_mediation_meta: 54e627e72c72310eced40e7b03c98d1365efe22b
+  gma_mediation_mintegral: 66c8c5a5412fa55fe91ed0d11d548e050c796dbc
   Google-Mobile-Ads-SDK: 14f57f2dc33532a24db288897e26494640810407
   google_mobile_ads: 16ad301354fa6a7ea55770c6254bd4339bf8558b
   GoogleAdsOnDeviceConversion: 02fc8fe599acd867e328321effb0d9b2d023a38a
   GoogleAppMeasurement: 3b4687de50ab25ee2d4d541849f10ca8df862a12
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
+  GoogleMobileAdsMediationFacebook: 234b9cecc2f9c751567a71d035974c00e6803777
+  GoogleMobileAdsMediationMintegral: fa41384b29c36699bf703ab75ca6407e59d29b9b
+  GoogleMobileAdsMediationVungle: d090c301d492c458986c447972808c8d9efc1439
   GoogleUserMessagingPlatform: befe603da6501006420c206222acd449bba45a9c
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   "gRPC-C++": cc207623316fb041a7a3e774c252cf68a058b9e8
@@ -1796,6 +1863,7 @@ SPEC CHECKSUMS:
   in_app_review: 7dd1ea365263f834b8464673f9df72c80c17c937
   leveldb-library: cc8b8f8e013647a295ad3f8cd2ddf49a6f19be19
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
+  MintegralAdSDK: 88cc19314a1424a5d7f976c834030879017ed5f9
   mobile_scanner: 9157936403f5a0644ca3779a38ff8404c5434a93
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   network_info_plus: 16d8832ab43b7bc22b168d76fffcad9da35486d2
@@ -1813,6 +1881,7 @@ SPEC CHECKSUMS:
   url_launcher_ios: 694010445543906933d732453a59da0a173ae33d
   vibration: ca8104a8875b9c493e15b21b04e456befd0ff6eb
   video_thumbnail: b637e0ad5f588ca9945f6e2c927f73a69a661140
+  VungleAds: 7ceb822f20a6619d8d9ed6a616dacd8cc5b05036
   webview_flutter_wkwebview: 1821ceac936eba6f7984d89a9f3bcb4dea99ebb2
 
 PODFILE CHECKSUM: 78ff4e98f9a3d45cd3cb16b797222a8b6724612f
