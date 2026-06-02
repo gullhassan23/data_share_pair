@@ -8,7 +8,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
@@ -59,18 +58,6 @@ class PremiumPlan {
   });
 }
 
-class PurchaseVerificationResult {
-  final bool isValid;
-  final String environment;
-  final String? transactionId;
-
-  const PurchaseVerificationResult({
-    required this.isValid,
-    required this.environment,
-    this.transactionId,
-  });
-}
-
 class SubscriptionIAPService {
   SubscriptionIAPService._internal();
 
@@ -110,8 +97,6 @@ class SubscriptionIAPService {
   List<ProductDetails> _products = [];
   List<ProductDetails> get products => _products;
   final Set<String> _reportedPurchaseKeys = <String>{};
-  static const String _reportedPurchasePrefPrefix =
-      'firebase_reported_purchase_';
 
   Future<void> init() async {
     debugPrint('[SubscriptionIAP] init: starting...');
@@ -251,24 +236,15 @@ class SubscriptionIAPService {
           debugPrint(
             '[SubscriptionIAP] _onPurchaseUpdated: status=PURCHASED, verifying with backend...',
           );
-          final verification = await _verifyPurchaseWithBackend(purchaseDetails);
+          final isValid = await _verifyPurchaseWithBackend(purchaseDetails);
           debugPrint(
-            '[SubscriptionIAP] _onPurchaseUpdated: verification result isValid=${verification.isValid}, env=${verification.environment}',
+            '[SubscriptionIAP] _onPurchaseUpdated: verification result isValid=$isValid',
           );
-          if (verification.isValid) {
+          if (isValid) {
             setCachedPremium(true);
             // Persist immediately so app restart does not temporarily lose Pro state.
             await PremiumStatusStore.saveIsPremium(true);
-            if (verification.environment == 'production') {
-              await _reportSubscriptionRevenueToFirebase(
-                purchaseDetails,
-                verifiedTransactionId: verification.transactionId,
-              );
-            } else {
-              debugPrint(
-                '[SubscriptionIAP] _onPurchaseUpdated: skipping Firebase revenue log for non-production purchase',
-              );
-            }
+            await _reportSubscriptionRevenueToFirebase(purchaseDetails);
             debugPrint(
               '[SubscriptionIAP] _onPurchaseUpdated: success — premium granted',
             );
@@ -304,14 +280,14 @@ class SubscriptionIAPService {
           debugPrint(
             '[SubscriptionIAP] _onPurchaseUpdated: status=RESTORED, verifying with backend...',
           );
-          final verification = await _verifyPurchaseWithBackend(
+          final isValid = await _verifyPurchaseWithBackend(
             purchaseDetails,
             isRestore: true,
           );
           debugPrint(
-            '[SubscriptionIAP] _onPurchaseUpdated: restore verification isValid=${verification.isValid}, env=${verification.environment}',
+            '[SubscriptionIAP] _onPurchaseUpdated: restore verification isValid=$isValid',
           );
-          if (verification.isValid) {
+          if (isValid) {
             setCachedPremium(true);
             // Persist immediately so app restart does not temporarily lose Pro state.
             await PremiumStatusStore.saveIsPremium(true);
@@ -391,7 +367,7 @@ class SubscriptionIAPService {
     return null;
   }
 
-  Future<PurchaseVerificationResult> _verifyPurchaseWithBackend(
+  Future<bool> _verifyPurchaseWithBackend(
     PurchaseDetails purchaseDetails, {
     bool isRestore = false,
   }) async {
@@ -410,10 +386,7 @@ class SubscriptionIAPService {
         debugPrint(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: CLOUD_FUNCTION_URL missing in .env',
         );
-        return const PurchaseVerificationResult(
-          isValid: false,
-          environment: 'unknown',
-        );
+        return false;
       }
 
       final uri = Uri.parse(functionUrl);
@@ -436,43 +409,26 @@ class SubscriptionIAPService {
         debugPrint(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: failed status=${response.statusCode} body=${response.body}',
         );
-        return const PurchaseVerificationResult(
-          isValid: false,
-          environment: 'unknown',
-        );
+        return false;
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final isValid = decoded['isValid'] == true;
-      final environment =
-          (decoded['environment'] is String && decoded['environment'] != null)
-              ? decoded['environment'] as String
-              : 'unknown';
-      final transactionId =
-          decoded['transactionId'] is String ? decoded['transactionId'] as String : null;
       debugPrint(
-        '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid environment=$environment transactionId=$transactionId',
+        '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid',
       );
-      return PurchaseVerificationResult(
-        isValid: isValid,
-        environment: environment,
-        transactionId: transactionId,
-      );
+      return isValid;
     } catch (e, st) {
       debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: exception: $e');
       debugPrint(
         '[SubscriptionIAP] _verifyPurchaseWithBackend: stackTrace: $st',
       );
-      return const PurchaseVerificationResult(
-        isValid: false,
-        environment: 'unknown',
-      );
+      return false;
     }
   }
 
   Future<void> _reportSubscriptionRevenueToFirebase(
     PurchaseDetails purchaseDetails,
-    {String? verifiedTransactionId}
   ) async {
     final product = _products.cast<ProductDetails?>().firstWhere(
       (p) => p?.id == purchaseDetails.productID,
@@ -485,11 +441,10 @@ class SubscriptionIAPService {
       return;
     }
 
-    final transactionId = verifiedTransactionId ?? purchaseDetails.purchaseID;
+    final transactionId = purchaseDetails.purchaseID;
     final purchaseKey =
         '${purchaseDetails.productID}:${transactionId ?? purchaseDetails.transactionDate ?? ''}';
-    final alreadyReported = await _isPurchaseAlreadyReported(purchaseKey);
-    if (alreadyReported || _reportedPurchaseKeys.contains(purchaseKey)) {
+    if (_reportedPurchaseKeys.contains(purchaseKey)) {
       return;
     }
 
@@ -509,7 +464,6 @@ class SubscriptionIAPService {
         ],
       );
       _reportedPurchaseKeys.add(purchaseKey);
-      await _markPurchaseReported(purchaseKey);
       debugPrint(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: logged product=${product.id} value=${product.rawPrice} ${product.currencyCode}',
       );
@@ -521,22 +475,6 @@ class SubscriptionIAPService {
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: stackTrace: $st',
       );
     }
-  }
-
-  Future<bool> _isPurchaseAlreadyReported(String purchaseKey) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool('$_reportedPurchasePrefPrefix$purchaseKey') ?? false;
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<void> _markPurchaseReported(String purchaseKey) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('$_reportedPurchasePrefPrefix$purchaseKey', true);
-    } catch (_) {}
   }
 
   void dispose() {
