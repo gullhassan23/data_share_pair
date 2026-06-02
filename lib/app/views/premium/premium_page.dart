@@ -686,6 +686,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
 
   @override
   Widget build(BuildContext context) {
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
     final yearlySelected = _selectedId == widget.yearlyId;
     final weeklySelected = _selectedId == widget.weeklyId;
     final monthlySelected = _selectedId == widget.monthlyId;
@@ -730,7 +731,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
           onTap: () => setState(() => _selectedId = widget.weeklyId),
         ),
 
-        if (!_isFreeSendUsed) ...[
+        if (!_isFreeSendUsed && !isIOS) ...[
           const SizedBox(height: 16),
           InkWell(
             onTap:
