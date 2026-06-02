@@ -9,6 +9,20 @@ const USERS_COLLECTION = "Users";
 
 const APPSTORE_SHARED_SECRET = defineSecret("APPSTORE_SHARED_SECRET");
 
+/**
+ * Maps Apple verifyReceipt response to subscription environment for analytics.
+ * Sandbox/test purchases must not count as Firebase revenue.
+ */
+function resolveSubscriptionEnvironment(data, usedSandbox, { isFallback = false } = {}) {
+  if (isFallback) return "sandbox";
+  const appleEnv =
+    data && typeof data.environment === "string"
+      ? data.environment.toLowerCase()
+      : "";
+  const isSandbox = usedSandbox || appleEnv === "sandbox";
+  return isSandbox ? "sandbox" : "production";
+}
+
 async function sendFcmNotification({
   fcmToken,
   title,
@@ -201,7 +215,15 @@ exports.verifyAppleSubscription = onRequest(
             });
           }
         }
-        return res.status(200).json({ isValid: true });
+        const fallbackEnvironment = resolveSubscriptionEnvironment(
+          data,
+          usedSandbox,
+          { isFallback: true }
+        );
+        return res.status(200).json({
+          isValid: true,
+          environment: fallbackEnvironment,
+        });
       }
 
       const receiptInfo = Array.isArray(data.latest_receipt_info)
@@ -394,7 +416,8 @@ exports.verifyAppleSubscription = onRequest(
         }
       }
 
-      return res.status(200).json({ isValid: isPremium });
+      const environment = resolveSubscriptionEnvironment(data, usedSandbox);
+      return res.status(200).json({ isValid: isPremium, environment });
     } catch (e) {
       console.error("verifyAppleSubscription error:", e);
       return res.status(500).json({ isValid: false, error: "Internal error" });

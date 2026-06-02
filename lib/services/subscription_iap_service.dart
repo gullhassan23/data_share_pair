@@ -12,6 +12,20 @@ import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
+import 'package:share_app_latest/services/subscription_revenue_policy.dart';
+
+/// Result of backend receipt verification.
+class SubscriptionVerificationResult {
+  const SubscriptionVerificationResult({
+    required this.isValid,
+    required this.reportRevenue,
+    this.environment,
+  });
+
+  final bool isValid;
+  final bool reportRevenue;
+  final String? environment;
+}
 
 Set<String> get kPremiumProductIds {
   final isAndroid = Platform.isAndroid;
@@ -236,15 +250,23 @@ class SubscriptionIAPService {
           debugPrint(
             '[SubscriptionIAP] _onPurchaseUpdated: status=PURCHASED, verifying with backend...',
           );
-          final isValid = await _verifyPurchaseWithBackend(purchaseDetails);
+          final verification = await _verifyPurchaseWithBackend(purchaseDetails);
           debugPrint(
-            '[SubscriptionIAP] _onPurchaseUpdated: verification result isValid=$isValid',
+            '[SubscriptionIAP] _onPurchaseUpdated: verification isValid=${verification.isValid} '
+            'environment=${verification.environment} reportRevenue=${verification.reportRevenue}',
           );
-          if (isValid) {
+          if (verification.isValid) {
             setCachedPremium(true);
             // Persist immediately so app restart does not temporarily lose Pro state.
             await PremiumStatusStore.saveIsPremium(true);
-            await _reportSubscriptionRevenueToFirebase(purchaseDetails);
+            if (verification.reportRevenue) {
+              await _reportSubscriptionRevenueToFirebase(purchaseDetails);
+            } else {
+              debugPrint(
+                '[SubscriptionIAP] _onPurchaseUpdated: skipping Firebase revenue '
+                '(environment=${verification.environment ?? "unknown"})',
+              );
+            }
             debugPrint(
               '[SubscriptionIAP] _onPurchaseUpdated: success — premium granted',
             );
@@ -280,14 +302,15 @@ class SubscriptionIAPService {
           debugPrint(
             '[SubscriptionIAP] _onPurchaseUpdated: status=RESTORED, verifying with backend...',
           );
-          final isValid = await _verifyPurchaseWithBackend(
+          final verification = await _verifyPurchaseWithBackend(
             purchaseDetails,
             isRestore: true,
           );
           debugPrint(
-            '[SubscriptionIAP] _onPurchaseUpdated: restore verification isValid=$isValid',
+            '[SubscriptionIAP] _onPurchaseUpdated: restore verification '
+            'isValid=${verification.isValid} environment=${verification.environment}',
           );
-          if (isValid) {
+          if (verification.isValid) {
             setCachedPremium(true);
             // Persist immediately so app restart does not temporarily lose Pro state.
             await PremiumStatusStore.saveIsPremium(true);
@@ -367,7 +390,7 @@ class SubscriptionIAPService {
     return null;
   }
 
-  Future<bool> _verifyPurchaseWithBackend(
+  Future<SubscriptionVerificationResult> _verifyPurchaseWithBackend(
     PurchaseDetails purchaseDetails, {
     bool isRestore = false,
   }) async {
@@ -386,7 +409,10 @@ class SubscriptionIAPService {
         debugPrint(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: CLOUD_FUNCTION_URL missing in .env',
         );
-        return false;
+        return const SubscriptionVerificationResult(
+          isValid: false,
+          reportRevenue: false,
+        );
       }
 
       final uri = Uri.parse(functionUrl);
@@ -409,21 +435,35 @@ class SubscriptionIAPService {
         debugPrint(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: failed status=${response.statusCode} body=${response.body}',
         );
-        return false;
+        return const SubscriptionVerificationResult(
+          isValid: false,
+          reportRevenue: false,
+        );
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final isValid = decoded['isValid'] == true;
+      final environment = decoded['environment'] as String?;
+      final reportRevenue =
+          isValid && shouldReportSubscriptionRevenue(environment);
       debugPrint(
-        '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid',
+        '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid '
+        'environment=$environment reportRevenue=$reportRevenue',
       );
-      return isValid;
+      return SubscriptionVerificationResult(
+        isValid: isValid,
+        reportRevenue: reportRevenue,
+        environment: environment,
+      );
     } catch (e, st) {
       debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: exception: $e');
       debugPrint(
         '[SubscriptionIAP] _verifyPurchaseWithBackend: stackTrace: $st',
       );
-      return false;
+      return const SubscriptionVerificationResult(
+        isValid: false,
+        reportRevenue: false,
+      );
     }
   }
 
