@@ -582,7 +582,13 @@ This app verifies purchases on a backend (Firebase Cloud Function). Client sends
 
 Firestore is updated by the backend. The UI listens to Firestore in `PremiumController` (section 3.3).
 
-### 7.3 Cached premium for instant ad gating
+### 7.3 Firebase Analytics revenue (`purchase` vs `in_app_purchase`)
+
+Revenue is logged only for **production** subscriptions via `logPurchase()` after backend verification. Sandbox/TestFlight purchases grant premium but do **not** send revenue. GA4 event **`in_app_purchase`** (often auto-logged on iOS) is **not** the same as **`purchase`**.
+
+Full flow, GA4 checklist, and FAQ: **[IAP_ANALYTICS.md](IAP_ANALYTICS.md)**
+
+### 7.4 Cached premium for instant ad gating
 
 On app launch, cached premium is loaded so ads respect Pro immediately:
 
