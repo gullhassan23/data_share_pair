@@ -6,9 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/components/on_boardingbutton.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
-import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/services/analytics_screen_tracker.dart';
-import 'package:share_app_latest/services/one_time_free_send_store.dart';
 import 'package:share_app_latest/services/subscription_iap_service.dart';
 
 /// Premium subscription screen – dark theme, gradient accents, file-transfer focused content.
@@ -646,10 +644,8 @@ class _PremiumPlansSection extends StatefulWidget {
   State<_PremiumPlansSection> createState() => _PremiumPlansSectionState();
 }
 
-class _PremiumPlansSectionState extends State<_PremiumPlansSection>
-    with WidgetsBindingObserver {
+class _PremiumPlansSectionState extends State<_PremiumPlansSection> {
   late String _selectedId;
-  bool _isFreeSendUsed = true;
 
   static const String _fallbackWeeklyPrice = '2500';
   static const String _fallbackMonthlyPrice = '2900';
@@ -658,35 +654,11 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _selectedId = widget.yearlyId;
-    _loadFreeSendStatus();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadFreeSendStatus();
-    }
-  }
-
-  Future<void> _loadFreeSendStatus() async {
-    final used = await OneTimeFreeSendStore.hasUsedLocalThenRemote();
-    if (!mounted) return;
-    setState(() {
-      _isFreeSendUsed = used;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
     final yearlySelected = _selectedId == widget.yearlyId;
     final weeklySelected = _selectedId == widget.weeklyId;
     final monthlySelected = _selectedId == widget.monthlyId;
@@ -710,7 +682,7 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
           title: 'Yearly Plan',
           price: yearlyPrice,
           priceSuffix: 'per year',
-          badgeText: 'SAVE UP TO 88%',
+          badgeText: 'SAVE UP TO 90%',
           isSelected: yearlySelected,
           onTap: () => setState(() => _selectedId = widget.yearlyId),
         ),
@@ -730,30 +702,6 @@ class _PremiumPlansSectionState extends State<_PremiumPlansSection>
           isSelected: weeklySelected,
           onTap: () => setState(() => _selectedId = widget.weeklyId),
         ),
-
-        if (!_isFreeSendUsed && !isIOS) ...[
-          const SizedBox(height: 16),
-          InkWell(
-            onTap:
-                widget.isDisabled
-                    ? null
-                    : () {
-                      Get.toNamed(
-                        AppRoutes.choosemethodscan,
-                        arguments: <String, dynamic>{'isReceiver': false},
-                      )?.then((_) => _loadFreeSendStatus());
-                    },
-            child: Text(
-              'Continue without subscription (1 free send)',
-              style: GoogleFonts.roboto(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-                decoration: TextDecoration.underline,
-              ),
-            ),
-          ),
-        ],
         const SizedBox(height: 40),
         SizedBox(
           width: double.infinity,
