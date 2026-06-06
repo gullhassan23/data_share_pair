@@ -279,8 +279,6 @@ class SubscriptionIAPService {
                 expiryDate: c.subscriptionStatus.value?.expiryDate,
               );
             }
-            // Sync Adapty analytics/profile after successful purchase.
-            unawaited(AdaptyService.instance.syncAfterPurchaseOrRestore());
             // Real-time UI update: refresh Firestore status so premium page updates immediately.
             if (Get.isRegistered<PremiumController>()) {
               await Get.find<PremiumController>().refreshSubscriptionStatus();
@@ -294,6 +292,14 @@ class SubscriptionIAPService {
             await _inAppPurchase.completePurchase(purchaseDetails);
             debugPrint(
               '[SubscriptionIAP] _onPurchaseUpdated: purchase completed',
+            );
+          }
+          if (verification.isValid) {
+            // Adapty observer mode: report after store transaction is finished.
+            unawaited(
+              AdaptyService.instance.syncAfterPurchaseOrRestore(
+                purchaseDetails: purchaseDetails,
+              ),
             );
           }
           isLoading.value = false;
@@ -326,8 +332,6 @@ class SubscriptionIAPService {
                 expiryDate: c.subscriptionStatus.value?.expiryDate,
               );
             }
-            // Sync Adapty analytics/profile after successful restore.
-            unawaited(AdaptyService.instance.syncAfterPurchaseOrRestore());
             // Real-time UI update: refresh Firestore status so premium page updates immediately (like buy flow).
             if (Get.isRegistered<PremiumController>()) {
               await Get.find<PremiumController>().refreshSubscriptionStatus();
@@ -335,6 +339,13 @@ class SubscriptionIAPService {
           }
           if (purchaseDetails.pendingCompletePurchase) {
             await _inAppPurchase.completePurchase(purchaseDetails);
+          }
+          if (verification.isValid) {
+            unawaited(
+              AdaptyService.instance.syncAfterPurchaseOrRestore(
+                purchaseDetails: purchaseDetails,
+              ),
+            );
           }
           isLoading.value = false;
           break;
@@ -444,8 +455,11 @@ class SubscriptionIAPService {
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final isValid = decoded['isValid'] == true;
       final environment = decoded['environment'] as String?;
-      final reportRevenue =
-          isValid && shouldReportSubscriptionRevenue(environment);
+      final reportRevenue = isValid &&
+          shouldReportSubscriptionRevenue(
+            environment,
+            isAndroid: Platform.isAndroid,
+          );
       debugPrint(
         '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid '
         'environment=$environment reportRevenue=$reportRevenue',

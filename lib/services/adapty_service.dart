@@ -1,6 +1,8 @@
 import 'package:adapty_flutter/adapty_flutter.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 
 /// Adapty integration used for subscription analytics & validation.
@@ -25,11 +27,13 @@ class AdaptyService {
       await Adapty().activate(
         configuration: AdaptyConfiguration(
           apiKey: apiKey,
-        )..withLogLevel(
+        )
+          ..withObserverMode(true)
+          ..withLogLevel(
             kReleaseMode ? AdaptyLogLevel.error : AdaptyLogLevel.verbose,
           ),
       );
-      debugPrint('[Adapty] SDK activated');
+      debugPrint('[Adapty] SDK activated (observer mode)');
     } on AdaptyError catch (e, st) {
       // 3005 = "can only be activated once" – safe to ignore as success.
       if (e.code == 3005) {
@@ -49,12 +53,37 @@ class AdaptyService {
 
     _initialized = true;
 
+    await _linkFirebaseIntegration();
+
     // Identify user with the same device-based id used for backend.
     try {
       final userId = await getOrCreateUserId();
       await identifyUser(userId);
     } catch (e, st) {
       debugPrint('[Adapty] identify on init error: $e\n$st');
+    }
+  }
+
+  /// Links Adapty profile to Firebase so subscription revenue can sync to GA4.
+  Future<void> _linkFirebaseIntegration() async {
+    if (!_initialized) return;
+    try {
+      final appInstanceId = await FirebaseAnalytics.instance.appInstanceId;
+      if (appInstanceId == null || appInstanceId.isEmpty) {
+        debugPrint('[Adapty] Firebase appInstanceId unavailable');
+        return;
+      }
+      await Adapty().setIntegrationIdentifier(
+        key: 'firebase_app_instance_id',
+        value: appInstanceId,
+      );
+      debugPrint('[Adapty] linked firebase_app_instance_id');
+    } on AdaptyError catch (e, st) {
+      debugPrint(
+        '[Adapty] setIntegrationIdentifier error code=${e.code} message=${e.message}\n$st',
+      );
+    } catch (e, st) {
+      debugPrint('[Adapty] link Firebase integration error: $e\n$st');
     }
   }
 
@@ -111,14 +140,48 @@ class AdaptyService {
     return access != null && access.isActive;
   }
 
+  /// Report a store transaction to Adapty (required in observer mode with
+  /// [in_app_purchase]). Call after [InAppPurchase.completePurchase].
+  Future<void> reportTransaction(PurchaseDetails purchaseDetails) async {
+    if (!_initialized) return;
+
+    final transactionId = purchaseDetails.purchaseID;
+    if (transactionId == null || transactionId.isEmpty) {
+      debugPrint(
+        '[Adapty] reportTransaction skipped: missing transaction id '
+        'for ${purchaseDetails.productID}',
+      );
+      return;
+    }
+
+    try {
+      await Adapty().reportTransaction(transactionId: transactionId);
+      debugPrint(
+        '[Adapty] reportTransaction ok product=${purchaseDetails.productID} '
+        'transactionId=$transactionId',
+      );
+    } on AdaptyError catch (e, st) {
+      debugPrint(
+        '[Adapty] reportTransaction error code=${e.code} message=${e.message}\n$st',
+      );
+    } catch (e, st) {
+      debugPrint('[Adapty] reportTransaction unexpected error: $e\n$st');
+    }
+  }
+
   /// Call after a successful purchase or restore (after backend says premium=true).
-  Future<void> syncAfterPurchaseOrRestore() async {
+  Future<void> syncAfterPurchaseOrRestore({
+    PurchaseDetails? purchaseDetails,
+  }) async {
+    if (purchaseDetails != null) {
+      await reportTransaction(purchaseDetails);
+    }
+
     final profile = await _getProfile();
     if (profile == null) return;
 
     final adaptyPremium = _hasActivePremium(profile);
     debugPrint('[Adapty] syncAfterPurchaseOrRestore premium=$adaptyPremium');
-    // Optionally compare with backend premium in a separate job.
   }
 }
 
