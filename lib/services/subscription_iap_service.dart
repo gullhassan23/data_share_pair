@@ -8,6 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:share_app_latest/app/controllers/premium_controller.dart';
 import 'package:share_app_latest/utils/user_id.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
@@ -18,13 +19,16 @@ import 'package:share_app_latest/services/subscription_revenue_policy.dart';
 class SubscriptionVerificationResult {
   const SubscriptionVerificationResult({
     required this.isValid,
-    required this.reportRevenue,
+    this.verifiedByApple,
     this.environment,
+    this.appleStatus,
   });
 
   final bool isValid;
-  final bool reportRevenue;
+  /// `true` when Apple verifyReceipt succeeded (status 0). `false` for fallback.
+  final bool? verifiedByApple;
   final String? environment;
+  final int? appleStatus;
 }
 
 Set<String> get kPremiumProductIds {
@@ -208,9 +212,15 @@ class SubscriptionIAPService {
         '[SubscriptionIAP] buy: buyNonConsumable returned (result will come via purchase stream)',
       );
     } catch (e, st) {
+      isLoading.value = false;
+      final message = e.toString();
+      if (message.contains('purchase_cancelled') ||
+          message.contains('storekit2_purchase_cancelled')) {
+        debugPrint('[SubscriptionIAP] buy: user cancelled purchase');
+        return;
+      }
       debugPrint('[SubscriptionIAP] buy: exception: $e');
       debugPrint('[SubscriptionIAP] buy: stackTrace: $st');
-      isLoading.value = false;
       rethrow;
     }
   }
@@ -251,20 +261,43 @@ class SubscriptionIAPService {
             '[SubscriptionIAP] _onPurchaseUpdated: status=PURCHASED, verifying with backend...',
           );
           final verification = await _verifyPurchaseWithBackend(purchaseDetails);
+          final revenueDecision = evaluatePurchaseRevenue(
+            isValid: verification.isValid,
+            isRestore: false,
+            environment: verification.environment,
+            productId: purchaseDetails.productID,
+            transactionId: purchaseDetails.purchaseID,
+            verifiedByApple: verification.verifiedByApple,
+            isAndroid: Platform.isAndroid,
+          );
           debugPrint(
             '[SubscriptionIAP] _onPurchaseUpdated: verification isValid=${verification.isValid} '
-            'environment=${verification.environment} reportRevenue=${verification.reportRevenue}',
+            'verifiedByApple=${verification.verifiedByApple} '
+            'environment=${verification.environment} '
+            'reportRevenue=${revenueDecision.shouldReport}',
           );
           if (verification.isValid) {
             setCachedPremium(true);
             // Persist immediately so app restart does not temporarily lose Pro state.
             await PremiumStatusStore.saveIsPremium(true);
-            if (verification.reportRevenue) {
+            if (revenueDecision.shouldReport) {
+              debugPrint(
+                '[RevenueFix] reporting revenue productId=${purchaseDetails.productID} '
+                'environment=${verification.environment ?? "null"}',
+              );
               await _reportSubscriptionRevenueToFirebase(purchaseDetails);
             } else {
               debugPrint(
+                '[RevenueFix] reason=${revenueDecision.skipReason} '
+                'isValid=${verification.isValid} '
+                'verifiedByApple=${verification.verifiedByApple} '
+                'environment=${verification.environment ?? "null"} '
+                'productId=${purchaseDetails.productID} '
+                'transactionId=${purchaseDetails.purchaseID ?? "null"}',
+              );
+              debugPrint(
                 '[SubscriptionIAP] _onPurchaseUpdated: skipping Firebase revenue '
-                '(environment=${verification.environment ?? "unknown"})',
+                '(reason=${revenueDecision.skipReason})',
               );
             }
             debugPrint(
@@ -315,6 +348,12 @@ class SubscriptionIAPService {
           debugPrint(
             '[SubscriptionIAP] _onPurchaseUpdated: restore verification '
             'isValid=${verification.isValid} environment=${verification.environment}',
+          );
+          debugPrint(
+            '[RevenueFix] reason=restore_flow '
+            'isValid=${verification.isValid} '
+            'environment=${verification.environment ?? "null"} '
+            'productId=${purchaseDetails.productID}',
           );
           if (verification.isValid) {
             setCachedPremium(true);
@@ -401,6 +440,54 @@ class SubscriptionIAPService {
     return null;
   }
 
+  /// StoreKit 2 sends a JWS in [serverVerificationData]; legacy verifyReceipt needs
+  /// the App Store unified receipt (base64). Refresh when JWS is detected.
+  Future<Map<String, String>> _resolveAppleVerificationPayload(
+    PurchaseDetails purchaseDetails,
+  ) async {
+    final serverData =
+        purchaseDetails.verificationData.serverVerificationData.trim();
+
+    if (!Platform.isIOS) {
+      return {'receiptData': serverData};
+    }
+
+    final isJws =
+        serverData.startsWith('eyJ') && serverData.split('.').length == 3;
+    if (!isJws) {
+      return {'receiptData': serverData};
+    }
+
+    debugPrint(
+      '[SubscriptionIAP] StoreKit2 JWS detected — refreshing App Store receipt',
+    );
+
+    String? appReceipt;
+    try {
+      final addition = _inAppPurchase
+          .getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
+      final refreshed = await addition.refreshPurchaseVerificationData();
+      final refreshedReceipt = refreshed?.serverVerificationData.trim() ?? '';
+      if (refreshedReceipt.isNotEmpty &&
+          !refreshedReceipt.startsWith('eyJ')) {
+        appReceipt = refreshedReceipt;
+        debugPrint('[SubscriptionIAP] refreshed App Store receipt obtained');
+      }
+    } catch (e) {
+      debugPrint(
+        '[SubscriptionIAP] refreshPurchaseVerificationData failed: $e',
+      );
+    }
+
+    return {
+      'receiptData': appReceipt ?? serverData,
+      if (isJws) 'jwsRepresentation': serverData,
+      if (purchaseDetails.purchaseID != null &&
+          purchaseDetails.purchaseID!.isNotEmpty)
+        'transactionId': purchaseDetails.purchaseID!,
+    };
+  }
+
   Future<SubscriptionVerificationResult> _verifyPurchaseWithBackend(
     PurchaseDetails purchaseDetails, {
     bool isRestore = false,
@@ -409,8 +496,8 @@ class SubscriptionIAPService {
       '[SubscriptionIAP] _verifyPurchaseWithBackend: productId=${purchaseDetails.productID}, isRestore=$isRestore',
     );
     try {
-      final receiptData =
-          purchaseDetails.verificationData.serverVerificationData;
+      final applePayload = await _resolveAppleVerificationPayload(purchaseDetails);
+      final receiptData = applePayload['receiptData'] ?? '';
       final userId = await getOrCreateUserId();
       // Retry getToken() so APNS can become ready (iOS). Ensures notification + data both work.
       String? fcmToken = await _getFcmTokenWithRetry();
@@ -418,11 +505,14 @@ class SubscriptionIAPService {
       final functionUrl = dotenv.env['CLOUD_FUNCTION_URL'];
       if (functionUrl == null || functionUrl.isEmpty) {
         debugPrint(
+          '[RevenueFix] reason=missing_cloud_function_url',
+        );
+        debugPrint(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: CLOUD_FUNCTION_URL missing in .env',
         );
         return const SubscriptionVerificationResult(
           isValid: false,
-          reportRevenue: false,
+          verifiedByApple: false,
         );
       }
 
@@ -432,6 +522,10 @@ class SubscriptionIAPService {
         'receiptData': receiptData,
         'productId': purchaseDetails.productID,
         'userId': userId,
+        if (applePayload['jwsRepresentation'] != null)
+          'jwsRepresentation': applePayload['jwsRepresentation'],
+        if (applePayload['transactionId'] != null)
+          'transactionId': applePayload['transactionId'],
         if (fcmToken != null && fcmToken.isNotEmpty) 'fcmToken': fcmToken,
         if (isRestore) 'isRestore': true,
       };
@@ -444,39 +538,53 @@ class SubscriptionIAPService {
 
       if (response.statusCode != 200) {
         debugPrint(
+          '[RevenueFix] reason=backend_http_error '
+          'status=${response.statusCode} body=${response.body}',
+        );
+        debugPrint(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: failed status=${response.statusCode} body=${response.body}',
         );
         return const SubscriptionVerificationResult(
           isValid: false,
-          reportRevenue: false,
+          verifiedByApple: false,
         );
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final isValid = decoded['isValid'] == true;
       final environment = decoded['environment'] as String?;
-      final reportRevenue = isValid &&
-          shouldReportSubscriptionRevenue(
-            environment,
-            isAndroid: Platform.isAndroid,
-          );
+      final verifiedRaw = decoded['verified'];
+      final bool? verifiedByApple =
+          verifiedRaw is bool ? verifiedRaw : (isValid ? true : false);
+      final appleStatus = decoded['appleStatus'] is int
+          ? decoded['appleStatus'] as int
+          : null;
+      debugPrint(
+        '[RevenueFix] backend_response '
+        'isValid=$isValid verifiedByApple=$verifiedByApple '
+        'environment=$environment appleStatus=$appleStatus',
+      );
       debugPrint(
         '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid '
-        'environment=$environment reportRevenue=$reportRevenue',
+        'verifiedByApple=$verifiedByApple environment=$environment',
       );
       return SubscriptionVerificationResult(
         isValid: isValid,
-        reportRevenue: reportRevenue,
+        verifiedByApple: verifiedByApple,
         environment: environment,
+        appleStatus: appleStatus,
       );
     } catch (e, st) {
+      debugPrint(
+        '[RevenueFix] reason=backend_exception error=$e',
+      );
       debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: exception: $e');
       debugPrint(
         '[SubscriptionIAP] _verifyPurchaseWithBackend: stackTrace: $st',
       );
       return const SubscriptionVerificationResult(
         isValid: false,
-        reportRevenue: false,
+        verifiedByApple: false,
       );
     }
   }
@@ -484,11 +592,33 @@ class SubscriptionIAPService {
   Future<void> _reportSubscriptionRevenueToFirebase(
     PurchaseDetails purchaseDetails,
   ) async {
-    final product = _products.cast<ProductDetails?>().firstWhere(
+    debugPrint(
+      '[RevenueFix] _reportSubscriptionRevenueToFirebase: enter '
+      'productId=${purchaseDetails.productID} '
+      'transactionId=${purchaseDetails.purchaseID ?? "null"} '
+      'cachedProducts=${_products.map((p) => p.id).toList()}',
+    );
+    ProductDetails? product = _products.cast<ProductDetails?>().firstWhere(
       (p) => p?.id == purchaseDetails.productID,
       orElse: () => null,
     );
     if (product == null) {
+      debugPrint(
+        '[RevenueFix] reason=missing_product retrying product query '
+        'productId=${purchaseDetails.productID}',
+      );
+      await _loadProducts();
+      product = _products.cast<ProductDetails?>().firstWhere(
+        (p) => p?.id == purchaseDetails.productID,
+        orElse: () => null,
+      );
+    }
+    if (product == null) {
+      debugPrint(
+        '[RevenueFix] reason=missing_product '
+        'productId=${purchaseDetails.productID} '
+        'available=${_products.map((p) => p.id).toList()}',
+      );
       debugPrint(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: product not found for ${purchaseDetails.productID}',
       );
@@ -496,12 +626,27 @@ class SubscriptionIAPService {
     }
 
     final transactionId = purchaseDetails.purchaseID;
-    final purchaseKey =
-        '${purchaseDetails.productID}:${transactionId ?? purchaseDetails.transactionDate ?? ''}';
-    if (_reportedPurchaseKeys.contains(purchaseKey)) {
+    if (transactionId == null || transactionId.isEmpty) {
+      debugPrint(
+        '[RevenueFix] reason=missing_transaction_id '
+        'productId=${purchaseDetails.productID}',
+      );
       return;
     }
 
+    final purchaseKey = '${purchaseDetails.productID}:$transactionId';
+    if (_reportedPurchaseKeys.contains(purchaseKey)) {
+      debugPrint(
+        '[RevenueFix] reason=duplicate_purchase purchaseKey=$purchaseKey',
+      );
+      return;
+    }
+
+    debugPrint(
+      '[RevenueFix] FirebaseAnalytics.logPurchase: invoking '
+      'productId=${product.id} currency=${product.currencyCode} '
+      'value=${product.rawPrice} transactionId=$transactionId',
+    );
     try {
       await FirebaseAnalytics.instance.logPurchase(
         currency: product.currencyCode,
@@ -519,9 +664,17 @@ class SubscriptionIAPService {
       );
       _reportedPurchaseKeys.add(purchaseKey);
       debugPrint(
+        '[RevenueFix] FirebaseAnalytics.logPurchase: SUCCESS '
+        'productId=${product.id} value=${product.rawPrice} ${product.currencyCode} '
+        'purchaseKey=$purchaseKey',
+      );
+      debugPrint(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: logged product=${product.id} value=${product.rawPrice} ${product.currencyCode}',
       );
     } catch (e, st) {
+      debugPrint(
+        '[RevenueFix] reason=log_purchase_failed error=$e',
+      );
       debugPrint(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: failed: $e',
       );

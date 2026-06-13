@@ -11,16 +11,174 @@ const APPSTORE_SHARED_SECRET = defineSecret("APPSTORE_SHARED_SECRET");
 
 /**
  * Maps Apple verifyReceipt response to subscription environment for analytics.
- * Sandbox/test purchases must not count as Firebase revenue.
+ * Trusts Apple's environment when present; otherwise infers from verify URL used.
  */
-function resolveSubscriptionEnvironment(data, usedSandbox, { isFallback = false } = {}) {
-  if (isFallback) return "sandbox";
+function resolveSubscriptionEnvironment(data, usedSandbox) {
   const appleEnv =
     data && typeof data.environment === "string"
       ? data.environment.toLowerCase()
       : "";
-  const isSandbox = usedSandbox || appleEnv === "sandbox";
-  return isSandbox ? "sandbox" : "production";
+  if (appleEnv === "sandbox") return "sandbox";
+  if (appleEnv === "production") return "production";
+  return usedSandbox ? "sandbox" : "production";
+}
+
+function isAppleJws(value) {
+  return (
+    typeof value === "string" &&
+    value.startsWith("eyJ") &&
+    value.split(".").length === 3
+  );
+}
+
+function decodeAppleJwsPayload(jws) {
+  const part = jws.split(".")[1];
+  if (!part) return null;
+  const padded = part + "=".repeat((4 - (part.length % 4)) % 4);
+  const json = Buffer.from(
+    padded.replace(/-/g, "+").replace(/_/g, "/"),
+    "base64"
+  ).toString("utf8");
+  return JSON.parse(json);
+}
+
+function environmentFromJwsPayload(payload) {
+  const env =
+    payload && typeof payload.environment === "string"
+      ? payload.environment.toLowerCase()
+      : "";
+  return env === "sandbox" ? "sandbox" : "production";
+}
+
+async function persistSubscriptionState({
+  userId,
+  productId,
+  isPremium,
+  expiryDate,
+  autoRenewStatus,
+  fcmToken,
+  isRestore,
+  environment,
+  source,
+  transactionId,
+  appleStatus,
+}) {
+  const userRef = db.collection(USERS_COLLECTION).doc(userId);
+  const updateData = {
+    isPremium,
+    productId,
+    expiryDate: expiryDate
+      ? admin.firestore.Timestamp.fromDate(expiryDate)
+      : null,
+    autoRenewStatus,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  if (fcmToken && typeof fcmToken === "string") {
+    updateData.fcmToken = fcmToken;
+  }
+  await userRef.set(updateData, { merge: true });
+
+  try {
+    const docId = transactionId || `${Date.now()}`;
+    await userRef
+      .collection("subscriptions")
+      .doc(docId)
+      .set(
+        {
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+          productId,
+          isPremium,
+          expiryDate: expiryDate
+            ? admin.firestore.Timestamp.fromDate(expiryDate)
+            : null,
+          autoRenewStatus,
+          transactionId,
+          status: appleStatus ?? 0,
+          environment,
+          isRestore: !!isRestore,
+          source,
+        },
+        { merge: true }
+      );
+  } catch (e) {
+    console.error("Subscription history write failed:", e);
+  }
+}
+
+async function verifyStoreKit2Jws({
+  jws,
+  productId,
+  userId,
+  fcmToken,
+  isRestore,
+}) {
+  let payload;
+  try {
+    payload = decodeAppleJwsPayload(jws);
+  } catch (e) {
+    console.error("StoreKit2 JWS decode failed:", e);
+    return null;
+  }
+  if (!payload || typeof payload !== "object") return null;
+
+  const txProductId = payload.productId;
+  if (txProductId && txProductId !== productId) {
+    console.error("StoreKit2 JWS product mismatch", {
+      expected: productId,
+      actual: txProductId,
+    });
+    return {
+      isValid: false,
+      environment: environmentFromJwsPayload(payload),
+      verified: false,
+      appleStatus: -1,
+      error: "product_mismatch",
+    };
+  }
+
+  const expiresMs = payload.expiresDate;
+  const expiryDate =
+    expiresMs != null && !Number.isNaN(Number(expiresMs))
+      ? new Date(Number(expiresMs))
+      : null;
+  const now = new Date();
+  const isPremium =
+    expiryDate && expiryDate.getTime() > now.getTime() ? true : false;
+  const environment = environmentFromJwsPayload(payload);
+  const transactionId =
+    payload.transactionId != null ? String(payload.transactionId) : null;
+
+  await persistSubscriptionState({
+    userId,
+    productId,
+    isPremium,
+    expiryDate,
+    autoRenewStatus: payload.revocationDate ? "0" : "1",
+    fcmToken,
+    isRestore,
+    environment,
+    source: "storekit2_jws",
+    transactionId,
+    appleStatus: 0,
+  });
+
+  console.log(
+    "verifyAppleSubscription: StoreKit2 JWS",
+    JSON.stringify({
+      environment,
+      isPremium,
+      productId,
+      userId,
+      transactionId,
+    })
+  );
+
+  return {
+    isValid: isPremium,
+    environment,
+    verified: true,
+    source: "storekit2_jws",
+  };
 }
 
 async function sendFcmNotification({
@@ -56,7 +214,8 @@ exports.verifyAppleSubscription = onRequest(
         return res.status(405).send("Method not allowed");
       }
 
-      const { receiptData, productId, userId, fcmToken, isRestore } = req.body || {};
+      const { receiptData, productId, userId, fcmToken, isRestore, jwsRepresentation, transactionId } =
+        req.body || {};
 
       if (isRestore) {
         console.log("verifyAppleSubscription: restore flow", { userId, productId });
@@ -69,13 +228,38 @@ exports.verifyAppleSubscription = onRequest(
         });
       }
 
+      const jws =
+        (typeof jwsRepresentation === "string" && jwsRepresentation) ||
+        (isAppleJws(receiptData) ? receiptData : null);
+
+      if (jws) {
+        const jwsResult = await verifyStoreKit2Jws({
+          jws,
+          productId,
+          userId,
+          fcmToken,
+          isRestore,
+        });
+        if (jwsResult) {
+          return res.status(200).json(jwsResult);
+        }
+      }
+
+      const legacyReceipt = isAppleJws(receiptData) ? null : receiptData;
+      if (!legacyReceipt) {
+        return res.status(400).json({
+          isValid: false,
+          error: "Missing legacy App Store receipt for verifyReceipt",
+        });
+      }
+
       const APPLE_VERIFY_URL_PROD = "https://buy.itunes.apple.com/verifyReceipt";
       const APPLE_VERIFY_URL_SANDBOX =
         "https://sandbox.itunes.apple.com/verifyReceipt";
 
       const sharedSecret = APPSTORE_SHARED_SECRET.value();
       const payload = {
-        "receipt-data": receiptData,
+        "receipt-data": legacyReceipt,
         password: sharedSecret,
         "exclude-old-transactions": true,
       };
@@ -100,8 +284,37 @@ exports.verifyAppleSubscription = onRequest(
       }
 
       if (data.status !== 0) {
-        console.error("Apple verification failed:", data);
-        // DEV fallback: still grant premium with 30/365 days for testing
+        console.error(
+          "Apple verification failed:",
+          JSON.stringify({
+            status: data.status,
+            usedSandbox,
+            environment: data.environment ?? null,
+            productId,
+            userId,
+          })
+        );
+
+        // Sandbox-only fallback: keep premium for sandbox QA when verify still fails.
+        // Production verification failures must NOT grant premium or fake revenue env.
+        if (!usedSandbox) {
+          console.log(
+            "verifyAppleSubscription: production verify failed — no fallback",
+            JSON.stringify({
+              status: data.status,
+              productId,
+              userId,
+            })
+          );
+          return res.status(200).json({
+            isValid: false,
+            environment: "production",
+            verified: false,
+            appleStatus: data.status,
+            error: "apple_verification_failed",
+          });
+        }
+
         const now = new Date();
         const days =
           typeof productId === "string" && productId.includes("yearly")
@@ -215,14 +428,23 @@ exports.verifyAppleSubscription = onRequest(
             });
           }
         }
-        const fallbackEnvironment = resolveSubscriptionEnvironment(
-          data,
-          usedSandbox,
-          { isFallback: true }
+        console.log(
+          "verifyAppleSubscription: sandbox DEV fallback",
+          JSON.stringify({
+            status: data.status,
+            usedSandbox,
+            appleEnvironment: data.environment ?? null,
+            resolvedEnvironment: "sandbox",
+            productId,
+            userId,
+          })
         );
         return res.status(200).json({
           isValid: true,
-          environment: fallbackEnvironment,
+          environment: "sandbox",
+          verified: false,
+          appleStatus: data.status,
+          source: "sandbox_dev_fallback",
         });
       }
 
@@ -417,7 +639,23 @@ exports.verifyAppleSubscription = onRequest(
       }
 
       const environment = resolveSubscriptionEnvironment(data, usedSandbox);
-      return res.status(200).json({ isValid: isPremium, environment });
+      console.log(
+        "verifyAppleSubscription: success",
+        JSON.stringify({
+          status: data.status,
+          usedSandbox,
+          appleEnvironment: data.environment ?? null,
+          resolvedEnvironment: environment,
+          isPremium,
+          productId,
+          userId,
+        })
+      );
+      return res.status(200).json({
+        isValid: isPremium,
+        environment,
+        verified: true,
+      });
     } catch (e) {
       console.error("verifyAppleSubscription error:", e);
       return res.status(500).json({ isValid: false, error: "Internal error" });

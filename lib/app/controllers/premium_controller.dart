@@ -54,27 +54,33 @@ class PremiumController extends GetxController {
         .collection('Users')
         .doc(uid)
         .snapshots()
-        .listen((doc) {
-      if (!doc.exists) {
-        subscriptionStatus.value = const SubscriptionStatus(isPremium: false);
-      } else {
-        final data = doc.data()!;
-        subscriptionStatus.value = SubscriptionStatus(
-          isPremium: data['isPremium'] == true,
-          productId: data['productId'] as String?,
-          expiryDate: (data['expiryDate'] as Timestamp?)?.toDate(),
-        );
-      }
+        .listen(
+      (doc) {
+        if (!doc.exists) {
+          subscriptionStatus.value = const SubscriptionStatus(isPremium: false);
+        } else {
+          final data = doc.data()!;
+          subscriptionStatus.value = SubscriptionStatus(
+            isPremium: data['isPremium'] == true,
+            productId: data['productId'] as String?,
+            expiryDate: (data['expiryDate'] as Timestamp?)?.toDate(),
+          );
+        }
 
-      // Persist and sync premium status for use by ad logic.
-      final current = subscriptionStatus.value;
-      final isPro = current?.isPremium == true;
-      SubscriptionIAPService().setCachedPremium(isPro);
-      // Fire-and-forget; ads can read this synchronously on next launch.
-      PremiumStatusStore.saveIsPremium(isPro);
-      GameAnalyticsService.setPremiumDimension(isPro);
-      isLoading.value = false;
-    });
+        // Persist and sync premium status for use by ad logic.
+        final current = subscriptionStatus.value;
+        final isPro = current?.isPremium == true;
+        SubscriptionIAPService().setCachedPremium(isPro);
+        // Fire-and-forget; ads can read this synchronously on next launch.
+        PremiumStatusStore.saveIsPremium(isPro);
+        GameAnalyticsService.setPremiumDimension(isPro);
+        isLoading.value = false;
+      },
+      onError: (Object error) {
+        debugPrint('[PremiumController] Firestore listener error: $error');
+        isLoading.value = false;
+      },
+    );
   }
 
   Future<void> buy(String productId) async {

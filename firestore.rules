@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Device-based user ids created by the app (no Firebase Auth).
+    match /Users/{userId} {
+      allow read, write: if userId.matches('^device_[0-9]+_[0-9]+$');
+    }
+
+    match /Users/{userId}/subscriptions/{subscriptionId} {
+      allow read: if userId.matches('^device_[0-9]+_[0-9]+$');
+      allow write: if false;
+    }
+  }
+}

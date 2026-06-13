@@ -1,22 +1,15 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 
-function resolveSubscriptionEnvironment(data, usedSandbox, { isFallback = false } = {}) {
-  if (isFallback) return "sandbox";
+function resolveSubscriptionEnvironment(data, usedSandbox) {
   const appleEnv =
     data && typeof data.environment === "string"
       ? data.environment.toLowerCase()
       : "";
-  const isSandbox = usedSandbox || appleEnv === "sandbox";
-  return isSandbox ? "sandbox" : "production";
+  if (appleEnv === "sandbox") return "sandbox";
+  if (appleEnv === "production") return "production";
+  return usedSandbox ? "sandbox" : "production";
 }
-
-test("fallback verification is always sandbox", () => {
-  assert.equal(
-    resolveSubscriptionEnvironment({}, false, { isFallback: true }),
-    "sandbox"
-  );
-});
 
 test("Apple Sandbox environment maps to sandbox", () => {
   assert.equal(
@@ -25,13 +18,24 @@ test("Apple Sandbox environment maps to sandbox", () => {
   );
 });
 
-test("status 21007 retry sets usedSandbox to production path", () => {
-  assert.equal(resolveSubscriptionEnvironment({ environment: "Production" }, true), "sandbox");
-});
-
-test("production receipt maps to production", () => {
+test("Apple Production environment maps to production", () => {
   assert.equal(
     resolveSubscriptionEnvironment({ environment: "Production" }, false),
     "production"
+  );
+});
+
+test("missing Apple environment with usedSandbox infers sandbox", () => {
+  assert.equal(resolveSubscriptionEnvironment({}, true), "sandbox");
+});
+
+test("missing Apple environment without usedSandbox infers production", () => {
+  assert.equal(resolveSubscriptionEnvironment({}, false), "production");
+});
+
+test("21007 sandbox retry still maps sandbox when Apple says Sandbox", () => {
+  assert.equal(
+    resolveSubscriptionEnvironment({ environment: "Sandbox" }, true),
+    "sandbox"
   );
 });
