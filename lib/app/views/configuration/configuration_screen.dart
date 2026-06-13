@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_app_latest/app/views/configuration/how_it_works_screen.dart';
+import 'package:share_app_latest/app/views/configuration/subscription_analytics_report_screen.dart';
 import 'package:share_app_latest/routes/app_routes.dart';
 import 'package:share_app_latest/components/bg_container.dart';
 import 'package:share_app_latest/routes/app_navigator.dart';
@@ -422,6 +423,17 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                       icon: "assets/icons/Rate Us.png",
                       label: 'Rate Us',
                       onTap: () => _openRateUs(context),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildMenuTile(
+                      leading: _circleIcon(Icons.analytics_outlined),
+                      label: 'Firebase IAP Report',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const SubscriptionAnalyticsReportScreen(),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 10),
                     _buildMenuTile(

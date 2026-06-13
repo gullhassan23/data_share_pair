@@ -14,6 +14,8 @@ import 'package:share_app_latest/utils/user_id.dart';
 import 'package:share_app_latest/services/adapty_service.dart';
 import 'package:share_app_latest/services/premium_status_store.dart';
 import 'package:share_app_latest/services/subscription_revenue_policy.dart';
+import 'package:share_app_latest/services/subscription_analytics_report_store.dart';
+import 'package:share_app_latest/utils/release_safe_log.dart';
 
 /// Result of backend receipt verification.
 class SubscriptionVerificationResult {
@@ -53,7 +55,7 @@ Set<String> get kPremiumProductIds {
   if (weekly != null && weekly.isNotEmpty) ids.add(weekly);
 
   if (ids.isEmpty) {
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] Missing IAP product IDs in .env '
       '(IAP_PRODUCT_* / IAP_ANDROID_PRODUCT_*).',
     );
@@ -117,13 +119,13 @@ class SubscriptionIAPService {
   final Set<String> _reportedPurchaseKeys = <String>{};
 
   Future<void> init() async {
-    debugPrint('[SubscriptionIAP] init: starting...');
+    iapDebugLog('[SubscriptionIAP] init: starting...');
     isLoading.value = true;
     final available = await _inAppPurchase.isAvailable();
     _isAvailable = available;
-    debugPrint('[SubscriptionIAP] init: isAvailable=$available');
+    iapDebugLog('[SubscriptionIAP] init: isAvailable=$available');
     if (!available) {
-      debugPrint('[SubscriptionIAP] init: aborting (IAP not available)');
+      iapDebugLog('[SubscriptionIAP] init: aborting (IAP not available)');
       isLoading.value = false;
       return;
     }
@@ -131,24 +133,24 @@ class SubscriptionIAPService {
     _subscription ??= _inAppPurchase.purchaseStream.listen(
       _onPurchaseUpdated,
       onError: (e) {
-        debugPrint('[SubscriptionIAP] purchaseStream error: $e');
+        iapDebugLog('[SubscriptionIAP] purchaseStream error: $e');
       },
       onDone: () {
-        debugPrint('[SubscriptionIAP] purchaseStream done');
+        iapDebugLog('[SubscriptionIAP] purchaseStream done');
         _subscription?.cancel();
       },
     );
-    debugPrint('[SubscriptionIAP] init: purchase stream listener attached');
+    iapDebugLog('[SubscriptionIAP] init: purchase stream listener attached');
 
     await _loadProducts();
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] init: completed (products count: ${_products.length})',
     );
     isLoading.value = false;
   }
 
   Future<void> _loadProducts() async {
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] _loadProducts: querying product IDs: $kPremiumProductIds',
     );
     final response = await _inAppPurchase.queryProductDetails(
@@ -156,14 +158,14 @@ class SubscriptionIAPService {
     );
 
     if (response.error != null) {
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] _loadProducts: query error: ${response.error}',
       );
       return;
     }
 
     _products = response.productDetails;
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] _loadProducts: fetched ${_products.length} product(s): ${_products.map((p) => p.id).toList()}',
     );
   }
@@ -184,11 +186,11 @@ class SubscriptionIAPService {
   }
 
   Future<void> buy(String productId) async {
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] buy: productId=$productId, isAvailable=$_isAvailable',
     );
     if (!_isAvailable) {
-      debugPrint('[SubscriptionIAP] buy: aborting (IAP not available)');
+      iapDebugLog('[SubscriptionIAP] buy: aborting (IAP not available)');
       return;
     }
 
@@ -197,18 +199,18 @@ class SubscriptionIAPService {
       orElse: () => null,
     );
     if (product == null) {
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] buy: product not found: $productId (available: ${_products.map((p) => p.id).toList()})',
       );
       return;
     }
 
     final purchaseParam = PurchaseParam(productDetails: product);
-    debugPrint('[SubscriptionIAP] buy: starting purchase for ${product.id}');
+    iapDebugLog('[SubscriptionIAP] buy: starting purchase for ${product.id}');
     isLoading.value = true;
     try {
       await _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] buy: buyNonConsumable returned (result will come via purchase stream)',
       );
     } catch (e, st) {
@@ -216,27 +218,27 @@ class SubscriptionIAPService {
       final message = e.toString();
       if (message.contains('purchase_cancelled') ||
           message.contains('storekit2_purchase_cancelled')) {
-        debugPrint('[SubscriptionIAP] buy: user cancelled purchase');
+        iapDebugLog('[SubscriptionIAP] buy: user cancelled purchase');
         return;
       }
-      debugPrint('[SubscriptionIAP] buy: exception: $e');
-      debugPrint('[SubscriptionIAP] buy: stackTrace: $st');
+      iapDebugLog('[SubscriptionIAP] buy: exception: $e');
+      iapDebugLog('[SubscriptionIAP] buy: stackTrace: $st');
       rethrow;
     }
   }
 
   Future<void> restorePurchases() async {
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] restorePurchases: starting, isAvailable=$_isAvailable',
     );
     if (!_isAvailable) {
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] restorePurchases: aborting (IAP not available)',
       );
       return;
     }
     await _inAppPurchase.restorePurchases();
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] restorePurchases: restore call completed (results via purchase stream)',
     );
   }
@@ -244,165 +246,61 @@ class SubscriptionIAPService {
   Future<void> _onPurchaseUpdated(
     List<PurchaseDetails> purchaseDetailsList,
   ) async {
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] _onPurchaseUpdated: received ${purchaseDetailsList.length} update(s)',
     );
     for (final purchaseDetails in purchaseDetailsList) {
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] _onPurchaseUpdated: productId=${purchaseDetails.productID}, status=${purchaseDetails.status}',
       );
       switch (purchaseDetails.status) {
         case PurchaseStatus.pending:
-          debugPrint('[SubscriptionIAP] _onPurchaseUpdated: status=PENDING');
+          iapDebugLog('[SubscriptionIAP] _onPurchaseUpdated: status=PENDING');
           isLoading.value = true;
           break;
         case PurchaseStatus.purchased:
-          debugPrint(
+          iapDebugLog(
             '[SubscriptionIAP] _onPurchaseUpdated: status=PURCHASED, verifying with backend...',
           );
-          final verification = await _verifyPurchaseWithBackend(purchaseDetails);
-          final revenueDecision = evaluatePurchaseRevenue(
-            isValid: verification.isValid,
-            isRestore: false,
-            environment: verification.environment,
-            productId: purchaseDetails.productID,
-            transactionId: purchaseDetails.purchaseID,
-            verifiedByApple: verification.verifiedByApple,
-            isAndroid: Platform.isAndroid,
+          final purchasedVerification =
+              await _verifyPurchaseWithBackend(purchaseDetails);
+          await _handleVerifiedPurchaseUpdate(
+            purchaseDetails: purchaseDetails,
+            verification: purchasedVerification,
+            isRestoreFlow: false,
           );
-          debugPrint(
-            '[SubscriptionIAP] _onPurchaseUpdated: verification isValid=${verification.isValid} '
-            'verifiedByApple=${verification.verifiedByApple} '
-            'environment=${verification.environment} '
-            'reportRevenue=${revenueDecision.shouldReport}',
-          );
-          if (verification.isValid) {
-            setCachedPremium(true);
-            // Persist immediately so app restart does not temporarily lose Pro state.
-            await PremiumStatusStore.saveIsPremium(true);
-            if (revenueDecision.shouldReport) {
-              debugPrint(
-                '[RevenueFix] reporting revenue productId=${purchaseDetails.productID} '
-                'environment=${verification.environment ?? "null"}',
-              );
-              await _reportSubscriptionRevenueToFirebase(purchaseDetails);
-            } else {
-              debugPrint(
-                '[RevenueFix] reason=${revenueDecision.skipReason} '
-                'isValid=${verification.isValid} '
-                'verifiedByApple=${verification.verifiedByApple} '
-                'environment=${verification.environment ?? "null"} '
-                'productId=${purchaseDetails.productID} '
-                'transactionId=${purchaseDetails.purchaseID ?? "null"}',
-              );
-              debugPrint(
-                '[SubscriptionIAP] _onPurchaseUpdated: skipping Firebase revenue '
-                '(reason=${revenueDecision.skipReason})',
-              );
-            }
-            debugPrint(
-              '[SubscriptionIAP] _onPurchaseUpdated: success — premium granted',
-            );
-            // Immediate UI update (do not wait for Firestore roundtrip).
-            if (Get.isRegistered<PremiumController>()) {
-              final c = Get.find<PremiumController>();
-              c.subscriptionStatus.value = SubscriptionStatus(
-                isPremium: true,
-                productId: purchaseDetails.productID,
-                expiryDate: c.subscriptionStatus.value?.expiryDate,
-              );
-            }
-            // Real-time UI update: refresh Firestore status so premium page updates immediately.
-            if (Get.isRegistered<PremiumController>()) {
-              await Get.find<PremiumController>().refreshSubscriptionStatus();
-            }
-          } else {
-            debugPrint(
-              '[SubscriptionIAP] _onPurchaseUpdated: verification failed — premium not granted',
-            );
-          }
-          if (purchaseDetails.pendingCompletePurchase) {
-            await _inAppPurchase.completePurchase(purchaseDetails);
-            debugPrint(
-              '[SubscriptionIAP] _onPurchaseUpdated: purchase completed',
-            );
-          }
-          if (verification.isValid) {
-            // Adapty observer mode: report after store transaction is finished.
-            unawaited(
-              AdaptyService.instance.syncAfterPurchaseOrRestore(
-                purchaseDetails: purchaseDetails,
-              ),
-            );
-          }
           isLoading.value = false;
           break;
         case PurchaseStatus.restored:
-          debugPrint(
+          iapDebugLog(
             '[SubscriptionIAP] _onPurchaseUpdated: status=RESTORED, verifying with backend...',
           );
-          final verification = await _verifyPurchaseWithBackend(
+          final restoredVerification = await _verifyPurchaseWithBackend(
             purchaseDetails,
             isRestore: true,
           );
-          debugPrint(
-            '[SubscriptionIAP] _onPurchaseUpdated: restore verification '
-            'isValid=${verification.isValid} environment=${verification.environment}',
+          await _handleVerifiedPurchaseUpdate(
+            purchaseDetails: purchaseDetails,
+            verification: restoredVerification,
+            isRestoreFlow: true,
           );
-          debugPrint(
-            '[RevenueFix] reason=restore_flow '
-            'isValid=${verification.isValid} '
-            'environment=${verification.environment ?? "null"} '
-            'productId=${purchaseDetails.productID}',
-          );
-          if (verification.isValid) {
-            setCachedPremium(true);
-            // Persist immediately so app restart does not temporarily lose Pro state.
-            await PremiumStatusStore.saveIsPremium(true);
-            debugPrint(
-              '[SubscriptionIAP] _onPurchaseUpdated: restore success — premium granted',
-            );
-            // Immediate UI update (do not wait for Firestore roundtrip).
-            if (Get.isRegistered<PremiumController>()) {
-              final c = Get.find<PremiumController>();
-              c.subscriptionStatus.value = SubscriptionStatus(
-                isPremium: true,
-                productId: purchaseDetails.productID,
-                expiryDate: c.subscriptionStatus.value?.expiryDate,
-              );
-            }
-            // Real-time UI update: refresh Firestore status so premium page updates immediately (like buy flow).
-            if (Get.isRegistered<PremiumController>()) {
-              await Get.find<PremiumController>().refreshSubscriptionStatus();
-            }
-          }
-          if (purchaseDetails.pendingCompletePurchase) {
-            await _inAppPurchase.completePurchase(purchaseDetails);
-          }
-          if (verification.isValid) {
-            unawaited(
-              AdaptyService.instance.syncAfterPurchaseOrRestore(
-                purchaseDetails: purchaseDetails,
-              ),
-            );
-          }
           isLoading.value = false;
           break;
         case PurchaseStatus.error:
-          debugPrint(
+          iapDebugLog(
             '[SubscriptionIAP] _onPurchaseUpdated: status=ERROR: ${purchaseDetails.error}',
           );
           isLoading.value = false;
           break;
         case PurchaseStatus.canceled:
-          debugPrint(
+          iapDebugLog(
             '[SubscriptionIAP] _onPurchaseUpdated: status=CANCELED (user cancelled)',
           );
           isLoading.value = false;
           break;
         // ignore: unreachable_switch_default
         default:
-          debugPrint(
+          iapDebugLog(
             '[SubscriptionIAP] _onPurchaseUpdated: status=OTHER (${purchaseDetails.status})',
           );
           isLoading.value = false;
@@ -420,13 +318,13 @@ class SubscriptionIAPService {
       try {
         final token = await FirebaseMessaging.instance.getToken();
         if (token != null && token.isNotEmpty) {
-          debugPrint(
+          iapDebugLog(
             '[SubscriptionIAP] _getFcmTokenWithRetry: token obtained on attempt $attempt',
           );
           return token;
         }
       } catch (e) {
-        debugPrint(
+        iapDebugLog(
           '[SubscriptionIAP] _getFcmTokenWithRetry: attempt $attempt failed: $e',
         );
         if (attempt < maxAttempts) {
@@ -434,7 +332,7 @@ class SubscriptionIAPService {
         }
       }
     }
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] _getFcmTokenWithRetry: no token after $maxAttempts attempts',
     );
     return null;
@@ -458,7 +356,7 @@ class SubscriptionIAPService {
       return {'receiptData': serverData};
     }
 
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] StoreKit2 JWS detected — refreshing App Store receipt',
     );
 
@@ -471,10 +369,10 @@ class SubscriptionIAPService {
       if (refreshedReceipt.isNotEmpty &&
           !refreshedReceipt.startsWith('eyJ')) {
         appReceipt = refreshedReceipt;
-        debugPrint('[SubscriptionIAP] refreshed App Store receipt obtained');
+        iapDebugLog('[SubscriptionIAP] refreshed App Store receipt obtained');
       }
     } catch (e) {
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] refreshPurchaseVerificationData failed: $e',
       );
     }
@@ -492,7 +390,7 @@ class SubscriptionIAPService {
     PurchaseDetails purchaseDetails, {
     bool isRestore = false,
   }) async {
-    debugPrint(
+    iapDebugLog(
       '[SubscriptionIAP] _verifyPurchaseWithBackend: productId=${purchaseDetails.productID}, isRestore=$isRestore',
     );
     try {
@@ -504,10 +402,10 @@ class SubscriptionIAPService {
 
       final functionUrl = dotenv.env['CLOUD_FUNCTION_URL'];
       if (functionUrl == null || functionUrl.isEmpty) {
-        debugPrint(
+        iapDebugLog(
           '[RevenueFix] reason=missing_cloud_function_url',
         );
-        debugPrint(
+        iapDebugLog(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: CLOUD_FUNCTION_URL missing in .env',
         );
         return const SubscriptionVerificationResult(
@@ -537,11 +435,11 @@ class SubscriptionIAPService {
       );
 
       if (response.statusCode != 200) {
-        debugPrint(
+        iapDebugLog(
           '[RevenueFix] reason=backend_http_error '
           'status=${response.statusCode} body=${response.body}',
         );
-        debugPrint(
+        iapDebugLog(
           '[SubscriptionIAP] _verifyPurchaseWithBackend: failed status=${response.statusCode} body=${response.body}',
         );
         return const SubscriptionVerificationResult(
@@ -559,12 +457,12 @@ class SubscriptionIAPService {
       final appleStatus = decoded['appleStatus'] is int
           ? decoded['appleStatus'] as int
           : null;
-      debugPrint(
+      iapDebugLog(
         '[RevenueFix] backend_response '
         'isValid=$isValid verifiedByApple=$verifiedByApple '
         'environment=$environment appleStatus=$appleStatus',
       );
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] _verifyPurchaseWithBackend: decoded isValid=$isValid '
         'verifiedByApple=$verifiedByApple environment=$environment',
       );
@@ -575,11 +473,11 @@ class SubscriptionIAPService {
         appleStatus: appleStatus,
       );
     } catch (e, st) {
-      debugPrint(
+      iapDebugLog(
         '[RevenueFix] reason=backend_exception error=$e',
       );
-      debugPrint('[SubscriptionIAP] _verifyPurchaseWithBackend: exception: $e');
-      debugPrint(
+      iapDebugLog('[SubscriptionIAP] _verifyPurchaseWithBackend: exception: $e');
+      iapDebugLog(
         '[SubscriptionIAP] _verifyPurchaseWithBackend: stackTrace: $st',
       );
       return const SubscriptionVerificationResult(
@@ -589,10 +487,125 @@ class SubscriptionIAPService {
     }
   }
 
+  Future<void> _handleVerifiedPurchaseUpdate({
+    required PurchaseDetails purchaseDetails,
+    required SubscriptionVerificationResult verification,
+    required bool isRestoreFlow,
+  }) async {
+    final sandboxReporting = reportSandboxRevenueToFirebase();
+    final revenueDecision = evaluatePurchaseRevenue(
+      isValid: verification.isValid,
+      isRestore: isRestoreFlow,
+      environment: verification.environment,
+      productId: purchaseDetails.productID,
+      transactionId: purchaseDetails.purchaseID,
+      verifiedByApple: verification.verifiedByApple,
+      isAndroid: Platform.isAndroid,
+      reportSandboxRevenue: sandboxReporting,
+    );
+
+    iapDebugLog(
+      '[SubscriptionIAP] _onPurchaseUpdated: verification isValid=${verification.isValid} '
+      'verifiedByApple=${verification.verifiedByApple} '
+      'environment=${verification.environment} '
+      'isRestoreFlow=$isRestoreFlow '
+      'reportSandboxRevenue=$sandboxReporting '
+      'reportRevenue=${revenueDecision.shouldReport}',
+    );
+
+    SubscriptionAnalyticsReportStore.instance.recordVerification(
+      isValid: verification.isValid,
+      verifiedByApple: verification.verifiedByApple,
+      environment: verification.environment,
+      productId: purchaseDetails.productID,
+      transactionId: purchaseDetails.purchaseID,
+      willReportRevenue: verification.isValid && revenueDecision.shouldReport,
+      skipReason: revenueDecision.skipReason,
+      isRestoreFlow: isRestoreFlow,
+    );
+
+    if (verification.isValid) {
+      setCachedPremium(true);
+      await PremiumStatusStore.saveIsPremium(true);
+
+      if (revenueDecision.shouldReport) {
+        iapDebugLog(
+          '[FirebaseAnalytics] ▶ WILL REPORT to Firebase '
+          '(revenue + subscription_purchase_detail event) '
+          'productId=${purchaseDetails.productID} '
+          'environment=${verification.environment ?? "null"} '
+          'sandboxReporting=$sandboxReporting',
+        );
+        iapDebugLog(
+          '[RevenueFix] reporting revenue productId=${purchaseDetails.productID} '
+          'environment=${verification.environment ?? "null"} '
+          'sandboxReporting=$sandboxReporting',
+        );
+        await _reportSubscriptionRevenueToFirebase(
+          purchaseDetails,
+          verification: verification,
+          purchaseStatus:
+              isRestoreFlow ? 'restored' : purchaseDetails.status.name,
+        );
+      } else {
+        iapDebugLog(
+          '[FirebaseAnalytics] ✗ SKIPPED — revenue and event will NOT go to Firebase '
+          'reason=${revenueDecision.skipReason}',
+        );
+        iapDebugLog(
+          '[RevenueFix] reason=${revenueDecision.skipReason} '
+          'isValid=${verification.isValid} '
+          'verifiedByApple=${verification.verifiedByApple} '
+          'environment=${verification.environment ?? "null"} '
+          'productId=${purchaseDetails.productID} '
+          'transactionId=${purchaseDetails.purchaseID ?? "null"} '
+          'reportSandboxRevenue=$sandboxReporting',
+        );
+        iapDebugLog(
+          '[SubscriptionIAP] _onPurchaseUpdated: skipping Firebase revenue '
+          '(reason=${revenueDecision.skipReason})',
+        );
+      }
+
+      iapDebugLog(
+        '[SubscriptionIAP] _onPurchaseUpdated: success — premium granted',
+      );
+
+      if (Get.isRegistered<PremiumController>()) {
+        final c = Get.find<PremiumController>();
+        c.subscriptionStatus.value = SubscriptionStatus(
+          isPremium: true,
+          productId: purchaseDetails.productID,
+          expiryDate: c.subscriptionStatus.value?.expiryDate,
+        );
+        await Get.find<PremiumController>().refreshSubscriptionStatus();
+      }
+    } else {
+      iapDebugLog(
+        '[SubscriptionIAP] _onPurchaseUpdated: verification failed — premium not granted',
+      );
+    }
+
+    if (purchaseDetails.pendingCompletePurchase) {
+      await _inAppPurchase.completePurchase(purchaseDetails);
+      iapDebugLog('[SubscriptionIAP] _onPurchaseUpdated: purchase completed');
+    }
+
+    if (verification.isValid) {
+      unawaited(
+        AdaptyService.instance.syncAfterPurchaseOrRestore(
+          purchaseDetails: purchaseDetails,
+        ),
+      );
+    }
+  }
+
   Future<void> _reportSubscriptionRevenueToFirebase(
-    PurchaseDetails purchaseDetails,
-  ) async {
-    debugPrint(
+    PurchaseDetails purchaseDetails, {
+    SubscriptionVerificationResult? verification,
+    String? purchaseStatus,
+  }) async {
+    iapDebugLog(
       '[RevenueFix] _reportSubscriptionRevenueToFirebase: enter '
       'productId=${purchaseDetails.productID} '
       'transactionId=${purchaseDetails.purchaseID ?? "null"} '
@@ -603,7 +616,7 @@ class SubscriptionIAPService {
       orElse: () => null,
     );
     if (product == null) {
-      debugPrint(
+      iapDebugLog(
         '[RevenueFix] reason=missing_product retrying product query '
         'productId=${purchaseDetails.productID}',
       );
@@ -614,44 +627,78 @@ class SubscriptionIAPService {
       );
     }
     if (product == null) {
-      debugPrint(
+      iapDebugLog(
+        '[FirebaseAnalytics] ✗ SKIPPED — product not found, revenue/event NOT sent '
+        'productId=${purchaseDetails.productID} '
+        'available=${_products.map((p) => p.id).toList()}',
+      );
+      iapDebugLog(
         '[RevenueFix] reason=missing_product '
         'productId=${purchaseDetails.productID} '
         'available=${_products.map((p) => p.id).toList()}',
       );
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: product not found for ${purchaseDetails.productID}',
+      );
+      SubscriptionAnalyticsReportStore.instance.recordSkipped(
+        reason: 'missing_product',
       );
       return;
     }
 
     final transactionId = purchaseDetails.purchaseID;
     if (transactionId == null || transactionId.isEmpty) {
-      debugPrint(
+      iapDebugLog(
+        '[FirebaseAnalytics] ✗ SKIPPED — missing transactionId, revenue/event NOT sent '
+        'productId=${purchaseDetails.productID}',
+      );
+      iapDebugLog(
         '[RevenueFix] reason=missing_transaction_id '
         'productId=${purchaseDetails.productID}',
+      );
+      SubscriptionAnalyticsReportStore.instance.recordSkipped(
+        reason: 'missing_transaction_id',
       );
       return;
     }
 
     final purchaseKey = '${purchaseDetails.productID}:$transactionId';
     if (_reportedPurchaseKeys.contains(purchaseKey)) {
-      debugPrint(
+      iapDebugLog(
+        '[FirebaseAnalytics] ✗ SKIPPED — duplicate purchase, already reported '
+        'purchaseKey=$purchaseKey',
+      );
+      iapDebugLog(
         '[RevenueFix] reason=duplicate_purchase purchaseKey=$purchaseKey',
+      );
+      SubscriptionAnalyticsReportStore.instance.recordSkipped(
+        reason: 'duplicate_purchase',
       );
       return;
     }
 
-    debugPrint(
+    final environment = verification?.environment ?? 'unknown';
+    final isSandboxTest = environment == 'sandbox';
+    final status = purchaseStatus ?? purchaseDetails.status.name;
+
+    iapDebugLog(
+      '[FirebaseAnalytics] Sending purchase revenue (logPurchase) ... '
+      'productId=${product.id} value=${product.rawPrice} ${product.currencyCode} '
+      'transactionId=$transactionId environment=$environment',
+    );
+    iapDebugLog(
       '[RevenueFix] FirebaseAnalytics.logPurchase: invoking '
-      'productId=${product.id} currency=${product.currencyCode} '
-      'value=${product.rawPrice} transactionId=$transactionId',
+      'productId=${product.id} title=${product.title} '
+      'currency=${product.currencyCode} value=${product.rawPrice} '
+      'price=${product.price} transactionId=$transactionId '
+      'environment=$environment',
     );
     try {
       await FirebaseAnalytics.instance.logPurchase(
         currency: product.currencyCode,
         value: product.rawPrice,
         transactionId: transactionId,
+        affiliation: environment,
         items: [
           AnalyticsEventItem(
             itemId: product.id,
@@ -659,29 +706,109 @@ class SubscriptionIAPService {
             itemCategory: 'subscription',
             price: product.rawPrice,
             currency: product.currencyCode,
+            quantity: 1,
           ),
         ],
       );
+
+      iapDebugLog(
+        '[FirebaseAnalytics] ✓ REVENUE SENT — event=purchase '
+        'value=${product.rawPrice} currency=${product.currencyCode} '
+        'transactionId=$transactionId affiliation=$environment',
+      );
+      SubscriptionAnalyticsReportStore.instance.recordRevenueSent(
+        productId: product.id,
+        transactionId: transactionId,
+        value: product.rawPrice,
+        currency: product.currencyCode,
+        environment: environment,
+      );
+
+      final detailParams = <String, Object>{
+        'product_id': product.id,
+        'product_title': _truncateAnalyticsParam(product.title),
+        'product_description': _truncateAnalyticsParam(product.description),
+        'product_price_display': product.price,
+        'product_price_raw': product.rawPrice,
+        'product_currency': product.currencyCode,
+        'transaction_id': transactionId,
+        'purchase_environment': environment,
+        'purchase_status': status,
+        'verified_by_apple': verification?.verifiedByApple ?? false,
+        'is_sandbox_test': isSandboxTest,
+        'apple_status': verification?.appleStatus ?? -1,
+      };
+
+      iapDebugLog(
+        '[FirebaseAnalytics] Sending custom event (subscription_purchase_detail) ... '
+        'params=$detailParams',
+      );
+
+      await FirebaseAnalytics.instance.logEvent(
+        name: 'subscription_purchase_detail',
+        parameters: detailParams,
+      );
+
+      iapDebugLog(
+        '[FirebaseAnalytics] ✓ EVENT SENT — event=subscription_purchase_detail '
+        'productId=${product.id} environment=$environment isSandbox=$isSandboxTest',
+      );
+      SubscriptionAnalyticsReportStore.instance.recordEventSent(
+        productId: product.id,
+        transactionId: transactionId,
+        environment: environment,
+      );
+
       _reportedPurchaseKeys.add(purchaseKey);
-      debugPrint(
+
+      iapDebugLog(
+        '[FirebaseAnalytics] ═══════════════════════════════════════',
+      );
+      iapDebugLog(
+        '[FirebaseAnalytics] ✓✓ DONE — revenue + event both reported to Firebase',
+      );
+      iapDebugLog(
+        '[FirebaseAnalytics]   Revenue  → purchase | '
+        '${product.rawPrice} ${product.currencyCode} | tx=$transactionId',
+      );
+      iapDebugLog(
+        '[FirebaseAnalytics]   Event    → subscription_purchase_detail | '
+        'productId=${product.id} | env=$environment | status=$status',
+      );
+      iapDebugLog(
+        '[FirebaseAnalytics]   Verify in Firebase Console → DebugView (realtime)',
+      );
+      iapDebugLog(
+        '[FirebaseAnalytics] ═══════════════════════════════════════',
+      );
+      iapDebugLog(
         '[RevenueFix] FirebaseAnalytics.logPurchase: SUCCESS '
         'productId=${product.id} value=${product.rawPrice} ${product.currencyCode} '
-        'purchaseKey=$purchaseKey',
+        'environment=$environment purchaseKey=$purchaseKey',
       );
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: logged product=${product.id} value=${product.rawPrice} ${product.currencyCode}',
       );
     } catch (e, st) {
-      debugPrint(
+      iapDebugLog(
+        '[FirebaseAnalytics] ✗ FAILED — Firebase revenue/event NOT reported error=$e',
+      );
+      SubscriptionAnalyticsReportStore.instance.recordFailed(error: e.toString());
+      iapDebugLog(
         '[RevenueFix] reason=log_purchase_failed error=$e',
       );
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: failed: $e',
       );
-      debugPrint(
+      iapDebugLog(
         '[SubscriptionIAP] _reportSubscriptionRevenueToFirebase: stackTrace: $st',
       );
     }
+  }
+
+  static String _truncateAnalyticsParam(String value, {int maxLen = 99}) {
+    if (value.length <= maxLen) return value;
+    return value.substring(0, maxLen);
   }
 
   void dispose() {

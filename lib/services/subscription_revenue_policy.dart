@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:share_app_latest/utils/release_safe_log.dart';
 
 /// Decision for whether a verified purchase should log Firebase revenue.
 class PurchaseRevenueDecision {
@@ -11,20 +13,32 @@ class PurchaseRevenueDecision {
   final String skipReason;
 }
 
+/// When true, sandbox / TestFlight subscriptions also call [logPurchase].
+///
+/// Set `IAP_REPORT_SANDBOX_REVENUE=false` in `.env` before a production App Store
+/// release if you want to exclude sandbox revenue from GA4 Monetization.
+bool reportSandboxRevenueToFirebase() {
+  if (!dotenv.isInitialized) return true;
+  final raw = dotenv.env['IAP_REPORT_SANDBOX_REVENUE']?.trim().toLowerCase();
+  if (raw == 'false' || raw == '0' || raw == 'no') return false;
+  return true;
+}
+
 /// Whether a verified subscription should be logged as Firebase purchase revenue.
 ///
-/// iOS: blocks only when [environment] is explicitly `"sandbox"`.
-/// Null/empty/missing environment does NOT block (verified purchases still count).
+/// iOS production: blocks only when [environment] is `"sandbox"` unless
+/// [reportSandboxRevenue] is enabled for QA / TestFlight testing.
 ///
 /// Android: release builds report revenue regardless of environment string.
 bool shouldReportSubscriptionRevenue(
   String? environment, {
   bool isAndroid = false,
   bool isReleaseBuild = kReleaseMode,
+  bool reportSandboxRevenue = true,
 }) {
   if (isAndroid) {
     final result = isReleaseBuild;
-    debugPrint(
+    iapDebugLog(
       '[RevenueFix] shouldReportSubscriptionRevenue: platform=android '
       'environment=$environment isReleaseBuild=$isReleaseBuild → $result',
     );
@@ -32,16 +46,17 @@ bool shouldReportSubscriptionRevenue(
   }
 
   if (environment == 'sandbox') {
-    debugPrint(
+    final result = reportSandboxRevenue;
+    iapDebugLog(
       '[RevenueFix] shouldReportSubscriptionRevenue: platform=ios '
-      'environment=sandbox → false',
+      'environment=sandbox reportSandboxRevenue=$reportSandboxRevenue → $result',
     );
-    return false;
+    return result;
   }
 
-  debugPrint(
+  iapDebugLog(
     '[RevenueFix] shouldReportSubscriptionRevenue: platform=ios '
-    'environment=$environment → true (not explicitly sandbox)',
+    'environment=$environment → true',
   );
   return true;
 }
@@ -56,8 +71,11 @@ PurchaseRevenueDecision evaluatePurchaseRevenue({
   bool? verifiedByApple,
   bool isAndroid = false,
   bool isReleaseBuild = kReleaseMode,
+  bool reportSandboxRevenue = true,
 }) {
-  if (isRestore) {
+  final isSandboxEnv = environment == 'sandbox';
+
+  if (isRestore && !(reportSandboxRevenue && isSandboxEnv)) {
     return const PurchaseRevenueDecision(
       shouldReport: false,
       skipReason: 'restore_flow',
@@ -91,6 +109,7 @@ PurchaseRevenueDecision evaluatePurchaseRevenue({
     environment,
     isAndroid: isAndroid,
     isReleaseBuild: isReleaseBuild,
+    reportSandboxRevenue: reportSandboxRevenue,
   )) {
     return PurchaseRevenueDecision(
       shouldReport: false,

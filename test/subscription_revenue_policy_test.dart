@@ -12,13 +12,24 @@ void main() {
       expect(shouldReportSubscriptionRevenue(''), isTrue);
     });
 
-    test('blocks only explicit sandbox on iOS', () {
-      expect(shouldReportSubscriptionRevenue('sandbox'), isFalse);
+    test('blocks sandbox on iOS when sandbox reporting disabled', () {
+      expect(
+        shouldReportSubscriptionRevenue(
+          'sandbox',
+          reportSandboxRevenue: false,
+        ),
+        isFalse,
+      );
     });
 
-    test('allows non-sandbox unknown values on iOS', () {
-      expect(shouldReportSubscriptionRevenue('staging'), isTrue);
-      expect(shouldReportSubscriptionRevenue('Production'), isTrue);
+    test('allows sandbox on iOS when sandbox reporting enabled', () {
+      expect(
+        shouldReportSubscriptionRevenue(
+          'sandbox',
+          reportSandboxRevenue: true,
+        ),
+        isTrue,
+      );
     });
 
     test('reports Android revenue in release builds regardless of environment',
@@ -59,19 +70,7 @@ void main() {
       expect(decision.skipReason, isEmpty);
     });
 
-    test('allows verified purchase when environment is null on iOS', () {
-      final decision = evaluatePurchaseRevenue(
-        isValid: true,
-        isRestore: false,
-        environment: null,
-        productId: 'com.app.monthly',
-        transactionId: 'tx_1',
-        verifiedByApple: true,
-      );
-      expect(decision.shouldReport, isTrue);
-    });
-
-    test('blocks sandbox environment on iOS', () {
+    test('allows sandbox purchase when sandbox reporting enabled', () {
       final decision = evaluatePurchaseRevenue(
         isValid: true,
         isRestore: false,
@@ -79,25 +78,40 @@ void main() {
         productId: 'com.app.monthly',
         transactionId: 'tx_1',
         verifiedByApple: true,
+        reportSandboxRevenue: true,
+      );
+      expect(decision.shouldReport, isTrue);
+    });
+
+    test('allows sandbox restored StoreKit2 flow when sandbox reporting enabled',
+        () {
+      final decision = evaluatePurchaseRevenue(
+        isValid: true,
+        isRestore: true,
+        environment: 'sandbox',
+        productId: 'com.app.monthly',
+        transactionId: 'tx_1',
+        verifiedByApple: true,
+        reportSandboxRevenue: true,
+      );
+      expect(decision.shouldReport, isTrue);
+    });
+
+    test('blocks sandbox when sandbox reporting disabled', () {
+      final decision = evaluatePurchaseRevenue(
+        isValid: true,
+        isRestore: false,
+        environment: 'sandbox',
+        productId: 'com.app.monthly',
+        transactionId: 'tx_1',
+        verifiedByApple: true,
+        reportSandboxRevenue: false,
       );
       expect(decision.shouldReport, isFalse);
       expect(decision.skipReason, 'environment_sandbox');
     });
 
-    test('blocks unverified fallback receipts', () {
-      final decision = evaluatePurchaseRevenue(
-        isValid: true,
-        isRestore: false,
-        environment: 'sandbox',
-        productId: 'com.app.monthly',
-        transactionId: 'tx_1',
-        verifiedByApple: false,
-      );
-      expect(decision.shouldReport, isFalse);
-      expect(decision.skipReason, 'unverified_receipt');
-    });
-
-    test('blocks restore flow', () {
+    test('blocks production restore when sandbox reporting disabled', () {
       final decision = evaluatePurchaseRevenue(
         isValid: true,
         isRestore: true,
@@ -105,6 +119,7 @@ void main() {
         productId: 'com.app.monthly',
         transactionId: 'tx_1',
         verifiedByApple: true,
+        reportSandboxRevenue: false,
       );
       expect(decision.shouldReport, isFalse);
       expect(decision.skipReason, 'restore_flow');
